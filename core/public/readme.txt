@@ -1,0 +1,1 @@
+Public folder is required

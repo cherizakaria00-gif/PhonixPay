@@ -1,0 +1,392 @@
+{
+    "banner": {
+        "builder": true,
+        "no_selection":true,
+        "name": "Banner",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"1080x635"
+                }
+            },
+            "heading": "text",
+            "subheading": "text",
+            "button_text": "text",
+            "button_url": "text"
+        }
+    },
+    "feature": {
+        "builder": true,
+        "name": "Feature Section",
+        "content": {
+            "heading": "text",
+            "subheading": "text"
+        },
+        "element": {
+            "images":{
+                "image":{
+                    "size":"39x39"
+                }
+            },
+            "title": "text",
+            "description": "textarea",
+            "modal": true
+        }
+    },
+    "about": {
+        "builder": true,
+        "name": "About Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"330x375"
+                }
+            },
+            "heading": "text",
+            "subheading": "text",
+            "description": "textarea"
+        },
+        "element": {
+            "title": "text",
+            "description": "text",
+            "modal": true
+        }
+    },
+    "policy_pages": {
+        "builder": true,
+        "no_selection":true,
+        "name": "Policy Pages",
+        "hide_builder":true,
+        "element": {
+            "title": "text",
+            "slug":"title",
+            "details": "textarea-nic",
+            "modal": false,
+            "seo":true
+        }
+    },
+    "faq": {
+        "builder": true,
+        "name": "FAQ Section",
+        "content": {
+            "heading": "text",
+            "subheading": "text"
+        },
+        "element": {
+            "question": "text",
+            "answer": "textarea",
+            "modal": true
+        }
+    },
+    "blog": {
+        "builder": true,
+        "name": "Blog Section",
+        "element": {
+            "images":{
+                "image":{
+                    "size":"820x450",
+                    "thumb":"410x225" 
+                }
+            },
+            "title": "text",
+            "slug":"title",
+            "description": "textarea-nic",
+            "modal": false,
+            "seo":true
+        }
+    },
+    "subscribe": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Subscribe",
+        "content": {
+            "heading": "text",
+            "subheading": "text"
+        }
+    },
+    "social_icon": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Social Icons",
+        "element": {
+            "title": "text",
+            "social_icon": "icon",
+            "url": "text",
+            "modal": false
+        }
+    },
+    "contact_us": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Contact Us",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"680x585" 
+                },
+                "map_image":{
+                    "size":"885x535"
+                }
+            },
+            "phone": "text",
+            "email": "text",
+            "office_address": "text"
+        }
+    },
+    "kyc": {
+        "builder": true,
+        "no_selection": true,
+        "name": "KYC Content",
+        "content": {
+            "required": "text",
+            "pending": "text",
+            "reject": "text"
+        }
+    },
+    "footer": {
+        "builder": true,  
+        "no_selection":true,
+        "name": "Footer",
+        "content": {
+            "description": "text"
+        }
+    },
+    "pdf_content": {
+        "builder": true,
+        "no_selection": true,
+        "name": "PDF Content",
+        "content": {
+            "header": "textarea",
+            "footer": "textarea"
+        }
+    },
+    "login_register": {
+        "builder": true,
+        "no_selection":true,
+        "name": "Login & Registration",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"615x620"
+                }
+            }
+        }
+    },
+    "testimonial": {
+        "builder": true,
+        "name": "Testimonial Section",
+        "content": {
+            "heading": "text",
+            "subheading": "text",
+            "btn_text": "text",
+            "btn_url": "text"
+        },
+        "element": {
+            "images":{
+                "company":{
+                    "size":"170x45"
+                },
+                "image":{
+                    "size":"59x59"
+                }
+            },
+            "name": "text",
+            "designation": "text",
+            "remark": "textarea",
+            "modal": false
+        }
+    },
+    "case_study": {
+        "builder": true,
+        "name": "Case Study Section",
+        "content": {
+            "heading": "text",
+            "subheading": "text",
+            "title": "text",
+            "second_title": "text",
+            "third_title": "text",
+            "images":{
+                "image":{
+                    "size":"570x645"
+                },
+                "second_image":{
+                    "size":"570x305"
+                },
+                "third_image":{
+                    "size":"570x305"
+                }
+            }
+        }
+    },
+    "product": {
+        "builder": true,
+        "name": "Product Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"630x865"
+                }
+            },
+            "heading": "text",
+            "subheading": "text",
+            "second_heading": "text",
+            "second_subheading": "text",
+            "description": "textarea",
+            "btn_text": "text",
+            "btn_url": "text"
+        },
+        "element": {
+            "title": "text",
+            "description": "textarea",
+            "modal": true
+        }
+    },
+    "brand": {
+        "builder": true,
+        "name": "Brand Section",
+        "content": {
+            "heading": "text"
+        },
+        "element": {
+            "images":{
+                "image":{
+                    "size":"128x32"
+                }
+            },
+            "modal": true
+        }
+    },
+    "payment_solution": {
+        "builder": true,
+        "name": "Payment Solution Section",
+        "content": {
+            "heading": "text",
+            "subheading": "text"
+        },
+        "element": {
+            "title":"text",
+            "description":"textarea",
+            "modal": true
+        }
+    },
+    "roadmap": {
+        "builder": true,
+        "name": "Roadmap Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"620x645"
+                }
+            },
+            "heading": "text",
+            "description": "textarea"
+        }
+    },
+    "mission": {
+        "builder": true,
+        "name": "Mission Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"500x560"
+                }
+            },
+            "heading": "text",
+            "description": "textarea",
+            "button_text": "text",   
+            "button_url": "text"
+        },
+        "element":{
+            "list_text":"text",
+            "modal":true
+        }
+    },
+    "gold_history": {
+        "builder": true,
+        "name": "Gold History Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"500x560"
+                }
+            },
+            "heading": "text",
+            "subheading": "text"
+        },
+        "element":{
+            "date":"text",
+            "description":"textarea",
+            "modal":true
+        }
+    },
+    "payment_method": {
+        "builder": true,
+        "name": "Payment Method Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"1216x116"
+                }
+            }
+        }
+    },
+    "payout": {
+        "builder": true,
+        "name": "Payout Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"565x775"
+                }
+            },
+            "heading": "text",
+            "subheading": "text"
+        },
+        "element":{
+            "images":{
+                "image":{
+                    "size":"33x33"
+                }
+            },
+            "title":"text",
+            "description":"textarea",
+            "modal":true
+        }
+    },
+    "developer_tool": {
+        "builder": true,
+        "name": "Developer Tool Section",
+        "content": {
+            "images":{
+                "image":{
+                    "size":"630x865"
+                }
+            },
+            "heading": "text",
+            "subheading": "text"
+        },
+        "element": {
+            "images":{
+                "image":{
+                    "size":"50x52"
+                }
+            },
+            "title":"text",
+            "description":"textarea",
+            "modal": true
+        }
+    },
+    "banned": {
+        "builder": true,
+        "no_selection": true,
+        "name": "Banned Page",
+        "content": {
+            "heading": "text",
+            "images": {
+                "image": {
+                    "size": "360x370"
+                }
+            }
+        }
+    }
+}

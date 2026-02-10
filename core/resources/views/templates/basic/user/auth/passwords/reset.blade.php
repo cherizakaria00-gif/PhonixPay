@@ -1,0 +1,51 @@
+@extends($activeTemplate.'layouts.frontend')
+
+@section('content')
+<div class="pt-120 pb-60">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-7 col-xl-5">
+                <div class="card custom--card">
+                    <div class="card-header"> 
+                        <h5 class="card-title text-center">@lang('Reset Password')</h5>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="mb-5">
+                            <p>@lang('Your account is verified successfully. Now you can change your password. Please enter a strong password and don\'t share it with anyone.')</p>
+                        </div> 
+                        <form method="POST" action="{{ route('user.password.update') }}">
+                            @csrf
+                            <input type="hidden" name="email" value="{{ $email }}">
+                            <input type="hidden" name="token" value="{{ $token }}">
+                            <div class="form-group">
+                                <label class="floating-label powerZIndex">@lang('Password')</label>
+                                <div class="input--group">
+                                    <input type="password" class="form--control @if(gs('secure_password')) secure-password @endif" id="password" name="password" required>
+                                    <div class="password-show-hide fa-solid toggle-password fa-eye-slash" id="#password"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="floating-label">@lang('Confirm Password')</label>
+                                <div class="input--group">
+                                    <input type="password" class="form--control" name="password_confirmation" id="password_confirmation" required>
+                                    <div class="password-show-hide fa-solid toggle-password fa-eye-slash" id="#password_confirmation"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn btn--base w-100"> @lang('Submit')</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@if(gs('secure_password'))
+    @push('script-lib')
+        <script src="{{ asset('assets/global/js/secure_password.js') }}"></script>
+    @endpush
+@endif
