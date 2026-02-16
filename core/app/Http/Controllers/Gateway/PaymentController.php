@@ -29,9 +29,21 @@ class PaymentController extends Controller
             $apiPayment = $this->getApiPayment($request->payment_trx);
 
             if($apiPayment['status'] == 'error'){ 
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => $apiPayment['message'],
+                    ], 422);
+                }
                 return back()->withNotify(['error', $apiPayment['message']]);
             }
         }catch(\Exception $error){
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $error->getMessage(),
+                ], 422);
+            }
             $notify[] = ['error', $error->getMessage()];
             return back()->withNotify($notify);
         }
@@ -45,6 +57,12 @@ class PaymentController extends Controller
             foreach(@$checkUserPayment['message'] as $message){
                 $notify[] = ['error', $message];
             }
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => implode(' ', @$checkUserPayment['message'] ?? []),
+                ], 422);
+            }
             return back()->withNotify(@$notify);
         }
 
@@ -52,11 +70,23 @@ class PaymentController extends Controller
 
         if (!$gate) {
             $notify[] = ['error', 'Invalid gateway'];
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid gateway',
+                ], 422);
+            }
             return back()->withNotify($notify);
         }
  
         if (($gate->min_amount * $gate->rate) > $amount || ($gate->max_amount * $gate->rate) < $amount) {
             $notify[] = ['error', 'Please follow payment limit'];
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Please follow payment limit',
+                ], 422);
+            }
             return back()->withNotify($notify);
         }
 
@@ -90,6 +120,64 @@ class PaymentController extends Controller
         $apiPayment->save();
 
         session()->put('Track', $data->trx);
+
+        if ($request->expectsJson()) {
+            $dirName = $data->gateway->alias;
+            $new = __NAMESPACE__ . '\\' . $dirName . '\\ProcessController';
+
+            $processResponse = $new::process($data);
+            $processResponse = json_decode($processResponse);
+
+            if (isset($processResponse->error)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $processResponse->message ?? 'Something went wrong',
+                ], 422);
+            }
+
+            if (isset($processResponse->redirect)) {
+                return response()->json([
+                    'status' => 'redirect',
+                    'redirect_url' => $processResponse->redirect_url ?? route('deposit.confirm'),
+                ]);
+            }
+
+            if (isset($processResponse->session) && isset($processResponse->StripeJSAcc)) {
+                return response()->json([
+                    'status' => 'stripe_checkout',
+                    'session_id' => $processResponse->session->id ?? null,
+                    'publishable_key' => $processResponse->StripeJSAcc->publishable_key ?? null,
+                ]);
+            }
+
+            if ($dirName === 'StripeJs' && isset($processResponse->src) && isset($processResponse->url)) {
+                return response()->json([
+                    'status' => 'stripe_js',
+                    'src' => $processResponse->src,
+                    'url' => $processResponse->url,
+                    'method' => $processResponse->method ?? 'post',
+                    'val' => $processResponse->val ?? [],
+                ]);
+            }
+
+            if ($dirName === 'Stripe') {
+                $html = view('Template::payment.partials.stripe_embedded', [
+                    'data' => $processResponse,
+                    'deposit' => $data,
+                ])->render();
+
+                return response()->json([
+                    'status' => 'form',
+                    'html' => $html,
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'redirect',
+                'redirect_url' => route('deposit.confirm'),
+            ]);
+        }
+
         return to_route('deposit.confirm');
     }
 
@@ -222,6 +310,45 @@ class PaymentController extends Controller
                 'post_balance' => showAmount($user->balance, currencyFormat:false)
             ]);
         }
+    }
+
+    public static function refundUserData(Deposit $deposit, string $note = null): bool
+    {
+        if ($deposit->status != Status::PAYMENT_SUCCESS) {
+            return false;
+        }
+
+        $user = User::find($deposit->user_id);
+        if (!$user) {
+            return false;
+        }
+
+        $refundAmount = $deposit->amount - $deposit->totalCharge;
+        if ($refundAmount < 0) {
+            $refundAmount = 0;
+        }
+
+        $user->balance -= $refundAmount;
+        $user->save();
+
+        $deposit->status = Status::PAYMENT_REFUNDED;
+        if ($note) {
+            $deposit->admin_feedback = $note;
+        }
+        $deposit->save();
+
+        $transaction = new Transaction();
+        $transaction->user_id = $deposit->user_id;
+        $transaction->amount = $refundAmount;
+        $transaction->post_balance = $user->balance;
+        $transaction->charge = 0;
+        $transaction->trx_type = '-';
+        $transaction->details = 'Refund from ' . $deposit->gatewayCurrency()->name . ' (TRX: ' . $deposit->trx . ')';
+        $transaction->trx = $deposit->trx;
+        $transaction->remark = 'refund';
+        $transaction->save();
+
+        return true;
     }
 
 }

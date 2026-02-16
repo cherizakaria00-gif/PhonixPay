@@ -1,1 +1,1 @@
-<?php $timezone = "UTC" ?>
+<?php $timezone = "Africa/Casablanca" ?>

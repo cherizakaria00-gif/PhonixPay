@@ -9,7 +9,11 @@ use App\Lib\HolidayCalculator;
 use App\Models\Withdrawal;
 use App\Models\WithdrawMethod;
 use App\Models\WithdrawSetting;
+use App\Models\AdminNotification;
+use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class WithdrawController extends Controller
 {
@@ -33,6 +37,13 @@ class WithdrawController extends Controller
             $method->select('id', 'name');
         }])->get('method_id');
 
+        $hasPendingWithdraw = Withdrawal::where('user_id', $user->id)->pending()->exists();
+        $nextPayoutDate = @$user->withdrawSetting->next_withdraw_date;
+        $canRequestPayout = false;
+        if (@$user->withdrawSetting->withdrawMethod->status == Status::ENABLE && !$hasPendingWithdraw) {
+            $canRequestPayout = true;
+        }
+
         $withdraws = Withdrawal::where('user_id', $user->id)->where('status', '!=', Status::PAYMENT_INITIATE)->when($scope, function($query) use ($scope){
                 $query->$scope();
             })->searchable(['trx'])->filter(['method:method_id'])->dateFilter()
@@ -43,7 +54,7 @@ class WithdrawController extends Controller
         }
         $withdraws = $withdraws->paginate(getPaginate());
 
-        return view('Template::user.withdraw.withdraws', compact('pageTitle','withdrawMethod', 'user', 'withdraws', 'gateways'));
+        return view('Template::user.withdraw.withdraws', compact('pageTitle','withdrawMethod', 'user', 'withdraws', 'gateways', 'hasPendingWithdraw', 'nextPayoutDate', 'canRequestPayout'));
     }
 
     public function withdrawMethod(){
@@ -113,6 +124,111 @@ class WithdrawController extends Controller
         $withdrawSetting->save();
 
         $notify[] = ['success', 'Withdraw setting updated successfully'];
+        return back()->withNotify($notify);
+    }
+
+    public function requestPayout(Request $request)
+    {
+        $user = auth()->user();
+        $withdrawSetting = $user->withdrawSetting;
+
+        if (!$withdrawSetting || !$withdrawSetting->withdrawMethod || $withdrawSetting->withdrawMethod->status != Status::ENABLE) {
+            $notify[] = ['error', 'Please setup an active payout method'];
+            return back()->withNotify($notify);
+        }
+
+        if (Withdrawal::where('user_id', $user->id)->pending()->exists()) {
+            $notify[] = ['error', 'A payout is already pending approval'];
+            return back()->withNotify($notify);
+        }
+
+        $request->validate([
+            'amount' => 'nullable|numeric|gt:0',
+        ]);
+
+        $nextPayoutDate = $withdrawSetting->next_withdraw_date;
+
+        $method = $withdrawSetting->withdrawMethod;
+        $amount = $request->amount;
+        if ($amount === null || $amount === '') {
+            $amount = $withdrawSetting->amount;
+        }
+        if (!$amount || $amount <= 0) {
+            $notify[] = ['error', 'Please enter a valid payout amount'];
+            return back()->withNotify($notify);
+        }
+
+        if ($amount < $method->min_limit) {
+            $notify[] = ['error', 'Your requested amount is smaller than minimum amount.'];
+            return back()->withNotify($notify)->withInput();
+        }
+        if ($amount > $method->max_limit) {
+            $notify[] = ['error', 'Your requested amount is larger than maximum amount.'];
+            return back()->withNotify($notify)->withInput();
+        }
+
+        if ($amount > $user->balance) {
+            $notify[] = ['error', 'Insufficient balance for payout'];
+            return back()->withNotify($notify);
+        }
+
+        $charge = $method->fixed_charge + ($amount * $method->percent_charge / 100);
+        $afterCharge = $amount - $charge;
+        $finalAmount = $afterCharge * $method->rate;
+
+        $withdraw = new Withdrawal();
+        $withdraw->method_id = $method->id;
+        $withdraw->user_id = $user->id;
+        $withdraw->amount = $amount;
+        $withdraw->currency = $method->currency;
+        $withdraw->rate = $method->rate;
+        $withdraw->charge = $charge;
+        $withdraw->final_amount = $finalAmount;
+        $withdraw->after_charge = $afterCharge;
+        $withdraw->trx = getTrx();
+        $withdraw->status = Status::PAYMENT_PENDING;
+        $withdraw->withdraw_information = $withdrawSetting->user_data;
+        if (Schema::hasColumn('withdrawals', 'payout_date')) {
+            $withdraw->payout_date = $nextPayoutDate;
+        }
+        $withdraw->save();
+
+        $user->balance -= $amount;
+        $user->save();
+
+        $withdrawSetting->amount = $amount;
+        $withdrawSetting->next_withdraw_date = HolidayCalculator::nextWorkingDay($withdrawSetting);
+        $withdrawSetting->save();
+
+        $transaction = new Transaction();
+        $transaction->user_id = $withdraw->user_id;
+        $transaction->amount = $withdraw->amount;
+        $transaction->post_balance = $user->balance;
+        $transaction->charge = $withdraw->charge;
+        $transaction->trx_type = '-';
+        $transaction->details = showAmount($withdraw->final_amount, currencyFormat:false) . ' ' . $withdraw->currency . ' Withdraw Via ' . $withdraw->method->name;
+        $transaction->trx = $withdraw->trx;
+        $transaction->remark = 'withdraw';
+        $transaction->save();
+
+        $adminNotification = new AdminNotification();
+        $adminNotification->user_id = $user->id;
+        $adminNotification->title = 'New withdraw request from '.$user->username;
+        $adminNotification->click_url = urlPath('admin.withdraw.data.details', $withdraw->id);
+        $adminNotification->save();
+
+        notify($user, 'WITHDRAW_REQUEST', [
+            'method_name' => $withdraw->method->name,
+            'method_currency' => $withdraw->currency,
+            'method_amount' => showAmount($withdraw->final_amount, currencyFormat:false),
+            'amount' => showAmount($withdraw->amount, currencyFormat:false),
+            'charge' => showAmount($withdraw->charge, currencyFormat:false),
+            'rate' => showAmount($withdraw->rate, currencyFormat:false),
+            'trx' => $withdraw->trx,
+            'post_balance' => showAmount($user->balance, currencyFormat:false),
+        ]);
+
+        $notify[] = ['success', 'Your payout request has been received. Please wait for confirmation.'];
         return back()->withNotify($notify);
     }
 

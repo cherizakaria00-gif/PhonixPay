@@ -197,6 +197,9 @@ CREATE TABLE `deposits` (
   `detail` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `btc_amount` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `btc_wallet` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `stripe_account_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `stripe_charge_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `stripe_session_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `trx` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `payment_try` int(10) NOT NULL DEFAULT 0,
   `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=>success, 2=>pending, 3=>cancel',
@@ -436,7 +439,8 @@ INSERT INTO `gateways` (`id`, `form_id`, `code`, `name`, `alias`, `image`, `stat
 (53, 0, 509, 'Now payments checkout', 'NowPaymentsCheckout', '663a38a59d2541715091621.png', 1, '{\"api_key\":{\"title\":\"API Key\",\"global\":true,\"value\":\"-------------------\"},\"secret_key\":{\"title\":\"Secret Key\",\"global\":true,\"value\":\"--------------\"}}', '{\"USD\":\"USD\",\"EUR\":\"EUR\"}', 1, '', NULL, NULL, '2023-02-14 04:42:09'),
 (54, 0, 510, 'Binance', 'Binance', '663a35db4fd621715090907.png', 1, '{\"api_key\":{\"title\":\"API Key\",\"global\":true,\"value\":\"tsu3tjiq0oqfbtmlbevoeraxhfbp3brejnm9txhjxcp4to29ujvakvfl1ibsn3ja\"},\"secret_key\":{\"title\":\"Secret Key\",\"global\":true,\"value\":\"jzngq4t04ltw8d4iqpi7admfl8tvnpehxnmi34id1zvfaenbwwvsvw7llw3zdko8\"},\"merchant_id\":{\"title\":\"Merchant ID\",\"global\":true,\"value\":\"231129033\"}}', '{\"BTC\":\"Bitcoin\",\"USD\":\"USD\",\"BNB\":\"BNB\"}', 1, '{\"cron\":{\"title\": \"Cron Job URL\",\"value\":\"ipn.Binance\"}}', NULL, NULL, '2023-02-14 11:08:04'),
 (55, 0, 124, 'SslCommerz', 'SslCommerz', '663a397a70c571715091834.png', 1, '{\"store_id\": {\"title\": \"Store ID\",\"global\": true,\"value\": \"---------\"},\"store_password\": {\"title\": \"Store Password\",\"global\": true,\"value\": \"----------\"}}', '{\"BDT\":\"BDT\",\"USD\":\"USD\",\"EUR\":\"EUR\",\"SGD\":\"SGD\",\"INR\":\"INR\",\"MYR\":\"MYR\"}', 0, NULL, NULL, NULL, '2023-05-06 13:43:01'),
-(56, 0, 125, 'Aamarpay', 'Aamarpay', '663a34d5d1dfc1715090645.png', 1, '{\"store_id\": {\"title\": \"Store ID\",\"global\": true,\"value\": \"---------\"},\"signature_key\": {\"title\": \"Signature Key\",\"global\": true,\"value\": \"----------\"}}', '{\"BDT\":\"BDT\"}', 0, NULL, NULL, NULL, '2023-05-06 13:43:01');
+(56, 0, 125, 'Aamarpay', 'Aamarpay', '663a34d5d1dfc1715090645.png', 1, '{\"store_id\": {\"title\": \"Store ID\",\"global\": true,\"value\": \"---------\"},\"signature_key\": {\"title\": \"Signature Key\",\"global\": true,\"value\": \"----------\"}}', '{\"BDT\":\"BDT\"}', 0, NULL, NULL, NULL, '2023-05-06 13:43:01'),
+(57, 0, 126, 'Stripe Payment Link', 'StripePaymentLink', '663a39afb519f1715091887.png', 1, '{\"secret_key\":{\"title\":\"Secret Key\",\"global\":true,\"value\":\"sk_test_51I6GGiCGv1sRiQlEi5v1or9eR0HVbuzdMd2rW4n3DxC8UKfz66R4X6n4yYkzvI2LeAIuRU9H99ZpY7XCNFC9xMs500vBjZGkKG\"}}', '{\"USD\":\"USD\",\"AUD\":\"AUD\",\"BRL\":\"BRL\",\"CAD\":\"CAD\",\"CHF\":\"CHF\",\"DKK\":\"DKK\",\"EUR\":\"EUR\",\"GBP\":\"GBP\",\"HKD\":\"HKD\",\"INR\":\"INR\",\"JPY\":\"JPY\",\"MXN\":\"MXN\",\"MYR\":\"MYR\",\"NOK\":\"NOK\",\"NZD\":\"NZD\",\"PLN\":\"PLN\",\"SEK\":\"SEK\",\"SGD\":\"SGD\"}', 0, '{\"webhook\":{\"title\": \"Webhook Endpoint\",\"value\":\"ipn.StripePaymentLink\"}}', NULL, NULL, '2026-02-11 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -457,6 +461,24 @@ CREATE TABLE `gateway_currencies` (
   `fixed_charge` decimal(28,8) NOT NULL DEFAULT 0.00000000,
   `rate` decimal(28,8) NOT NULL DEFAULT 0.00000000,
   `gateway_parameter` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `stripe_accounts`
+--
+
+CREATE TABLE `stripe_accounts` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `publishable_key` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `secret_key` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `min_amount` decimal(28,8) NOT NULL DEFAULT 0.00000000,
+  `max_amount` decimal(28,8) NOT NULL DEFAULT 0.00000000,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -884,6 +906,7 @@ CREATE TABLE `withdrawals` (
   `trx` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `final_amount` decimal(28,8) NOT NULL DEFAULT 0.00000000,
   `after_charge` decimal(28,8) NOT NULL DEFAULT 0.00000000,
+  `payout_date` date DEFAULT NULL,
   `withdraw_information` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=>success, 2=>pending, 3=>cancel,  ',
   `admin_feedback` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -984,7 +1007,8 @@ ALTER TABLE `cron_schedules`
 -- Indexes for table `deposits`
 --
 ALTER TABLE `deposits`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `stripe_account_id` (`stripe_account_id`);
 
 --
 -- Indexes for table `device_tokens`
@@ -1021,6 +1045,12 @@ ALTER TABLE `gateways`
 -- Indexes for table `gateway_currencies`
 --
 ALTER TABLE `gateway_currencies`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `stripe_accounts`
+--
+ALTER TABLE `stripe_accounts`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -1220,12 +1250,18 @@ ALTER TABLE `frontends`
 -- AUTO_INCREMENT for table `gateways`
 --
 ALTER TABLE `gateways`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `gateway_currencies`
 --
 ALTER TABLE `gateway_currencies`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `stripe_accounts`
+--
+ALTER TABLE `stripe_accounts`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --

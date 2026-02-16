@@ -6,6 +6,7 @@ use App\Constants\Status;
 use App\Traits\ExportData;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\StripeAccount;
 
 class Deposit extends Model
 {
@@ -39,6 +40,11 @@ class Deposit extends Model
         return $this->belongsTo(Gateway::class, 'method_code', 'code');
     }
 
+    public function stripeAccount()
+    {
+        return $this->belongsTo(StripeAccount::class);
+    }
+
     public function methodName(){
         if ($this->method_code < 5000) {
             $methodName = @$this->gatewayCurrency()->name;
@@ -60,6 +66,9 @@ class Deposit extends Model
             }
             elseif($this->status == Status::PAYMENT_SUCCESS && ($this->method_code < 1000 || $this->method_code >= 5000)){
                 $html = '<span class="badge badge--success">'.trans('Succeed').'</span>';
+            }
+            elseif($this->status == Status::PAYMENT_REFUNDED){
+                $html = '<span class="badge badge--warning">'.trans('Refunded').'</span>';
             }
             elseif($this->status == Status::PAYMENT_REJECT){
                 $html = '<span><span class="badge badge--danger">'.trans('Rejected').'</span><br>'.diffForHumans($this->updated_at).'</span>';

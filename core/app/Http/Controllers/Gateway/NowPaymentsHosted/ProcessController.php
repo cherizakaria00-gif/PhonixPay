@@ -7,11 +7,12 @@ use App\Http\Controllers\Gateway\PaymentController;
 use App\Lib\CurlRequest;
 use App\Models\Deposit;
 use App\Models\Gateway;
+use Illuminate\Support\Facades\Log;
 
 class ProcessController extends Controller {
     public static function process($deposit) {
         $nowPaymentsAcc = json_decode($deposit->gatewayCurrency()->gateway_parameter);
-        $response       = CurlRequest::curlPostContent('https://api.nowpayments.io/v1/payment', json_encode([
+        $responseRaw       = CurlRequest::curlPostContent('https://api.nowpayments.io/v1/payment', json_encode([
             'price_amount'     => $deposit->final_amount,
             'price_currency'   => gs('cur_text'),
             'pay_currency'     => $deposit->method_currency,
@@ -22,16 +23,25 @@ class ProcessController extends Controller {
             "x-api-key: $nowPaymentsAcc->api_key",
             'Content-Type: application/json',
         ]);
-        $response = json_decode($response);
+        $response = json_decode($responseRaw);
 
         if (!$response) {
+            Log::error('NowPayments hosted API error: empty response', [
+                'deposit_id' => $deposit->id,
+                'raw' => $responseRaw,
+            ]);
             $send['error']   = true;
             $send['message'] = 'Some problem ocurred with api.';
             return json_encode($send);
         }
         if(!@$response->status){
+            Log::error('NowPayments hosted API error', [
+                'deposit_id' => $deposit->id,
+                'response' => $response,
+            ]);
+            $message = $response->message ?? $response->error ?? 'Invalid api key';
             $send['error']   = true;
-            $send['message'] = 'Invalid api key';
+            $send['message'] = $message;
             return json_encode($send);
         }
 

@@ -8,8 +8,7 @@
         <select name="payment_statistics" class="widget_select text--white">
             <option value="today">@lang('Today')</option>
             <option value="week">@lang('This Week')</option>
-            <option value="month">@lang('This Month')</option>
-            <option value="year" selected>@lang('This Year')</option>
+            <option value="month" selected>@lang('This Month')</option>
         </select>
         <select name="payment_status" class="widget_select text--white ms-1">
             <option value="" selected>@lang('All')</option>
@@ -182,6 +181,18 @@
         border-bottom: 1px solid #e5e5e5;
         padding: 31px 15px;
     }
+    .stat-card {
+        border-left: 4px solid transparent;
+        background: #fff;
+    }
+    .stat-card--payment-total { border-left-color: #6c5ce7; background: rgba(108, 92, 231, 0.06); }
+    .stat-card--payment-chargeback { border-left-color: #ff9f43; background: rgba(255, 159, 67, 0.08); }
+    .stat-card--payment-succeed { border-left-color: #28c76f; background: rgba(40, 199, 111, 0.08); }
+    .stat-card--payment-canceled { border-left-color: #ea5455; background: rgba(234, 84, 85, 0.08); }
+    .stat-card--withdraw-total { border-left-color: #00bcd4; background: rgba(0, 188, 212, 0.08); }
+    .stat-card--withdraw-pending { border-left-color: #ff9f43; background: rgba(255, 159, 67, 0.08); }
+    .stat-card--withdraw-approved { border-left-color: #5c7cfa; background: rgba(92, 124, 250, 0.08); }
+    .stat-card--withdraw-rejected { border-left-color: #ea5455; background: rgba(234, 84, 85, 0.08); }
     @media (max-width: 424px) {
         .widget-card { 
             padding: 15px 10px;  
@@ -230,6 +241,18 @@
         padding-left: 0;
         padding-right: 0;
     }
+    .report-card .card-body {
+        min-height: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .report-card canvas {
+        max-width: 100%;
+    }
+    .chart-empty {
+        font-size: 13px;
+    }
 </style>
 @endpush
 
@@ -247,74 +270,203 @@
         function statistics() {
             var url = "{{ route('user.dashboard.statistics') }}";
             var time = $('[name=payment_statistics] option:selected').val();
-            var text = $('[name=payment_statistics] option:selected').text();
             var status = $('[name=payment_status] option:selected').val();
 
             $.get(url, {
                 time: time,
                 status: status,
             }, function(response) {
-        
                 $('.html').html(response.view);
 
-                $('.payment_canvas').html(
-                    '<canvas height="190" id="payment_chart" class="mt-4"></canvas>'
-                )
-                $('.payment-statistics').removeClass('no-data-found').text('Payment Statistics');
+                renderPaymentTrend(response);
+                renderStatusCharts(response);
+            });
+        }
 
-                if(Object.keys(response.payments).length == 0){
-                    return $('.payment-statistics').addClass('no-data-found').text('No Data Found');
+        function renderPaymentTrend(response) {
+            var labels = response.series_labels || [];
+            var series = response.payment_series || {};
+
+            $('.payment_canvas').html(
+                '<canvas height="260" id="payment_chart" class="mt-4"></canvas>'
+            );
+            $('.payment-statistics').removeClass('no-data-found').text('Payment Statistics');
+
+            if (!labels.length) {
+                $('.payment-statistics').addClass('no-data-found').text('No Data Found');
+                return;
+            }
+
+            var palette = [
+                '#6c5ce7',
+                '#28c76f',
+                '#ff9f43',
+                '#ea5455',
+                '#00bcd4',
+                '#5c7cfa'
+            ];
+
+            var datasets = [];
+            var index = 0;
+            for (var name in series) {
+                if (!series.hasOwnProperty(name)) {
+                    continue;
                 }
-                
-                var ctx = document.getElementById('payment_chart');
-                var myChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: Object.keys(response.payments),
-                        datasets: [{
-                            data: Object.values(response.payments),
-                            backgroundColor: [
-                                @for ($i = 0; $i < 365; $i++)
-                                    '#6c5ce7',
-                                @endfor
+                var color = palette[index % palette.length];
+                datasets.push({
+                    label: name,
+                    data: series[name],
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    tension: 0.35
+                });
+                index += 1;
+            }
 
-                            ],
-                            borderColor: [
-                                'rgba(231, 80, 90, 0.75)'
-                            ],
-                            borderWidth: 0,
+            var ctx = document.getElementById('payment_chart');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        xAxes: [{
+                            display: true,
+                            gridLines: {
+                                display: false
+                            }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            ticks: {
+                                beginAtZero: true,
+                                callback: function(value) {
+                                    return value + ' {{ gs("cur_text") }}';
+                                }
+                            }
                         }]
                     },
-                    options: {
-                        aspectRatio: 1,
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        elements: {
-                            line: {
-                                tension: 0 // disables bezier curves
-                            }
-                        },
-                        scales: {
-                            xAxes: [{
-                                display: false
-                            }],
-                            yAxes: [{
-                                display: false
-                            }]
-                        },
-                        legend: {
-                            display: false,
-                        },
-                        tooltips: {
-                            callbacks: {
-                                label: (tooltipItem, data) => data.datasets[0].data[
-                                    tooltipItem.index] + ' {{ gs("cur_text") }}'
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10
+                        }
+                    },
+                    tooltips: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(tooltipItem, data) {
+                                var label = data.datasets[tooltipItem.datasetIndex].label || '';
+                                var value = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index] || 0;
+                                return label + ': ' + value + ' {{ gs("cur_text") }}';
                             }
                         }
                     }
-                });
+                }
+            });
+        }
+
+        function renderStatusCharts(response) {
+            var paymentSummary = response.payment_summary || {};
+            var withdrawSummary = response.withdraw_summary || {};
+
+            $('.reporting-charts .chart-empty').remove();
+            $('.payment-status-canvas').html('<canvas height="180" id="payment_status_chart"></canvas>');
+            $('.withdraw-status-canvas').html('<canvas height="180" id="withdraw_status_chart"></canvas>');
+
+            var paymentData = [
+                Number(paymentSummary.total_refunded || 0),
+                Number(paymentSummary.total_succeed || 0),
+                Number(paymentSummary.total_canceled || 0)
+            ];
+
+            var withdrawData = [
+                Number(withdrawSummary.total_pending || 0),
+                Number(withdrawSummary.total_approved || 0),
+                Number(withdrawSummary.total_rejected || 0)
+            ];
+
+            buildDoughnutChart(
+                'payment_status_chart',
+                paymentData,
+                ["@lang('Chargeback')", "@lang('Succeed')", "@lang('Canceled')"]
+            );
+
+            buildDoughnutChart(
+                'withdraw_status_chart',
+                withdrawData,
+                ["@lang('Pending')", "@lang('Approved')", "@lang('Rejected')"]
+            );
+        }
+
+        function buildDoughnutChart(canvasId, data, labels) {
+            var total = data.reduce(function(sum, value) {
+                return sum + value;
+            }, 0);
+
+            var chartData = data;
+            var chartLabels = labels;
+            var chartColors = ['#ff9f43', '#28c76f', '#ea5455'];
+            var showLegend = true;
+
+            if (total === 0) {
+                chartData = [1];
+                chartLabels = ['No Data'];
+                chartColors = ['#e5e5e5'];
+                showLegend = false;
+                $('#' + canvasId).closest('.card-body')
+                    .append('<p class="chart-empty text-muted mt-2 mb-0">No Data Found</p>');
+            }
+
+            var ctx = document.getElementById(canvasId);
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: chartColors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutoutPercentage: 70,
+                    legend: {
+                        display: showLegend,
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            fontSize: 11
+                        }
+                    },
+                    tooltips: {
+                        callbacks: {
+                            label: function(tooltipItem, data) {
+                                if (!showLegend) {
+                                    return data.labels[tooltipItem.index];
+                                }
+
+                                var label = data.labels[tooltipItem.index] || '';
+                                var value = data.datasets[0].data[tooltipItem.index] || 0;
+                                return label + ': ' + value + ' {{ gs("cur_text") }}';
+                            }
+                        }
+                    }
+                }
             });
         }
     </script>
 @endpush
-

@@ -13,11 +13,12 @@ use App\Lib\FileManager;
 use App\Notify\Notify;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
+use App\Models\StripeAccount;
 use Laramin\Utility\VugiChugi;
 
 function systemDetails()
 {
-    $system['name'] = 'paymenthub';
+    $system['name'] = 'ClickDigital.ma';
     $system['version'] = '2.0';
     $system['build_version'] = '5.0.9';
     return $system;
@@ -551,4 +552,35 @@ function paymentRedirectUrl($apiPayment, $success = true, $reason = null)
     }
     
     return $apiPayment->cancel_url;
+}
+
+function selectStripeAccount($deposit)
+{
+    $amount = (float) ($deposit->final_amount ?? 0);
+
+    $accounts = StripeAccount::active()->orderBy('id')->get();
+    if ($accounts->isEmpty()) {
+        return null;
+    }
+
+    $matched = $accounts->first(function ($account) use ($amount) {
+        $min = (float) $account->min_amount;
+        $max = (float) $account->max_amount;
+        $max = $max > 0 ? $max : null;
+        return $amount >= $min && ($max === null || $amount <= $max);
+    });
+
+    if ($matched) {
+        return $matched;
+    }
+
+    $key = 'stripe_accounts_rr_pointer';
+    $pointer = Cache::increment($key);
+    if (!$pointer) {
+        Cache::put($key, 1, now()->addDays(7));
+        $pointer = 1;
+    }
+
+    $index = ($pointer - 1) % $accounts->count();
+    return $accounts->values()->get($index);
 }

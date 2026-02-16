@@ -12,7 +12,8 @@ class Withdrawal extends Model
     use ExportData;
 
     protected $casts = [
-        'withdraw_information' => 'object'
+        'withdraw_information' => 'object',
+        'payout_date' => 'date',
     ];
 
     protected $hidden = [

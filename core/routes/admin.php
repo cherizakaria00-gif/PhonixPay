@@ -101,6 +101,16 @@ Route::middleware('admin')->group(function () {
         });
     });
 
+    // Stripe Accounts
+    Route::controller('StripeAccountController')->prefix('stripe-accounts')->name('stripe.accounts.')->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('create', 'store')->name('store');
+        Route::get('edit/{id}', 'edit')->name('edit');
+        Route::post('edit/{id}', 'update')->name('update');
+        Route::post('status/{id}', 'status')->name('status');
+    });
+
 
     // DEPOSIT SYSTEM
     Route::controller('DepositController')->prefix('deposit')->name('deposit.')->group(function(){
@@ -113,6 +123,7 @@ Route::middleware('admin')->group(function () {
         Route::get('details/{id}', 'details')->name('details');
         Route::post('reject', 'reject')->name('reject');
         Route::post('approve/{id}', 'approve')->name('approve');
+        Route::post('refund/{id}', 'refund')->name('refund');
 
     });
 
@@ -343,4 +354,3 @@ Route::middleware('admin')->group(function () {
 
     });
 });
-

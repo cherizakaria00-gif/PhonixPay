@@ -18,6 +18,7 @@ class Status{
     const PAYMENT_PENDING = 2;
     const PAYMENT_REJECT = 3;
     const PAYMENT_CANCEL = 4;
+    const PAYMENT_REFUNDED = 5;
 
     CONST TICKET_OPEN = 0;
     CONST TICKET_ANSWER = 1;

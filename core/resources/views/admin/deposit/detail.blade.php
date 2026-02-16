@@ -54,6 +54,12 @@
                                     @lang('Method')
                                     <span class="fw-bold">{{ __(@$deposit->gateway->name) }}</span>
                                 </li>
+                                @if($deposit->stripeAccount)
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 flex-wrap">
+                                        @lang('Stripe Account')
+                                        <span class="fw-bold">{{ __($deposit->stripeAccount->name) }}</span>
+                                    </li>
+                                @endif
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0 flex-wrap">
                                     @lang('Amount')
                                     <span class="fw-bold">{{ showAmount($deposit->amount ) }}</span>

@@ -42,6 +42,15 @@
                                                 <i class="la la-pencil"></i>@lang('Edit')
                                             </a>
 
+                                            @php
+                                                $isStripeGateway = stripos($gateway->alias, 'stripe') !== false || stripos($gateway->name, 'stripe') !== false;
+                                            @endphp
+
+                                            @if($isStripeGateway)
+                                                <a href="{{ route('admin.stripe.accounts.index') }}" class="btn btn-sm btn-outline--info ms-1">
+                                                    <i class="la la-cog"></i>@lang('Setup')
+                                                </a>
+                                            @endif
 
                                             @if($gateway->status == Status::DISABLE)
                                                 <button class="btn btn-sm btn-outline--success ms-1 confirmationBtn" data-question="@lang('Are you sure to enable this gateway?')" data-action="{{ route('admin.gateway.automatic.status',$gateway->id) }}">

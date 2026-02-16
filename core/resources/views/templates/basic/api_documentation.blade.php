@@ -2,6 +2,7 @@
 
 @php
     $pages = App\Models\Page::where('tempname', $activeTemplate)->where('is_default', \App\Constants\Status::NO)->get();
+    $apiBaseUrl = 'https://www.phonixpay.com';
 @endphp
 
 @push('style-lib')
@@ -23,10 +24,10 @@
 @endpush
 
 @section('app')
-<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#d83000]/30">
+<div class="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#d83000]/20">
     <nav class="absolute w-full z-50 top-3 md:top-4 left-0">
         <div class="max-w-7xl mx-auto px-6">
-            <div class="bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-4 md:px-6">
+            <div class="bg-black/70 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-4 md:px-6">
                 <div class="flex items-center gap-4 py-1.5">
                     <a href="{{ route('home') }}" class="flex items-center gap-3">
                         <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-7 w-auto">
@@ -189,11 +190,11 @@
                                     </p>
                                     <p>
                                         <strong>@lang('Live End Point:')</strong>
-                                        <span class="text--base"> {{ route('payment.initiate') }} </span>
+                                        <span class="text--base"> {{ $apiBaseUrl . route('payment.initiate', [], false) }} </span>
                                     </p>
                                     <p class="d-flex align-items-center flex-wrap gap-2">
                                         <strong>@lang('Test End Point:')</strong>
-                                        <span class="text--base responsive-text"> {{ route('test.payment.initiate') }}
+                                        <span class="text--base responsive-text"> {{ $apiBaseUrl . route('test.payment.initiate', [], false) }}
                                         </span>
                                     </p>
                                 </section>
@@ -615,10 +616,10 @@
     $parameters = http_build_query($parameters);
 
     //live end point
-    $url = '{{ route('payment.initiate') }}';
+    $url = '{{ $apiBaseUrl . route('payment.initiate', [], false) }}';
 
     //test end point
-    $url = '{{ route('test.payment.initiate') }}';
+    $url = '{{ $apiBaseUrl . route('test.payment.initiate', [], false) }}';
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
@@ -746,7 +747,7 @@
         </div>
     </main>
 
-    <footer class="bg-slate-950 border-t border-slate-800">
+    <footer class="bg-white border-t border-slate-200">
         <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
             <div class="mt-8 md:order-1 md:mt-0">
                 <p class="text-center text-xs leading-5 text-slate-500">
@@ -754,9 +755,9 @@
                 </p>
             </div>
             <div class="flex justify-center space-x-6 md:order-2">
-                <a href="{{ route('policy.pages', 'terms-of-service') }}" class="text-slate-400 hover:text-slate-300">Terms</a>
-                <a href="{{ route('policy.pages', 'privacy-policy') }}" class="text-slate-400 hover:text-slate-300">Privacy</a>
-                <a href="{{ route('api.documentation') }}" class="text-slate-400 hover:text-slate-300">API Docs</a>
+                <a href="{{ route('policy.pages', 'terms-of-service') }}" class="text-slate-600 hover:text-slate-800">Terms</a>
+                <a href="{{ route('policy.pages', 'privacy-policy') }}" class="text-slate-600 hover:text-slate-800">Privacy</a>
+                <a href="{{ route('api.documentation') }}" class="text-slate-600 hover:text-slate-800">API Docs</a>
             </div>
         </div>
     </footer>

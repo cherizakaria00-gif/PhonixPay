@@ -28,7 +28,7 @@
                                 </span>
                                 <br>
                                 @if(@$user->withdrawSetting->withdrawMethod->status == Status::ENABLE)
-                                @lang('You\'ve') <span class="text--success withdraw-detail__balance">@if(@$user->withdrawSetting->amount > $user->balance){{ showAmount($user->balance) }}@else{{ showAmount(@$user->withdrawSetting->amount) }}@endif </span> @lang('for payout to your wallet.')
+                                @lang('Available for payout') <span class="text--success withdraw-detail__balance">{{ showAmount($user->balance) }}</span>
                                 @else
                                 <p class="mt-2 withdraw-detail__desc">
                                     @lang('Please, setup the payout method for withdrawals.')
@@ -36,13 +36,63 @@
                                 @endif
                             </h3>
                             @if(@$user->withdrawSetting->withdrawMethod->status == Status::ENABLE)
-                                <h4 class="text-muted mt-3 withdraw-detail__desc">@lang('Next payout request will create') : 
-                                    <span class="text--primary" id="countdown">{{ showDateTime(@$user->withdrawSetting->next_withdraw_date, 'M d, Y') }}</span>
-                                </h4>
+                                @if($hasPendingWithdraw)
+                                    <h4 class="text-muted mt-3 withdraw-detail__desc">@lang('Next payout') :
+                                        <span class="text--primary">@lang('Pending approval')</span>
+                                    </h4>
+                                @else
+                                    <h4 class="text-muted mt-3 withdraw-detail__desc">@lang('Next payout date') :
+                                        <span class="text--primary">{{ showDateTime($nextPayoutDate, 'd M') }}</span>
+                                    </h4>
+                                @endif
+                                <div class="mt-3 payout-request">
+                                    <form action="{{ route('user.withdraw.request') }}" method="post">
+                                        @csrf
+                                        <div class="payout-request__group">
+                                            <div class="payout-request__amount">
+                                                <label class="form-label mb-1">@lang('Payout Amount')</label>
+                                                <input
+                                                    type="number"
+                                                    step="any"
+                                                    name="amount"
+                                                    class="form-control form--control"
+                                                    placeholder="@lang('Enter amount')"
+                                                    value="{{ old('amount', getAmount(@$user->withdrawSetting->amount)) }}"
+                                                    min="{{ getAmount(@$user->withdrawSetting->withdrawMethod->min_limit) }}"
+                                                    max="{{ getAmount(@$user->withdrawSetting->withdrawMethod->max_limit) }}"
+                                                    @disabled($hasPendingWithdraw || !$canRequestPayout)
+                                                >
+                                            </div>
+                                            <div class="payout-request__action">
+                                                <button class="btn btn--primary btn-sm" @disabled($hasPendingWithdraw || !$canRequestPayout)>
+                                                    {{ $hasPendingWithdraw ? __('Payout Pending') : __('Request Payout') }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted payout-request__hint">
+                                            @lang('Min') {{ showAmount(@$user->withdrawSetting->withdrawMethod->min_limit) }} /
+                                            @lang('Max') {{ showAmount(@$user->withdrawSetting->withdrawMethod->max_limit) }}
+                                        </small>
+                                    </form>
+                                </div>
                             @endif
                         </div>
                     </div>
                     <div class="col-md-4">
+                        <div class="d-flex justify-content-end mb-3">
+                            <div class="dropdown manage-payouts">
+                                <button class="btn btn--primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    @lang('Manage payouts')
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('user.withdraw.method') }}">
+                                            @lang('Add Withdraw Method')
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                         <div class="withdraw-method">
                             <h5 class="title mb-2">@lang('Payout Method')</h5>
                             @if(@$user->withdrawSetting->withdrawMethod->status == Status::ENABLE)
@@ -58,7 +108,6 @@
                             @else 
                                 <h6 class="mt-2 text-muted withdraw-detail__desc">@lang('You\'ve no payout method')</h6>
                             @endif
-                            <a class="btn btn--primary btn-sm mt-3" href="{{ route('user.withdraw.method') }}">@lang('Set Payout Method')</a>
                         </div>
                     </div>
                 </div>
@@ -66,154 +115,34 @@
         </div>
 
         <div class="col-12 mt-5">
-            <div class="filter-area mb-3">
-                <form action="" class="form">
-                    <div class="d-flex flex-wrap gap-4">
-                        <div class="flex-grow-1">
-                            <div class="custom-input-box trx-search">
-                                <label>@lang('Trx Number')</label>
-                                <input type="text" name="search" value="{{ $request->search }}" placeholder="@lang('Trx Number')">
-                                <button type="submit" class="icon-area">
-                                    <i class="las la-search"></i>
-                                </button>
-                            </div>
-                        </div> 
-                        <div class="flex-grow-1">
-                            <div class="custom-input-box trx-search">
-                                <label>@lang('Date')</label>
-                                <input name="date" type="search" class="datepicker-here date-range" placeholder="@lang('Start Date - End Date')" autocomplete="off" value="{{ request()->date }}">
-                                <button type="submit" class="icon-area">
-                                    <i class="las la-search"></i>
-                                </button>
-                            </div>
-                        </div> 
-                        <div class="flex-grow-1"> 
-                            <div class="custom-input-box">
-                                <label>@lang('Gateway')</label> 
-                                <select name="method_id">
-                                    <option value="">@lang('All')</option> 
-                                    @foreach ($gateways as $data) 
-                                        <option value="{{ @$data->method_id }}" @selected($request->method_id == @$data->method_id)>
-                                            {{ __(@$data->method->name) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="custom-input-box">
-                                <label>@lang('Status')</label>
-                                <select name="status">
-                                    <option value="">@lang('All')</option> 
-                                    <option value="pending" @selected($request->status == 'pending')>@lang('Pending')</option> 
-                                    <option value="approved" @selected($request->status == 'approved')>@lang('Approved')</option> 
-                                    <option value="rejected" @selected($request->status == 'rejected')>@lang('Rejected')</option> 
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="row text-end mb-3">
-                <div class="col-lg-12 d-flex flex-wrap justify-content-end">
-                    <x-export />
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-12">
             <div class="card custom--card border-0">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">@lang('Payout History')</h5>
+                </div>
                 <div class="card-body p-0">
-                    <div class="accordion table--acordion" id="transactionAccordion">
-                        @forelse ($withdraws as $withdraw)
-                        <div class="accordion-item transaction-item 
-                        @if($withdraw->status == Status::PAYMENT_PENDING)
-                            trx-warning-badge
-                        @elseif($withdraw->status == Status::PAYMENT_SUCCESS)
-                            trx-success-badge
-                        @elseif($withdraw->status == Status::PAYMENT_REJECT)
-                            trx-danger-badge
-                        @endif
-                        ">
-                            <h2 class="accordion-header" id="h-{{ $loop->iteration }}">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                    data-bs-target="#c-{{ $loop->iteration }}" aria-expanded="false"
-                                    aria-controls="c-1">
-                                    <div class="col-lg-3 col-sm-4 col-6 order-1 icon-wrapper">
-                                        <div class="left">
-                                            <div class="icon rotate-none">
-                                                @if($withdraw->status == Status::PAYMENT_PENDING)
-                                                    <i class="las la-spinner text--warning"></i>
-                                                @elseif($withdraw->status == Status::PAYMENT_SUCCESS)
-                                                    <i class="las la-check text--success"></i>
-                                                @elseif($withdraw->status == Status::PAYMENT_REJECT)
-                                                    <i class="las la-times text--danger"></i>
-                                                @endif
-                                            </div>
-                                            <div class="content">
-                                                <h6 class="trans-title">{{ $withdraw->trx }}</h6>
-                                                <span class="text-muted font-size--14px mt-2">{{ showDateTime(@$withdraw->created_at, 'M d Y @g:i:a') }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-sm-5 col-12 order-sm-2 order-3 content-wrapper mt-sm-0 mt-3">
-                                        <p class="text-muted font-size--14px">
-                                            <b>@lang('Withdraw processed via') {{ __(@$withdraw->method->name) }}</b>
-                                            <p class="mt-1"><small>@lang('Requestd by System')</small></p>
-                                        </p>
-                                    </div>
-                                    <div class="col-lg-3 col-sm-3 col-6 order-sm-3 order-2 text-end amount-wrapper">
-                                        <p><b>{{ showAmount(@$withdraw->amount) }}</b></p>
-                                    </div>
-                                </button>
-                            </h2> 
-                            <div id="c-{{ $loop->iteration }}" class="accordion-collapse collapse" aria-labelledby="h-1" data-bs-parent="#transactionAccordion">
-                                <div class="accordion-body">
-                                    <ul class="caption-list">                           
-                                        <li>
-                                            <span class="caption">@lang('Gateway | Currency')</span>
-                                            <span class="value">{{ __(@$withdraw->method->name) }} - {{ __($withdraw->currency) }}</span>
-                                        </li>  
-                                        <li>
-                                            <span class="caption">@lang('Amount')</span>
-                                            <span class="value">{{ showAmount($withdraw->amount) }}</span>
-                                        </li>
-                                        <li>
-                                            <span class="caption">@lang('Charge')</span>
-                                            <span class="value">{{ showAmount($withdraw->charge) }}</span>
-                                        </li>
-                                        <li>
-                                            <span class="caption">@lang('After Charge')</span>
-                                            <span class="value">{{ showAmount($withdraw->amount - $withdraw->charge) }}</span>
-                                        </li>
-                                        <li>
-                                            <span class="caption">@lang('Currency Conversion')</span>
-                                            <span class="value">{{ showAmount($withdraw->amount - $withdraw->charge) }} x {{ showAmount($withdraw->rate, currencyFormat:false) }} {{ __($withdraw->currency) }} = {{ showAmount($withdraw->final_amount, currencyFormat:false) }} {{ __($withdraw->currency) }}</span>
-                                        </li>
-                                        <li>
-                                            <span class="caption">@lang('Withdraw Details')</span>
-                                            <span class="value">
-                                                <a href="javascript:void(0)" class="detailBtn"
-                                                    data-user_data="{{ json_encode($withdraw->withdraw_information) }}"
-                                                    @if ($withdraw->status == Status::PAYMENT_REJECT)
-                                                        data-admin_feedback="{{ $withdraw->admin_feedback }}"
-                                                    @endif
-                                                >@lang('See Withdraw Details')</a>
-                                            </span>
-                                        </li>
-                                        <li>
-                                            <span class="caption">@lang('Status')</span>
-                                            <span class="value">@php echo $withdraw->statusBadge @endphp</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        @empty
-                        <div class="accordion-body text-center">
-                            <x-empty-message h4="{{ true }}" />
-                        </div>
-                        @endforelse
+                    <div class="table-responsive--sm table-responsive">
+                        <table class="table table--light style--two">
+                            <thead>
+                                <tr>
+                                    <th>@lang('Date')</th>
+                                    <th>@lang('Amount')</th>
+                                    <th>@lang('Status')</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($withdraws as $withdraw)
+                                    <tr>
+                                        <td>{{ showDateTime(@$withdraw->created_at, 'd M Y') }}</td>
+                                        <td><strong>{{ showAmount(@$withdraw->amount) }}</strong></td>
+                                        <td>@php echo $withdraw->statusBadge @endphp</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td class="text-muted text-center" colspan="100%">{{ __('Data not found') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div><!-- custom--card end -->
@@ -229,29 +158,7 @@
     </div>
 </div>
 
-<div id="detailModal" class="modal fade" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h6 class="modal-title">@lang('Withdraw Details')</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <ul class="list-group list-group-flush userData mb-2">
-                </ul>
-                <div class="feedback"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn--dark btn-sm" data-bs-dismiss="modal">@lang('Close')</button>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
-
-@push('style-lib')
-    <link rel="stylesheet" type="text/css" href="{{ asset('assets/admin/css/daterangepicker.css') }}">
-@endpush
 
 @push('style')
 <style>
@@ -315,116 +222,30 @@
         max-width: 80px;
         max-height: 80px;
     }
+    .payout-request__group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+    }
+    .payout-request__amount {
+        flex: 1 1 220px;
+    }
+    .payout-request__amount .form--control {
+        height: 44px;
+    }
+    .payout-request__action .btn {
+        height: 44px;
+        padding-inline: 20px;
+    }
+    .payout-request__hint {
+        display: inline-block;
+        margin-top: 8px;
+    }
+    .manage-payouts .dropdown-menu {
+        min-width: 210px;
+    }
 
 
 </style>
 @endpush
-
-@push('script-lib')
-    <script src="{{ asset('assets/admin/js/moment.min.js') }}"></script>
-    <script src="{{ asset('assets/admin/js/daterangepicker.min.js') }}"></script>
-@endpush
-
-@push('script')
-    <script>
-        (function ($) {
-            "use strict";
-
-            @if(@$user->withdrawSetting->withdrawMethod->status == Status::ENABLE)
-
-                var countDownDate = new Date("{{ showDateTime(@$user->withdrawSetting->next_withdraw_date, 'M d, Y') }}").getTime();
-                var x = setInterval(function() {
-                var now = new Date().getTime();
-                var distance = countDownDate - now;
-                    
-                var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                    
-                document.getElementById("countdown").innerHTML = days + "d " + hours + "h "+ minutes + "m " + seconds + "s ";
-                    
-                if (distance < 0) {
-                    clearInterval(x);
-                    document.getElementById("countdown").innerHTML = "Created";
-                }
-                }, 1000);
-
-            @endif
-
-            $('.detailBtn').on('click', function () {
-                var modal = $('#detailModal');
-                var userData = $(this).data('user_data');
-                var html = ``;
-                userData.forEach(element => {
-                    if(element.type != 'file'){
-                        html += `
-                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                            <span class='fw-bold'>${element.name}</span>
-                            <span">${element.value}</span>
-                        </li>`;
-                    }
-                });
-
-                if(!html){
-                    html = `<span class='text-center'>@lang('No data found')</span>`;
-                }
-
-                modal.find('.userData').html(html);
-
-                if($(this).data('admin_feedback') != undefined){
-                    var adminFeedback = `
-                        <div class="ms-3 border-line-area style-two">
-                            <div class="border-line-title-wrapper">
-                                <strong class="border-line-title">@lang('Admin Feedback')</strong>
-                            </div>
-                            <p class="text-start">${$(this).data('admin_feedback')}</p>
-                        </div>
-                    `;
-                }else{
-                    var adminFeedback = '';
-                }
-
-                modal.find('.feedback').html(adminFeedback);
-                modal.modal('show');
-            });
-
-            $('[name=method_currency], [name=method_id], [name=status]').on('change', function(){
-                $('.form').submit();
-            })
-
-            const datePicker = $('.date-range').daterangepicker({
-                autoUpdateInput: false,
-                locale: {
-                    cancelLabel: 'Clear'
-                },
-                showDropdowns: true,
-                ranges: {
-                    'Today': [moment(), moment()],
-                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                    'Last 15 Days': [moment().subtract(14, 'days'), moment()],
-                    'Last 30 Days': [moment().subtract(30, 'days'), moment()],
-                    'This Month': [moment().startOf('month'), moment().endOf('month')],
-                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
-                    'Last 6 Months': [moment().subtract(6, 'months').startOf('month'), moment().endOf('month')],
-                    'This Year': [moment().startOf('year'), moment().endOf('year')],
-                },
-                maxDate: moment()
-            });
-
-            const changeDatePickerText = (event, startDate, endDate) => {
-                $(event.target).val(startDate.format('MMMM DD, YYYY') + ' - ' + endDate.format('MMMM DD, YYYY'));
-            }
-
-            $('.date-range').on('apply.daterangepicker', (event, picker) => changeDatePickerText(event, picker.startDate, picker.endDate));
-
-            if ($('.date-range').val()) {
-                let dateRange = $('.date-range').val().split(' - ');
-                $('.date-range').data('daterangepicker').setStartDate(new Date(dateRange[0]));
-                $('.date-range').data('daterangepicker').setEndDate(new Date(dateRange[1]));
-            }
-        })(jQuery);
-    </script>
-@endpush
-

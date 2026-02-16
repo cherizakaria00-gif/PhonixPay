@@ -20,13 +20,6 @@
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive(['user.gateway.methods']) }}">
-                <a href="{{ route('user.gateway.methods') }}" class="sidebar-menu__link">
-                    <i class="las la-credit-card"></i>
-                    @lang('Gateway Methods')
-                </a>
-            </li>
-
             <li class="sidebar-menu__item {{ menuActive('user.calculate.charge') }}">
                 <a href="{{ route('user.calculate.charge') }}" class="sidebar-menu__link">
                     <i class="las la-calculator"></i>

@@ -13,6 +13,10 @@
                             @lang('Date')
                             <span class="fw-bold">{{ showDateTime($withdrawal->created_at) }}</span>
                         </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            @lang('Payout Date')
+                            <span class="fw-bold">{{ showDateTime($withdrawal->payout_date ?? $withdrawal->created_at, 'd M Y') }}</span>
+                        </li>
 
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             @lang('Trx Number')

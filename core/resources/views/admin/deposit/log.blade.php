@@ -32,8 +32,18 @@
                             @endphp
                             <tr>
                                 <td>
-                                     <span class="fw-bold"> <a href="{{ appendQuery('method',@$deposit->gateway->alias) }}">{{ __(@$deposit->gateway->name) }}</a> </span>
-                                     <br>
+                                    @php
+                                        $isStripeGateway = stripos($deposit->gateway->alias, 'stripe') !== false || stripos($deposit->gateway->name, 'stripe') !== false;
+                                    @endphp
+                                    @if($isStripeGateway)
+                                        <span class="fw-bold">
+                                            <a href="{{ appendQuery('method',@$deposit->gateway->alias) }}">{{ __($deposit->stripeAccount->name ?? 'Stripe') }}</a>
+                                        </span>
+                                        <br>
+                                    @else
+                                        <span class="fw-bold"> <a href="{{ appendQuery('method',@$deposit->gateway->alias) }}">{{ __(@$deposit->gateway->name) }}</a> </span>
+                                        <br>
+                                    @endif
                                      <small> {{ $deposit->trx }} </small>
                                 </td>
 
@@ -67,6 +77,13 @@
                                        class="btn btn-sm btn-outline--primary ms-1">
                                         <i class="la la-desktop"></i> @lang('Details')
                                     </a>
+                                    @if($isStripeGateway && $deposit->status == \App\Constants\Status::PAYMENT_SUCCESS)
+                                        <button class="btn btn-sm btn-outline--danger ms-1 confirmationBtn"
+                                                data-question="@lang('Are you sure to refund this payment?')"
+                                                data-action="{{ route('admin.deposit.refund', $deposit->id) }}">
+                                            <i class="la la-undo"></i> @lang('Refund')
+                                        </button>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
@@ -86,6 +103,7 @@
         </div><!-- card end -->
     </div>
 </div>
+<x-confirmation-modal />
 @endsection
 
 @push('breadcrumb-plugins')

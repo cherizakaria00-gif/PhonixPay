@@ -89,100 +89,74 @@
     <div class="col-md-12">
         <div class="card custom--card border-0">
             <div class="card-body p-0">
-                <div class="accordion table--acordion" id="transactionAccordion">
-                    @forelse ($deposits as $deposit)
-                    <div class="accordion-item transaction-item
-                    @if($deposit->status == Status::PAYMENT_INITIATE)
-                    trx-dark-badge
-                    @elseif($deposit->status == Status::PAYMENT_SUCCESS)
-                    trx-success-badge
-                    @elseif($deposit->status == Status::PAYMENT_REJECT)
-                    trx-danger-badge
-                    @endif
-                    ">
-                        <h2 class="accordion-header" id="h-{{ $loop->iteration }}">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#c-{{ $loop->iteration }}" aria-expanded="false"
-                                aria-controls="c-1">
-                                <div class="col-lg-3 col-sm-4 col-6 order-1 icon-wrapper">
-                                    <div class="left">
-                                        <div class="icon rotate-none">
-                                            @if($deposit->status == Status::PAYMENT_INITIATE)
-                                                <i class="las la-plus text--dark"></i>
-                                            @elseif($deposit->status == Status::PAYMENT_SUCCESS)
-                                                <i class="las la-check text--success"></i>
-                                            @elseif($deposit->status == Status::PAYMENT_REJECT)
-                                                <i class="las la-times text--danger"></i>
-                                            @endif
+                <div class="table-responsive">
+                    <table class="table table--light style--two deposit-table">
+                        <thead>
+                            <tr>
+                                <th>@lang('Amount')</th>
+                                <th>@lang('Fee')</th>
+                                <th>@lang('Status')</th>
+                                <th>@lang('Name')</th>
+                                <th>@lang('Email')</th>
+                                <th>@lang('Mobile')</th>
+                                <th>@lang('Date')</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($deposits as $deposit)
+                                @php
+                                    $statusLabel = 'Initiated';
+                                    $statusClass = 'dark';
+                                    if ($deposit->status == Status::PAYMENT_SUCCESS) {
+                                        $statusLabel = 'Succeeded';
+                                        $statusClass = 'success';
+                                    } elseif ($deposit->status == Status::PAYMENT_REFUNDED) {
+                                        $statusLabel = 'Refunded';
+                                        $statusClass = 'warning';
+                                    } elseif ($deposit->status == Status::PAYMENT_REJECT) {
+                                        $statusLabel = 'Canceled';
+                                        $statusClass = 'danger';
+                                    }
+                                    $fee = $deposit->totalCharge ?? 0;
+                                    $customer = $deposit->apiPayment->customer ?? null;
+                                    $customerName = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+                                    $customerEmail = $customer->email ?? null;
+                                    $customerPhone = $customer->mobile ?? null;
+                                @endphp
+                                <tr>
+                                    <td>
+                                        <div class="amount-cell">
+                                            <span class="amount text--success">{{ showAmount(@$deposit->amount) }}</span>
                                         </div>
-                                        <div class="content">
-                                            <h6 class="trans-title">{{ $deposit->trx }}</h6>
-                                            <span class="text-muted font-size--14px mt-2">{{ showDateTime(@$deposit->created_at, 'M d Y @g:i:a') }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div
-                                    class="col-lg-6 col-sm-5 col-12 order-sm-2 order-3 content-wrapper mt-sm-0 mt-3">
-                                    <p class="text-muted font-size--14px">
-                                        <b>@lang('Payment processed via') {{ __(@$deposit->gateway->name) }}</b>
-                                        <p class="mt-1"><small>@lang('Requestd by') <b>{{ @$deposit->apiPayment->customer->first_name.' '.@$deposit->apiPayment->customer->first_name }}</b> (<a href="mailto:{{ @$deposit->apiPayment->customer->email }}">{{ @$deposit->apiPayment->customer->email }}</a>)</small></p>
-                                    </p>
-                                </div>
-                                <div class="col-lg-3 col-sm-3 col-6 order-sm-3 order-2 text-end amount-wrapper">
-                                    <p><b>{{ showAmount(@$deposit->amount) }}</b></p>
-                                </div>
-                            </button>
-                        </h2>
-                        <div id="c-{{ $loop->iteration }}" class="accordion-collapse collapse" aria-labelledby="h-1" data-bs-parent="#transactionAccordion">
-                            <div class="accordion-body">
-                                <ul class="caption-list">
-                                    <li>
-                                        <span class="caption">@lang('Gateway | Currency')</span>
-                                        <span class="value">{{ __(@$deposit->gateway->name) }} - {{ __($deposit->method_currency) }}</span>
-                                    </li>
-                                    <li>
-                                        <span class="caption">@lang('Amount')</span>
-                                        <span class="value">{{ showAmount($deposit->amount) }}</span>
-                                    </li>
-                                    <li>
-                                        <span class="caption">@lang('Charge')</span>
-                                        <span class="value">{{ showAmount($deposit->totalCharge) }}</span>
-                                    </li>
-                                    <li>
-                                        <span class="caption">@lang('After Charge')</span>
-                                        <span class="value">{{ showAmount($deposit->amount - $deposit->totalCharge) }}</span>
-                                    </li>
-                                    <li>
-                                        <span class="caption">@lang('Currency Conversion')</span>
-                                        <span class="value">{{ showAmount($deposit->amount - $deposit->totalCharge) }} x {{ showAmount($deposit->rate, currencyFormat:false) }} {{ __($deposit->method_currency) }} = {{ showAmount($deposit->final_amount, currencyFormat:false) }} {{ __($deposit->method_currency) }}</span>
-                                    </li>
-                                    <li>
-                                        <span class="caption">@lang('Site Name')</span>
-                                        <span class="value">{{ @$deposit->apiPayment->site_name }}</span>
-                                    </li>
-                                    <li>
-                                        <span class="caption">@lang('Payment Details')</span>
-                                        <span class="value"><a href="javascript:void(0)" class="detailBtn" data-payment="{{ $deposit->apiPayment }}">@lang('See Payment Details')</a></span>
-                                    </li>
-                                    <li>
-                                        <span class="caption">@lang('Status')</span>
-                                        <span class="value">@php echo $deposit->statusBadge @endphp</span>
-                                    </li>
-                                    @if($deposit->status == Status::PAYMENT_REJECT && @$deposit->apiPayment->cancel_reason)
-                                    <li>
-                                        <span class="caption">@lang('Reason')</span>
-                                        <span class="value">{{ @$deposit->apiPayment->cancel_reason }}</span>
-                                    </li>
-                                    @endif
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    @empty
-                    <div class="accordion-body text-center">
-                        <x-empty-message h4="{{ true }}" />
-                    </div>
-                    @endforelse
+                                    </td>
+                                    <td>
+                                        @if($fee > 0)
+                                            {{ showAmount($fee) }}
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge badge--{{ $statusClass }}">{{ __($statusLabel) }}</span>
+                                    </td>
+                                    <td>{{ $customerName ?: __('N/A') }}</td>
+                                    <td>
+                                        @if($customerEmail)
+                                            <a href="mailto:{{ $customerEmail }}">{{ $customerEmail }}</a>
+                                        @else
+                                            {{ __('N/A') }}
+                                        @endif
+                                    </td>
+                                    <td>{{ $customerPhone ?: __('N/A') }}</td>
+                                    <td>{{ showDateTime(@$deposit->created_at, 'M d, Y @g:i A') }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td class="text-muted text-center" colspan="100%">{{ __('Data not found') }}</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div><!-- custom--card end -->
@@ -250,6 +224,29 @@
 <style>
     .capitalize{
         text-transform: capitalize;
+    }
+    .deposit-table th,
+    .deposit-table td {
+        vertical-align: middle;
+        font-size: 14px;
+    }
+    .deposit-table td {
+        padding-top: 16px;
+        padding-bottom: 16px;
+    }
+    .amount-cell .amount {
+        font-weight: 600;
+        font-size: 15px;
+    }
+    .deposit-table .badge {
+        font-weight: 600;
+        font-size: 12px;
+    }
+    .deposit-table thead th {
+        white-space: nowrap;
+    }
+    .deposit-table a {
+        color: #5c7cfa;
     }
 </style>
 @endpush
@@ -349,7 +346,3 @@
         })(jQuery);
     </script>
 @endpush
-
-
-
-

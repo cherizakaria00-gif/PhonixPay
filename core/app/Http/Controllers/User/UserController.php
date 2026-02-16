@@ -54,7 +54,7 @@ class UserController extends Controller
         $deposits = Deposit::where('user_id', $user->id)->when($scope, function($query) use ($scope){
                 $query->$scope();
             })->searchable(['trx'])->filter(['method_currency', 'gateway:method_code'])->dateFilter()
-        ->with(['gateway', 'apiPayment'])->orderBy('id','desc');
+        ->with(['gateway', 'apiPayment', 'stripeAccount'])->orderBy('id','desc');
 
         if($request->export_type){
             return $deposits->export();
@@ -301,30 +301,54 @@ class UserController extends Controller
 
         $user = auth()->user();
 
-        $payments = Deposit::where('user_id',$user->id); 
+        $buildSeries = function ($query) use ($time, $type) {
+            $data = $query->where('created_at', '>=', $time)
+                ->selectRaw("SUM(amount) as amount, $type(created_at) as date")
+                ->groupBy('date')
+                ->get();
 
-        $status = $request->status; 
-        if($status){
-            $payments = $payments->$status();
-        }    
+            return $data->mapWithKeys(function ($row) use ($type) {
+                $date = $row->date;
+                if ($type == 'hour') {
+                    $date = date("g A", mktime($row->date));
+                }
 
-        $payments = $payments->where('created_at', '>=', $time)->selectRaw("SUM(amount) as amount, $type(created_at) as date")->groupBy('date')->get();
-        $totalPayments = $payments->sum('amount');
-        
-        $payments = $payments->mapWithKeys(function($order) use ($type){  
-            $date = $order->date;
+                return [
+                    $date => (int) $row->amount
+                ];
+            });
+        };
 
-            if($type == 'hour'){
-                $date = date("g A", mktime($order->date));
-            }
+        $paymentsTotalSeries = $buildSeries(Deposit::where('user_id', $user->id));
+        $paymentsSucceedSeries = $buildSeries(Deposit::where('user_id', $user->id)->successful());
+        $paymentsChargebackSeries = $buildSeries(Deposit::where('user_id', $user->id)->where('status', Status::PAYMENT_REFUNDED));
+        $paymentsCanceledSeries = $buildSeries(Deposit::where('user_id', $user->id)->rejected());
+        $withdrawTotalSeries = $buildSeries(Withdrawal::where('user_id', $user->id));
+        $withdrawApprovedSeries = $buildSeries(Withdrawal::where('user_id', $user->id)->approved());
 
-            return [
-                $date => (int) $order->amount
-            ];
-        });
+        $labels = collect()
+            ->merge($paymentsTotalSeries->keys())
+            ->merge($paymentsSucceedSeries->keys())
+            ->merge($paymentsChargebackSeries->keys())
+            ->merge($paymentsCanceledSeries->keys())
+            ->merge($withdrawTotalSeries->keys())
+            ->merge($withdrawApprovedSeries->keys())
+            ->unique()
+            ->values();
+
+        $paymentSeries = [
+            'Payments Total' => $labels->map(fn($label) => $paymentsTotalSeries[$label] ?? 0)->all(),
+            'Payments Succeed' => $labels->map(fn($label) => $paymentsSucceedSeries[$label] ?? 0)->all(),
+            'Payment Chargeback' => $labels->map(fn($label) => $paymentsChargebackSeries[$label] ?? 0)->all(),
+            'Payments Canceled' => $labels->map(fn($label) => $paymentsCanceledSeries[$label] ?? 0)->all(),
+            'Total Withdraws' => $labels->map(fn($label) => $withdrawTotalSeries[$label] ?? 0)->all(),
+            'Approved Withdraws' => $labels->map(fn($label) => $withdrawApprovedSeries[$label] ?? 0)->all(),
+        ];
+
+        $totalPayments = $paymentsTotalSeries->sum();
 
         $payment['total'] = Deposit::where('user_id', $user->id)->where('created_at', '>=', $time)->sum('amount');
-        $payment['total_initiated'] = Deposit::where('user_id', $user->id)->initiated()->where('created_at', '>=', $time)->sum('amount');
+        $payment['total_refunded'] = Deposit::where('user_id', $user->id)->where('status', Status::PAYMENT_REFUNDED)->where('created_at', '>=', $time)->sum('amount');
         $payment['total_succeed'] = Deposit::where('user_id', $user->id)->successful()->where('created_at', '>=', $time)->sum('amount');
         $payment['total_canceled'] = Deposit::where('user_id', $user->id)->rejected()->where('created_at', '>=', $time)->sum('amount');
      
@@ -334,8 +358,11 @@ class UserController extends Controller
         $withdraw['total_rejected'] = Withdrawal::where('user_id', $user->id)->rejected()->where('created_at', '>=', $time)->sum('amount'); 
 
         return [
-            'payments'=>$payments,
+            'series_labels' => $labels->all(),
+            'payment_series' => $paymentSeries,
             'total_payments'=>$totalPayments,
+            'payment_summary'=>$payment,
+            'withdraw_summary'=>$withdraw,
             'view'=>view('Template::partials.dashboard_statistics', compact('payment', 'withdraw'))->render(),
         ];
     }

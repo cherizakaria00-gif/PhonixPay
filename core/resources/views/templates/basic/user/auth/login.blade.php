@@ -20,14 +20,36 @@
         .sidebar-overlay,
         .scroll-top { display: none !important; }
 
-        .new-auth { font-family: 'Inter', sans-serif; }
+        .new-auth {
+            font-family: 'Inter', sans-serif;
+            --input-bg: #0b1220;
+            --input-fg: #ffffff;
+            --input-border: #1f2a44;
+            --input-placeholder: #94a3b8;
+        }
+        .new-auth.light-inputs {
+            --input-bg: #ffffff;
+            --input-fg: #0b1220;
+            --input-border: #e2e8f0;
+            --input-placeholder: #64748b;
+        }
         .new-auth .form--control {
-            background: #0b1220;
-            border: 1px solid #1f2a44;
-            color: #ffffff;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--input-fg);
             padding: 12px 14px;
             border-radius: 12px;
             width: 100%;
+        }
+        .new-auth .form--control::placeholder {
+            color: var(--input-placeholder);
+        }
+        .new-auth .form--control:-webkit-autofill,
+        .new-auth .form--control:-webkit-autofill:hover,
+        .new-auth .form--control:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--input-fg);
+            transition: background-color 9999s ease-in-out 0s;
+            box-shadow: 0 0 0 1000px var(--input-bg) inset;
         }
         .new-auth .form--control:focus {
             border-color: #6366f1;

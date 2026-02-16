@@ -50,9 +50,9 @@ class DepositController extends Controller
     protected function depositData($scope = null,$summary = false,$userId = null, $pageTitle)
     {  
         if ($scope) {
-            $deposits = Deposit::$scope()->with(['user', 'gateway']);
+            $deposits = Deposit::$scope()->with(['user', 'gateway', 'stripeAccount']);
         }else{
-            $deposits = Deposit::with(['user', 'gateway']);
+            $deposits = Deposit::with(['user', 'gateway', 'stripeAccount']);
         }
 
         if ($userId) {
@@ -99,10 +99,40 @@ class DepositController extends Controller
 
     public function details($id)
     {
-        $deposit = Deposit::where('id', $id)->with(['user', 'gateway'])->firstOrFail();
+        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount'])->firstOrFail();
         $pageTitle = $deposit->user->username.' requested ' . showAmount($deposit->amount);
         $details = ($deposit->detail != null) ? json_encode($deposit->detail) : null;
         return view('admin.deposit.detail', compact('pageTitle', 'deposit','details'));
+    }
+
+    public function refund($id)
+    {
+        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount'])->firstOrFail();
+
+        if ($deposit->status == Status::PAYMENT_REFUNDED) {
+            $notify[] = ['error', 'This payment is already refunded'];
+            return back()->withNotify($notify);
+        }
+
+        if ($deposit->status != Status::PAYMENT_SUCCESS) {
+            $notify[] = ['error', 'Only successful payments can be refunded'];
+            return back()->withNotify($notify);
+        }
+
+        $isStripeGateway = stripos($deposit->gateway->alias, 'stripe') !== false || stripos($deposit->gateway->name, 'stripe') !== false;
+        if (!$isStripeGateway) {
+            $notify[] = ['error', 'Refund is only available for Stripe payments'];
+            return back()->withNotify($notify);
+        }
+
+        $refunded = PaymentController::refundUserData($deposit, 'Refunded by admin');
+        if (!$refunded) {
+            $notify[] = ['error', 'Local refund update failed'];
+            return back()->withNotify($notify);
+        }
+
+        $notify[] = ['success', 'Refund recorded successfully'];
+        return back()->withNotify($notify);
     }
 
 

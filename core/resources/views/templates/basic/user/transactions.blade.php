@@ -72,65 +72,75 @@
         <div class="col-12">
             <div class="card custom--card border-0">
                 <div class="card-body p-0">
-                    <div class="accordion table--acordion" id="transactionAccordion">
-                        @forelse ($transactions as $trx)
-                            <div class="accordion-item transaction-item {{ @$trx->trx_type == '-' ? 'sent-item' : 'rcv-item' }}">
-                                <h2 class="accordion-header" id="h-{{ $loop->iteration }}">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#c-{{ $loop->iteration }}" aria-expanded="false"
-                                        aria-controls="c-1">
-                                        <div class="col-lg-3 col-sm-4 col-6 order-1 icon-wrapper">
-                                            <div class="left">
-                                                <div class="icon">
-                                                    <i class="las la-long-arrow-alt-right text--{{ @$trx->trx_type == '+' ? 'success' : 'danger' }}"></i>
-                                                </div>
-                                                <div class="content">
-                                                    <h6 class="trans-title">
-                                                        {{ __(ucwords(str_replace('_', ' ', @$trx->remark))) }}</h6>
-                                                    <span
-                                                        class="text-muted font-size--14px mt-2">{{ showDateTime(@$trx->created_at, 'M d Y @g:i:a') }}</span>
-                                                </div>
+                    <div class="table-responsive">
+                        <table class="table table--light style--two transaction-table">
+                            <thead>
+                                <tr>
+                                    <th>@lang('Amount')</th>
+                                    <th>@lang('Fee')</th>
+                                    <th>@lang('Status')</th>
+                                    <th>@lang('Customer')</th>
+                                    <th>@lang('Date')</th>
+                                    <th>@lang('Description')</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($transactions as $trx)
+                                    @php
+                                        $statusLabel = 'Succeeded';
+                                        $statusClass = 'success';
+                                        if (@$trx->remark === 'refund') {
+                                            $statusLabel = 'Refunded';
+                                            $statusClass = 'warning';
+                                        } elseif (@$trx->remark === 'withdraw') {
+                                            $statusLabel = 'Pending';
+                                            $statusClass = 'warning';
+                                        } elseif (@$trx->remark === 'withdraw_reject') {
+                                            $statusLabel = 'Rejected';
+                                            $statusClass = 'danger';
+                                        } elseif (in_array(@$trx->remark, ['gateway_charge', 'payment_charge'])) {
+                                            $statusLabel = 'Fee';
+                                            $statusClass = 'info';
+                                        } elseif (@$trx->trx_type === '-') {
+                                            $statusLabel = 'Debit';
+                                            $statusClass = 'danger';
+                                        }
+
+                                        $amountPrefix = @$trx->trx_type === '-' ? '-' : '+';
+                                        $amountClass = @$trx->trx_type === '-' ? 'text--danger' : 'text--success';
+                                        $customerLabel = auth()->user()->email ?? auth()->user()->username;
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <div class="amount-cell">
+                                                <span class="amount {{ $amountClass }}">
+                                                    {{ $amountPrefix }}{{ showAmount(@$trx->amount) }}
+                                                </span>
                                             </div>
-                                        </div>
-                                        <div class="col-lg-6 col-sm-5 col-12 order-sm-2 order-3 content-wrapper mt-sm-0 mt-3">
-                                            <p class="text-muted font-size--14px"><b>{{ __(@$trx->details) }}</b></p>
-                                        </div>
-                                        <div class="col-lg-3 col-sm-3 col-6 order-sm-3 order-2 text-end amount-wrapper">
-                                            <p><b>{{ showAmount(@$trx->amount) }}</b></p>
-                                        </div>
-                                    </button>
-                                </h2>
-                                <div id="c-{{ $loop->iteration }}" class="accordion-collapse collapse" aria-labelledby="h-1"
-                                    data-bs-parent="#transactionAccordion">
-                                    <div class="accordion-body">
-                                        <ul class="caption-list">
-                                            <li>
-                                                <span class="caption">@lang('Transaction ID')</span>
-                                                <span class="value">{{ @$trx->trx }}</span>
-                                            </li>
-                                            @if ($trx->charge > 0)
-                                                <li>
-                                                    <span class="caption">@lang('Charge')</span>
-                                                    <span class="value">{{ showAmount(@$trx->charge) }}</span>
-                                                </li>
+                                        </td>
+                                        <td>
+                                            @if($trx->charge > 0)
+                                                {{ showAmount(@$trx->charge) }}
+                                            @else
+                                                <span class="text-muted">—</span>
                                             @endif
-                                            <li>
-                                                <span class="caption">@lang('Transacted Amount')</span>
-                                                <span class="value">{{ showAmount(@$trx->amount) }}</span>
-                                            </li>
-                                            <li>
-                                                <span class="caption">@lang('Remaining Balance')</span>
-                                                <span class="value">{{ showAmount(@$trx->post_balance) }}</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div><!-- transaction-item end -->
-                        @empty
-                            <div class="accordion-body text-center">
-                                <x-empty-message h4="{{ true }}" />
-                            </div>
-                        @endforelse
+                                        </td>
+                                        <td>
+                                            <span class="badge badge--{{ $statusClass }}">{{ __($statusLabel) }}</span>
+                                        </td>
+                                        <td class="text-muted">
+                                            {{ $customerLabel }}
+                                        </td>
+                                        <td>{{ showDateTime(@$trx->created_at, 'M d, Y @g:i A') }}</td>
+                                        <td class="text-muted">{{ __(@$trx->details) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td class="text-muted text-center" colspan="100%">{{ __('Data not found') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -195,4 +205,29 @@
             }
         })(jQuery);
     </script>
+@endpush
+
+@push('style')
+<style>
+    .transaction-table th,
+    .transaction-table td {
+        vertical-align: middle;
+        font-size: 14px;
+    }
+    .transaction-table td {
+        padding-top: 16px;
+        padding-bottom: 16px;
+    }
+    .amount-cell .amount {
+        font-weight: 600;
+        font-size: 15px;
+    }
+    .transaction-table .badge {
+        font-weight: 600;
+        font-size: 12px;
+    }
+    .transaction-table thead th {
+        white-space: nowrap;
+    }
+</style>
 @endpush

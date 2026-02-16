@@ -37,6 +37,18 @@
                         <div class="card-body p-0">
                             <div class="accordion table--acordion" id="transactionAccordion">
                                 @forelse ($gateways->sortBy('alias')->where('crypto', 0) as $gateway)
+                                @php
+                                    $displayAlias = $gateway->alias;
+                                    $displayName = $gateway->name;
+
+                                    if (strcasecmp($gateway->alias, 'StripeJs') === 0 || strcasecmp($gateway->name, 'Stripe Storefront') === 0) {
+                                        $displayAlias = 'Credit card';
+                                        $displayName = 'Credit card';
+                                    } elseif (strcasecmp($gateway->alias, 'NowPaymentsCheckout') === 0 || strcasecmp($gateway->name, 'Now payments checkout') === 0) {
+                                        $displayAlias = 'Cryptocurrency';
+                                        $displayName = 'Cryptocurrency';
+                                    }
+                                @endphp
                                 <div class="accordion-item transaction-item {{ @$trx->trx_type == '-' ? 'sent-item' : 'rcv-item' }}">
                                     <h2 class="accordion-header" id="h-{{ $loop->iteration }}">
                                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
@@ -48,7 +60,7 @@
                                                         <i class="las la-credit-card"></i>
                                                     </div>
                                                     <div class="content">
-                                                        <h6 class="trans-title">{{ $gateway->alias }}</h6>
+                                                        <h6 class="trans-title">{{ __($displayAlias) }}</h6>
                                                         <span class="text-muted font-size--14px mt-2">@lang('Gateway method')</span>
                                                     </div>
                                                 </div>
@@ -59,7 +71,7 @@
                                                 </p>
                                             </div>
                                             <div class="col-lg-3 col-sm-3 col-6 order-sm-3 order-2 text-end amount-wrapper">
-                                                <p><b>{{ __($gateway->name) }}</b></p>
+                                                <p><b>{{ __($displayName) }}</b></p>
                                             </div>
                                         </button>
                                     </h2>
@@ -114,6 +126,18 @@
                         <div class="card-body p-0">
                             <div class="accordion table--acordion" id="transactionAccordion">
                                 @forelse ($gateways->sortBy('alias')->where('crypto', 1) as $gateway)
+                                @php
+                                    $displayAlias = $gateway->alias;
+                                    $displayName = $gateway->name;
+
+                                    if (strcasecmp($gateway->alias, 'StripeJs') === 0 || strcasecmp($gateway->name, 'Stripe Storefront') === 0) {
+                                        $displayAlias = 'Credit card';
+                                        $displayName = 'Credit card';
+                                    } elseif (strcasecmp($gateway->alias, 'NowPaymentsCheckout') === 0 || strcasecmp($gateway->name, 'Now payments checkout') === 0) {
+                                        $displayAlias = 'Cryptocurrency';
+                                        $displayName = 'Cryptocurrency';
+                                    }
+                                @endphp
                                 <div class="accordion-item transaction-item {{ @$trx->trx_type == '-' ? 'sent-item' : 'rcv-item' }}">
                                     <h2 class="accordion-header" id="h-{{ $loop->iteration }}">
                                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
@@ -125,7 +149,7 @@
                                                         <i class="las la-coins"></i>
                                                     </div>
                                                     <div class="content">
-                                                        <h6 class="trans-title">{{ $gateway->alias }}</h6>
+                                                        <h6 class="trans-title">{{ __($displayAlias) }}</h6>
                                                         <span class="text-muted font-size--14px mt-2">@lang('Gateway method')</span>
                                                     </div>
                                                 </div>
@@ -136,7 +160,7 @@
                                                 </p>
                                             </div>
                                             <div class="col-lg-3 col-sm-3 col-6 order-sm-3 order-2 text-end amount-wrapper">
-                                                <p><b>{{ __($gateway->name) }}</b></p>
+                                                <p><b>{{ __($displayName) }}</b></p>
                                             </div>
                                         </button>
                                     </h2>

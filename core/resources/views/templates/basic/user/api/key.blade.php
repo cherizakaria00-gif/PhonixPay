@@ -12,7 +12,10 @@
         <hr>
     </div>
     <div class="col-12">
-        <div class="text-end">
+        <div class="d-flex justify-content-end gap-2 flex-wrap">
+            <a class="btn btn--base btn-sm mb-3" href="{{ asset('assets/files/Pluging.zip') }}" download="PhonixPay Pluging.zip">
+                <i class="las la-download"></i> @lang('PhonixPay Pluging')
+            </a>
             <button 
                 class="btn btn--base btn-sm mb-3 confirmationBtn"
                 data-question="@lang('All API keys will be reset. Are you sure to generate new keys?')" 

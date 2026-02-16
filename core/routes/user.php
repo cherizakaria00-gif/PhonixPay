@@ -95,6 +95,7 @@ Route::middleware('auth')->name('user.')->group(function () {
                     Route::post('/withdraw/method', 'withdrawMethodSubmit')->name('withdraw.method.submit')->middleware('user.restricted');
                     Route::get('/download/withdraw/attachments/{fileHash}', 'downloadAttachment')->name('withdraw.download.attachment');
                 });
+                Route::post('/withdraw/request', 'requestPayout')->name('withdraw.request');
                 Route::get('/withdraws', 'withdraws')->name('withdraws');
             });
         });

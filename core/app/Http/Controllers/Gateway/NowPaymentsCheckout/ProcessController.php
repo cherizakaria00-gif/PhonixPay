@@ -6,33 +6,45 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Gateway\PaymentController;
 use App\Lib\CurlRequest;
 use App\Models\Deposit;
+use Illuminate\Support\Facades\Log;
 
 class ProcessController extends Controller {
     public static function process($deposit) {
         $nowPaymentsAcc = json_decode($deposit->gatewayCurrency()->gateway_parameter);
-        $response       = CurlRequest::curlPostContent('https://api.nowpayments.io/v1/invoice', json_encode([
+        $successUrl = self::buildReturnUrl($deposit->success_url);
+        $cancelUrl = self::buildReturnUrl($deposit->failed_url);
+        $responseRaw       = CurlRequest::curlPostContent('https://api.nowpayments.io/v1/invoice', json_encode([
             'price_amount'     => $deposit->final_amount,
             'price_currency'   => $deposit->method_currency,
             'ipn_callback_url' => route('ipn.NowPaymentsCheckout'),
-            'success_url'=>route('home').$deposit->success_url,
-            'cancel_url'=>route('home').$deposit->failed_url,
+            'success_url'      => $successUrl,
+            'cancel_url'       => $cancelUrl,
             'order_id'         => $deposit->trx,
 
         ]), [
             "x-api-key: $nowPaymentsAcc->api_key",
             'Content-Type: application/json',
         ]);
-        $response = json_decode($response);
+        $response = json_decode($responseRaw);
 
         if (!$response) {
+            Log::error('NowPayments checkout API error: empty response', [
+                'deposit_id' => $deposit->id,
+                'raw' => $responseRaw,
+            ]);
             $send['error']   = true;
             $send['message'] = 'Some problem ocurred with api.';
             return json_encode($send);
         }
 
-        if(!@$response->invoice_url){
+        if (!@$response->invoice_url) {
+            Log::error('NowPayments checkout API error', [
+                'deposit_id' => $deposit->id,
+                'response' => $response,
+            ]);
+            $message = $response->message ?? $response->error ?? 'Invalid api key';
             $send['error']   = true;
-            $send['message'] = 'Invalid api key';
+            $send['message'] = $message;
             return json_encode($send);
         }
 
@@ -40,6 +52,17 @@ class ProcessController extends Controller {
         $send['redirect_url'] = $response->invoice_url;
 
         return json_encode($send);
+    }
+
+    protected static function buildReturnUrl(?string $path): string
+    {
+        $path = trim((string) $path);
+        if ($path && filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+        $base = rtrim(route('home'), '/');
+        $path = $path ? '/' . ltrim($path, '/') : '';
+        return $base . $path;
     }
 
     public function ipn() {

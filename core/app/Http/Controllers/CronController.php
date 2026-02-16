@@ -13,6 +13,7 @@ use App\Models\Transaction;
 use App\Models\Withdrawal;
 use App\Models\WithdrawSetting;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class CronController extends Controller
 {
@@ -117,6 +118,11 @@ class CronController extends Controller
             $amount = $setting->amount;
             $method = $setting->withdrawMethod;
 
+            $hasPendingWithdraw = Withdrawal::where('user_id', $user->id)->pending()->exists();
+            if ($hasPendingWithdraw) {
+                continue;
+            }
+
             if($amount > $user->balance){ 
                 notify($user, 'INSUFFICIENT_WITHDRAW_BALANCE', [
                     'current_balance' => showAmount($user->balance, currencyFormat:false),
@@ -143,6 +149,9 @@ class CronController extends Controller
             $withdraw->trx = getTrx();
             $withdraw->status = Status::PAYMENT_PENDING;
             $withdraw->withdraw_information = $setting->user_data;
+            if (Schema::hasColumn('withdrawals', 'payout_date')) {
+                $withdraw->payout_date = $setting->next_withdraw_date;
+            }
             $withdraw->save();
     
             $user->balance -= $amount;

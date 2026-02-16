@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Constants\Status;
+use App\Http\Controllers\Gateway\PaymentController;
 use App\Models\AdminNotification;
+use App\Models\Deposit;
 use App\Models\Frontend;
 use App\Models\GatewayCurrency;
 use App\Models\Language;
@@ -14,6 +16,7 @@ use App\Models\SupportTicket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class SiteController extends Controller
@@ -207,5 +210,91 @@ class SiteController extends Controller
                             $gate->where('status', Status::ENABLE);
                         })->get(['id','currency','symbol'])->unique('currency');
         return view('Template::api_documentation', compact('pageTitle', 'allCurrency'));
+    }
+
+    public function successPaymentRedirect($depositId)
+    {
+        $deposit = Deposit::where('id', $depositId)->orderBy('id', 'desc')->firstOrFail();
+
+        if ($deposit->status == Status::PAYMENT_SUCCESS) {
+            return redirect($deposit->success_url ?? route('home'));
+        }
+
+        if ($deposit->gateway && $deposit->gateway->alias === 'StripePaymentLink') {
+            $this->confirmStripePaymentLink($deposit);
+        }
+
+        return redirect($deposit->success_url ?? route('home'));
+    }
+
+    public function cancelPaymentRedirect($depositId)
+    {
+        $deposit = Deposit::where('id', $depositId)->orderBy('id', 'desc')->firstOrFail();
+
+        if ($deposit->status == Status::PAYMENT_INITIATE) {
+            $deposit->status = Status::PAYMENT_REJECT;
+            $deposit->save();
+        }
+
+        return redirect($deposit->failed_url ?? route('home'));
+    }
+
+    private function confirmStripePaymentLink(Deposit $deposit): void
+    {
+        if (!$deposit->btc_wallet) {
+            return;
+        }
+
+        $secretKey = $deposit->stripeAccount->secret_key ?? null;
+        if (!$secretKey) {
+            $gatewayCurrency = GatewayCurrency::where('gateway_alias', 'StripePaymentLink')
+                ->orderBy('id', 'desc')
+                ->first();
+            $gatewayParams = json_decode($gatewayCurrency->gateway_parameter ?? '{}');
+            $secretKey = $gatewayParams->secret_key ?? null;
+        }
+
+        if (!$secretKey) {
+            return;
+        }
+
+        try {
+            \Stripe\Stripe::setApiKey($secretKey);
+            $sessions = \Stripe\Checkout\Session::all([
+                'payment_link' => $deposit->btc_wallet,
+                'limit' => 5,
+            ]);
+
+            if (empty($sessions->data)) {
+                return;
+            }
+
+            $paidSession = collect($sessions->data)->first(function ($session) {
+                return ($session->payment_status ?? null) === 'paid';
+            });
+
+            if (!$paidSession) {
+                return;
+            }
+
+            if (Schema::hasColumn('deposits', 'stripe_session_id')) {
+                $deposit->stripe_session_id = $paidSession->id;
+            }
+
+            if (!empty($paidSession->payment_intent) && Schema::hasColumn('deposits', 'stripe_charge_id')) {
+                try {
+                    $intent = \Stripe\PaymentIntent::retrieve($paidSession->payment_intent, []);
+                    if (!empty($intent->latest_charge)) {
+                        $deposit->stripe_charge_id = $intent->latest_charge;
+                    }
+                } catch (\Exception $e) {
+                    // Ignore charge lookup errors, continue with success
+                }
+            }
+
+            PaymentController::userDataUpdate($deposit);
+        } catch (\Exception $e) {
+            // Ignore Stripe errors on redirect, webhook will finalize if available
+        }
     }
 }
