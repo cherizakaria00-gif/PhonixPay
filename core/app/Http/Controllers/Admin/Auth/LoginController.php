@@ -67,7 +67,15 @@ class LoginController extends Controller
         }
 
 
-        Onumoti::getData();
+        if (!app()->environment('local') && !env('SKIP_LICENSE_CHECK', false)) {
+            try {
+                Onumoti::getData();
+            } catch (\Throwable $e) {
+                logger()->warning('License check skipped during admin login', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         // If the class is using the ThrottlesLogins trait, we can automatically throttle
         // the login attempts for this application. We'll key this by the username and

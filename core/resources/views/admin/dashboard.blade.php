@@ -71,14 +71,14 @@
                         </div>
 
                         <div class="widget-card bg--warning">
-                            <a href="{{ route('admin.deposit.pending') }}" class="widget-card-link"></a>
+                            <a href="{{ route('admin.deposit.refunded') }}" class="widget-card-link"></a>
                             <div class="widget-card-left">
                                 <div class="widget-card-icon">
-                                    <i class="fas fa-spinner"></i>
+                                    <i class="las la-undo"></i>
                                 </div>
                                 <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ $deposit['total_deposit_pending'] }}</h6>
-                                    <p class="widget-card-title">@lang('Pending Payments')</p>
+                                    <h6 class="widget-card-amount">{{ $deposit['total_deposit_refunded'] }}</h6>
+                                    <p class="widget-card-title">@lang('Refunded Payments')</p>
                                 </div>
                             </div>
                             <span class="widget-card-arrow">

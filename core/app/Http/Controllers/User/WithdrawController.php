@@ -58,17 +58,14 @@ class WithdrawController extends Controller
     }
 
     public function withdrawMethod(){
-        $user = auth()->user();
-        $pageTitle = 'Withdraw Method';
-        $withdrawMethod = WithdrawMethod::where('status',Status::ENABLE)->get();
-        return view('Template::user.withdraw.withdraw_method', compact('pageTitle', 'withdrawMethod', 'user'));
+        return redirect()->route('user.withdraws');
     }
 
     public function withdrawMethodSubmit(Request $request)
     {   
         $validation = [
             'method_code' => 'required',
-            'amount' => 'required|numeric|gt:0'
+            'amount' => 'nullable|numeric|gt:0'
         ];
 
         $method = WithdrawMethod::where('id', $request->method_code)->where('status', Status::ENABLE)->firstOrFail();
@@ -95,11 +92,16 @@ class WithdrawController extends Controller
 
         $request->validate($validation);
 
-        if ($request->amount < $method->min_limit) {
+        $amount = $request->amount;
+        if ($amount === null || $amount === '') {
+            $amount = $withdrawSetting?->amount ?? $method->min_limit;
+        }
+
+        if ($amount < $method->min_limit) {
             $notify[] = ['error', 'Your requested amount is smaller than minimum amount.'];
             return back()->withNotify($notify)->withInput();
         }
-        if ($request->amount > $method->max_limit) {
+        if ($amount > $method->max_limit) {
             $notify[] = ['error', 'Your requested amount is larger than maximum amount.'];
             return back()->withNotify($notify)->withInput();
         }
@@ -118,7 +120,7 @@ class WithdrawController extends Controller
 
         $withdrawSetting->user_id = $user->id;
         $withdrawSetting->withdraw_method_id = $method->id;
-        $withdrawSetting->amount = $request->amount;
+        $withdrawSetting->amount = $amount;
         $withdrawSetting->user_data = $userData;
         $withdrawSetting->next_withdraw_date = HolidayCalculator::nextWorkingDay($withdrawSetting);
         $withdrawSetting->save();
@@ -162,14 +164,14 @@ class WithdrawController extends Controller
             $notify[] = ['error', 'Your requested amount is smaller than minimum amount.'];
             return back()->withNotify($notify)->withInput();
         }
+        $availableBalance = $user->balance * 0.7;
+        if ($amount > $availableBalance) {
+            $notify[] = ['error', 'Insufficient payout balance. Available for payout is ' . showAmount($availableBalance)];
+            return back()->withNotify($notify);
+        }
         if ($amount > $method->max_limit) {
             $notify[] = ['error', 'Your requested amount is larger than maximum amount.'];
             return back()->withNotify($notify)->withInput();
-        }
-
-        if ($amount > $user->balance) {
-            $notify[] = ['error', 'Insufficient balance for payout'];
-            return back()->withNotify($notify);
         }
 
         $charge = $method->fixed_charge + ($amount * $method->percent_charge / 100);

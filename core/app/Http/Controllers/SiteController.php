@@ -212,7 +212,7 @@ class SiteController extends Controller
         return view('Template::api_documentation', compact('pageTitle', 'allCurrency'));
     }
 
-    public function successPaymentRedirect($depositId)
+    public function successPaymentRedirect(Request $request, $depositId)
     {
         $deposit = Deposit::where('id', $depositId)->orderBy('id', 'desc')->firstOrFail();
 
@@ -222,6 +222,18 @@ class SiteController extends Controller
 
         if ($deposit->gateway && $deposit->gateway->alias === 'StripePaymentLink') {
             $this->confirmStripePaymentLink($deposit);
+        }
+
+        if ($deposit->gateway && $deposit->gateway->alias === 'BictorysCheckout') {
+            $this->confirmBictorysCheckout($deposit, $request);
+        }
+
+        if ($deposit->gateway && $deposit->gateway->alias === 'BictorysDirect') {
+            $this->confirmBictorysDirect($deposit, $request);
+        }
+
+        if ($deposit->status == Status::PAYMENT_REJECT) {
+            return redirect($deposit->failed_url ?? route('home'));
         }
 
         return redirect($deposit->success_url ?? route('home'));
@@ -295,6 +307,81 @@ class SiteController extends Controller
             PaymentController::userDataUpdate($deposit);
         } catch (\Exception $e) {
             // Ignore Stripe errors on redirect, webhook will finalize if available
+        }
+    }
+
+    private function confirmBictorysCheckout(Deposit $deposit, Request $request): void
+    {
+        if ($deposit->status != Status::PAYMENT_INITIATE) {
+            return;
+        }
+
+        $status = strtolower((string) ($request->input('status')
+            ?? $request->input('paymentStatus')
+            ?? $request->input('payment_status')
+            ?? ''));
+
+        if ($status && !in_array($status, ['success', 'successful', 'paid', 'completed'], true)) {
+            return;
+        }
+
+        $reference = $request->input('paymentReference')
+            ?? $request->input('payment_reference')
+            ?? $request->input('reference');
+
+        if (!$deposit->btc_wallet && $reference) {
+            $deposit->btc_wallet = $reference;
+            $deposit->save();
+        }
+
+        PaymentController::userDataUpdate($deposit);
+    }
+
+    private function confirmBictorysDirect(Deposit $deposit, Request $request): void
+    {
+        if ($deposit->status != Status::PAYMENT_INITIATE) {
+            return;
+        }
+
+        $status = strtolower((string) ($request->input('status')
+            ?? $request->input('paymentStatus')
+            ?? $request->input('payment_status')
+            ?? ''));
+
+        $failedFlags = [
+            'failed',
+            'failure',
+            'error',
+            'canceled',
+            'cancelled',
+            'rejected',
+            'expired',
+        ];
+
+        if (($request->input('success') === false) || in_array($status, $failedFlags, true)) {
+            $deposit->status = Status::PAYMENT_REJECT;
+            $deposit->save();
+            return;
+        }
+
+        $successFlags = [
+            'success',
+            'successful',
+            'paid',
+            'completed',
+        ];
+
+        if (($request->input('success') ?? null) === true || in_array($status, $successFlags, true)) {
+            $reference = $request->input('paymentReference')
+                ?? $request->input('payment_reference')
+                ?? $request->input('reference');
+
+            if (!$deposit->btc_wallet && $reference) {
+                $deposit->btc_wallet = $reference;
+                $deposit->save();
+            }
+
+            PaymentController::userDataUpdate($deposit);
         }
     }
 }

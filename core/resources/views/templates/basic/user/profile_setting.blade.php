@@ -1,17 +1,12 @@
 @extends($activeTemplate.'layouts.master', ['setting'=>true])
 
+@php
+    $showHeaderBalance = true;
+@endphp
+
 @section('content')
 <div class="row justify-content-center gy-4">
     
-    <div class="col-12">
-        <div class="page-heading mb-4">
-            <h3 class="mb-2">{{ __($pageTitle) }}</h3>
-            <p>
-                @lang('Personalize and keep your account up-to-date with our user-friendly profile page, allowing you to easily view and update your profile information. Manage your preferences and ensure that your account reflects your current details.')
-            </p>
-        </div>
-        <hr>
-    </div>
 
     <div class="col-xl-5 col-lg-6">
         <div class="card">

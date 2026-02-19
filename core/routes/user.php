@@ -80,6 +80,14 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('add-device-token','addDeviceToken')->name('add.device.token');
             });
 
+            Route::controller('PaymentLinkController')->prefix('payment-links')->name('payment.links.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('create', 'create')->name('create');
+                Route::post('create', 'store')->name('store');
+                Route::get('edit/{id}', 'edit')->name('edit');
+                Route::post('edit/{id}', 'update')->name('update');
+            });
+
             //Profile setting
             Route::controller('ProfileController')->group(function(){
                 Route::get('profile-setting', 'profile')->name('profile.setting');

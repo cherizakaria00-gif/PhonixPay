@@ -15,6 +15,9 @@
                     <form action="{{route('deposit.insert')}}" method="post" id="checkout-form">
                         @csrf
                         <input type="hidden" name="payment_trx" required value="{{ @$trx }}">
+                        @if(isset($paymentLink))
+                            <input type="hidden" name="payment_link_code" value="{{ $paymentLink->code }}">
+                        @endif
                         <div class="card custom--card">
 
                             <div class="card-header border-0">
@@ -27,6 +30,39 @@
                             </div>
                             
                             <div class="card-body">
+                                @if(isset($paymentLink))
+                                    <div class="payment-link-summary mb-4">
+                                        <h5 class="mb-1">{{ __($paymentLink->description ?: 'Payment Link') }}</h5>
+                                        <p class="mb-0">@lang('Amount'):
+                                            <strong>{{ showAmount($paymentLink->amount, currencyFormat:false) }} {{ __($paymentLink->currency) }}</strong>
+                                        </p>
+                                        @if($paymentLink->expires_at)
+                                            <p class="mb-0 text-muted">@lang('Expires'):
+                                                {{ showDateTime($paymentLink->expires_at) }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                @endif
+                                @if(!empty($showCustomerForm))
+                                    <div class="row gy-3 mb-4">
+                                        <div class="col-md-6">
+                                            <label class="form-label">@lang('First Name')</label>
+                                            <input type="text" name="customer_first_name" class="form--control" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">@lang('Last Name')</label>
+                                            <input type="text" name="customer_last_name" class="form--control" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">@lang('Email')</label>
+                                            <input type="email" name="customer_email" class="form--control" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">@lang('Mobile')</label>
+                                            <input type="text" name="customer_mobile" class="form--control" required>
+                                        </div>
+                                    </div>
+                                @endif
                                 <input type="hidden" name="method_code" required>
                                 <div class="form-group">
                                     <div class="payment-options-grid">

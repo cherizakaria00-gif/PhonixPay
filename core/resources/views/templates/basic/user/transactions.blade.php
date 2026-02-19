@@ -2,19 +2,11 @@
 
 @php
     $request = request();
+    $showHeaderBalance = true;
 @endphp
 
 @section('content')
     <div class="row justify-content-center">
-        <div class="col-12">
-            <div class="page-heading mb-4">
-                <h3 class="mb-2">{{ __($pageTitle) }}</h3>
-                <p>
-                    @lang('Get a clear view of your account\'s financial activity with our transaction history page, providing detailed insights into your past transactions. Stay informed, monitor your spending, and keep control of your finances at all times.')
-                </p>
-            </div>
-            <hr>
-        </div>
         <div class="col-12">
             <div class="filter-area mb-3">
                 <form action="" class="form">

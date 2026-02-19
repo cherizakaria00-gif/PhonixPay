@@ -3,14 +3,22 @@
 @section('content')
 <div class="container">
     <div class="row justify-content-center gy-4">
+        @php
+            $balance = auth()->user()->balance ?? 0;
+            $payoutAvailable = $balance * 0.7;
+            $payoutAvailable = $payoutAvailable < 0 ? 0 : $payoutAvailable;
+        @endphp
         <div class="col-12">
-            <div class="page-heading mb-4">
-                <h3 class="mb-2">{{ __($pageTitle) }}</h3>
-                <p>
-                    @lang('Calculate payment gateway charges for your transactions quickly and easily with our user-friendly page. Enter the transaction amount and get an instant breakdown of the charges, helping you make informed decisions and streamline your payment process. Try it now!')
-                </p>
+            <div class="balance-summary">
+                <div class="balance-summary__item">
+                    <span class="balance-summary__label">@lang('Your current balance')</span>
+                    <span class="balance-summary__value text--success">{{ showAmount($balance) }}</span>
+                </div>
+                <div class="balance-summary__item">
+                    <span class="balance-summary__label">@lang('Available for payout')</span>
+                    <span class="balance-summary__value text--success">{{ showAmount($payoutAvailable) }}</span>
+                </div>
             </div>
-            <hr>
         </div>  
         <div class="col-lg-12"> 
             <div class="card style--two">

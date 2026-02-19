@@ -120,11 +120,17 @@ Route::middleware('admin')->group(function () {
         Route::get('approved/{user_id?}', 'approved')->name('approved');
         Route::get('successful/{user_id?}', 'successful')->name('successful');
         Route::get('initiated/{user_id?}', 'initiated')->name('initiated');
+        Route::get('refunded/{user_id?}', 'refunded')->name('refunded');
         Route::get('details/{id}', 'details')->name('details');
         Route::post('reject', 'reject')->name('reject');
         Route::post('approve/{id}', 'approve')->name('approve');
         Route::post('refund/{id}', 'refund')->name('refund');
 
+    });
+
+    // Payment Links
+    Route::controller('PaymentLinkController')->prefix('payment-links')->name('payment.links.')->group(function () {
+        Route::get('/', 'index')->name('index');
     });
 
 

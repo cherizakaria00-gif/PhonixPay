@@ -12,10 +12,6 @@
             <div class="col-xl-5 ps-xl-0 pe-xl-0">
                 <div class="reports">
                     <div class="widget-card-wrapper">
-                        <div class="widget-card stat-card stat-card--payment-total">
-                            <h3 class="widget-card__number">{{ showAmount($payment['total']) }}</h3>
-                            <p>@lang('Payment Requests')</p>
-                        </div>
                         <div class="widget-card stat-card stat-card--payment-chargeback">
                             <h3 class="widget-card__number">{{ showAmount($payment['total_refunded']) }}</h3>
                             <p>@lang('Payment Chargeback')</p>
@@ -23,10 +19,6 @@
                         <div class="widget-card stat-card stat-card--payment-succeed">
                             <h3 class="widget-card__number">{{ showAmount($payment['total_succeed']) }}</h3>
                             <p>@lang('Succeed Payment')</p>
-                        </div>
-                        <div class="widget-card stat-card stat-card--payment-canceled">
-                            <h3 class="widget-card__number">{{ showAmount($payment['total_canceled']) }}</h3>
-                            <p>@lang('Canceled Payment')</p>
                         </div>
                     </div>
                     <div class="widget-card-wrapper">

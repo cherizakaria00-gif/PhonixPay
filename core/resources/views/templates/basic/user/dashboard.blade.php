@@ -1,5 +1,9 @@
 @extends($activeTemplate . 'layouts.master')
 
+@php
+    $showHeaderBalance = true;
+@endphp
+
 @section('content')
 @include($activeTemplate.'partials.notice')
 

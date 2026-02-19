@@ -20,6 +20,13 @@
                 </a>
             </li>
 
+            <li class="sidebar-menu__item {{ menuActive('user.payment.links*') }}">
+                <a href="{{ route('user.payment.links.index') }}" class="sidebar-menu__link">
+                    <i class="las la-link"></i>
+                    @lang('Payment Links')
+                </a>
+            </li>
+
             <li class="sidebar-menu__item {{ menuActive('user.calculate.charge') }}">
                 <a href="{{ route('user.calculate.charge') }}" class="sidebar-menu__link">
                     <i class="las la-calculator"></i>

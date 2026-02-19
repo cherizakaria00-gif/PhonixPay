@@ -41,6 +41,12 @@ class DepositController extends Controller
         return $this->depositData('initiated', false, userId:$userId, pageTitle:$pageTitle);
     }
 
+    public function refunded($userId = null)
+    {
+        $pageTitle = 'Refunded Payments';
+        return $this->depositData('refunded', false, userId:$userId, pageTitle:$pageTitle);
+    }
+
     public function deposit($userId = null)
     {
         $pageTitle = 'Payment History';

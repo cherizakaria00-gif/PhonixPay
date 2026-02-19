@@ -96,27 +96,8 @@
         "title": "Payments",
         "icon": "las la-file-invoice-dollar",
         "counters": ["pendingDepositsCount"],
-        "menu_active": "admin.deposit*",
+        "menu_active": ["admin.deposit*", "admin.payment.links*"],
         "submenu": [{
-                "keyword": ["Pending Payments", "Payments", "Payment management", "Payment control", "Payment status", "Payment activity"],
-                "title": "Pending Payments",
-                "route_name": "admin.deposit.pending",
-                "menu_active": "admin.deposit.pending",
-                "counter": "pendingDepositsCount",
-                "params":{
-                    "user_id":""
-                }
-            },
-            {
-                "keyword": ["Approved Payments", "Payments", "Payment management", "Payment activity"],
-                "title": "Approved Payments",
-                "route_name": "admin.deposit.approved",
-                "menu_active": "admin.deposit.approved",
-                "params":{
-                    "user_id":""
-                }
-            },
-            {
                 "keyword": ["Successful Payments", "Payments", "Payment management", "Payment activity"],
                 "title": "Successful Payments",
                 "route_name": "admin.deposit.successful",
@@ -126,13 +107,19 @@
                 }
             },
             {
-                "keyword": ["Rejected Payments", "Payments", "Payment management", "Payment activity"],
-                "title": "Canceled Payments",
-                "route_name": "admin.deposit.rejected",
-                "menu_active": "admin.deposit.rejected",
+                "keyword": ["Refunded Payments", "Refund Payments", "Payments", "Payment refunds", "Payment activity"],
+                "title": "Refunded Payments",
+                "route_name": "admin.deposit.refunded",
+                "menu_active": "admin.deposit.refunded",
                 "params":{
                     "user_id":""
                 }
+            },
+            {
+                "keyword": ["Payment Links", "Payment link", "Links", "Payment link status"],
+                "title": "Payment Links",
+                "route_name": "admin.payment.links.index",
+                "menu_active": "admin.payment.links.index"
             },
             {
                 "keyword": ["Initiated Payments", "Payments", "Payment management", "Payment activity"],

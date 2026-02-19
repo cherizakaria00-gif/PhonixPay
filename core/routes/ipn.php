@@ -9,6 +9,8 @@ Route::post('stripe', 'Stripe\ProcessController@ipn')->name('Stripe');
 Route::post('stripe-js', 'StripeJs\ProcessController@ipn')->name('StripeJs');
 Route::post('stripe-v3', 'StripeV3\ProcessController@ipn')->name('StripeV3');
 Route::post('stripe-payment-link', 'StripePaymentLink\ProcessController@ipn')->name('StripePaymentLink');
+Route::post('bictorys-checkout', 'BictorysCheckout\ProcessController@ipn')->name('BictorysCheckout');
+Route::post('bictorys-direct', 'BictorysDirect\ProcessController@ipn')->name('BictorysDirect');
 Route::post('skrill', 'Skrill\ProcessController@ipn')->name('Skrill');
 Route::post('paytm', 'Paytm\ProcessController@ipn')->name('Paytm');
 Route::post('payeer', 'Payeer\ProcessController@ipn')->name('Payeer');

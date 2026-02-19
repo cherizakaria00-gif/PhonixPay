@@ -9,6 +9,12 @@ Route::get('/clear', function(){
 
 Route::get('cron', 'CronController@cron')->name('cron');
 
+Route::controller('PaymentLinkController')->group(function () {
+    Route::get('payment-link/{code}', 'show')->name('payment.link.show');
+    Route::post('payment-link/ipn/{code}', 'ipn')->name('payment.link.ipn');
+    Route::get('payment-link/redirect/{code}', 'redirect')->name('payment.link.redirect');
+});
+
 // User Support Ticket
 Route::controller('TicketController')->prefix('ticket')->name('ticket.')->group(function () {
     Route::get('/', 'supportTicket')->name('index');

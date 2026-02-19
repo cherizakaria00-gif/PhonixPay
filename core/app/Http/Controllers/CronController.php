@@ -174,7 +174,7 @@ class CronController extends Controller
             $adminNotification = new AdminNotification();
             $adminNotification->user_id = $user->id;
             $adminNotification->title = 'New withdraw request from '.$user->username;
-            $adminNotification->click_url = urlPath('admin.withdraw.details',$withdraw->id);
+            $adminNotification->click_url = urlPath('admin.withdraw.data.details', $withdraw->id);
             $adminNotification->save();
 
             notify($user, 'WITHDRAW_REQUEST', [

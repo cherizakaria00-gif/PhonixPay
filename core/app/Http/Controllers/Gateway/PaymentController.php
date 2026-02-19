@@ -8,6 +8,7 @@ use App\Lib\FormProcessor;
 use App\Models\AdminNotification;
 use App\Models\Deposit;
 use App\Models\GatewayCurrency;
+use App\Models\PaymentLink;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Traits\ApiPaymentHelpers;
@@ -46,6 +47,71 @@ class PaymentController extends Controller
             }
             $notify[] = ['error', $error->getMessage()];
             return back()->withNotify($notify);
+        }
+
+        if ($request->filled('payment_link_code')) {
+            $request->validate([
+                'customer_first_name' => 'required|string|max:100',
+                'customer_last_name' => 'required|string|max:100',
+                'customer_email' => 'required|email|max:255',
+                'customer_mobile' => 'required|string|max:50',
+            ]);
+        }
+
+        $paymentLink = null;
+
+        $customerPayload = [
+            'first_name' => $request->input('customer_first_name'),
+            'last_name' => $request->input('customer_last_name'),
+            'email' => $request->input('customer_email'),
+            'mobile' => $request->input('customer_mobile'),
+        ];
+
+        if (array_filter($customerPayload)) {
+            $apiPayment->customer = [
+                'first_name' => $customerPayload['first_name'] ?? null,
+                'last_name' => $customerPayload['last_name'] ?? null,
+                'email' => $customerPayload['email'] ?? null,
+                'mobile' => $customerPayload['mobile'] ?? null,
+            ];
+            $apiPayment->save();
+        }
+
+        if ($request->filled('payment_link_code')) {
+            $paymentLink = PaymentLink::where('code', $request->payment_link_code)->first();
+            if (!$paymentLink) {
+                $notify[] = ['error', 'Invalid payment link'];
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Invalid payment link',
+                    ], 422);
+                }
+                return back()->withNotify($notify);
+            }
+
+            $paymentLink->markExpiredIfNeeded();
+            if ($paymentLink->status != PaymentLink::STATUS_ACTIVE) {
+                $notify[] = ['error', 'This payment link is not available'];
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'This payment link is not available',
+                    ], 422);
+                }
+                return back()->withNotify($notify);
+            }
+
+            $apiPayment->amount = $paymentLink->amount;
+            $apiPayment->currency = $paymentLink->currency ?: $apiPayment->currency;
+            $apiPayment->details = $paymentLink->description ?: $apiPayment->details;
+            if (!$apiPayment->success_url) {
+                $apiPayment->success_url = $paymentLink->redirect_url;
+            }
+            if (!$apiPayment->cancel_url) {
+                $apiPayment->cancel_url = $paymentLink->redirect_url;
+            }
+            $apiPayment->save();
         }
 
         $amount = $apiPayment->amount;
@@ -111,6 +177,9 @@ class PaymentController extends Controller
         $data->final_amount = $payable;
         $data->btc_amount = 0;
         $data->btc_wallet = "";
+        if ($paymentLink) {
+            $data->payment_link_id = $paymentLink->id;
+        }
         $data->trx = getTrx();
         $data->success_url = $apiPayment->success_url;
         $data->failed_url = $apiPayment->cancel_url;
@@ -246,6 +315,16 @@ class PaymentController extends Controller
             $apiPayment = $deposit->apiPayment;
             $apiPayment->status = Status::PAYMENT_SUCCESS;
             $apiPayment->save();
+
+            if ($deposit->payment_link_id) {
+                $paymentLink = PaymentLink::find($deposit->payment_link_id);
+                if ($paymentLink && $paymentLink->status != PaymentLink::STATUS_PAID) {
+                    $paymentLink->status = PaymentLink::STATUS_PAID;
+                    $paymentLink->deposit_id = $deposit->id;
+                    $paymentLink->paid_at = now();
+                    $paymentLink->save();
+                }
+            }
 
             $transaction = new Transaction();
             $transaction->user_id = $deposit->user_id;

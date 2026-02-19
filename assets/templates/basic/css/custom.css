@@ -585,3 +585,71 @@ button .spinner-border {
   --bs-spinner-width: 1.5rem;
   --bs-spinner-height: 1.5rem;
 }
+
+.balance-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.balance-summary__item {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.balance-summary__label {
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.balance-summary__value {
+  font-weight: 700;
+  font-size: 22px;
+}
+
+@media (max-width: 767px) {
+  .balance-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+.header-balance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-right: 12px;
+}
+
+.header-balance__item {
+  white-space: nowrap;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-balance__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.header-balance__value {
+  font-weight: 700;
+}
+
+@media (max-width: 991px) {
+  .header-balance {
+    width: 100%;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+  }
+}

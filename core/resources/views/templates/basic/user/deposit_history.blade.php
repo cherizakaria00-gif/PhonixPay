@@ -2,20 +2,12 @@
 
 @php
     $request = request();
+    $showHeaderBalance = true;
 @endphp
 
 @section('content')
 <div class="row justify-content-center">
 
-    <div class="col-12">
-        <div class="page-heading mb-4">
-            <h3 class="mb-2">{{ __($pageTitle) }}</h3>
-            <p>
-                @lang('View and manage your transaction history with ease, and keep track of your payment over time. Stay informed and in control of your finances with our comprehensive payment history page.')
-            </p>
-        </div>
-        <hr>
-    </div>
 
     <div class="col-12">
         <div class="filter-area mb-3">

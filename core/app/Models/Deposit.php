@@ -45,6 +45,11 @@ class Deposit extends Model
         return $this->belongsTo(StripeAccount::class);
     }
 
+    public function paymentLink()
+    {
+        return $this->belongsTo(PaymentLink::class);
+    }
+
     public function methodName(){
         if ($this->method_code < 5000) {
             $methodName = @$this->gatewayCurrency()->name;
@@ -113,5 +118,10 @@ class Deposit extends Model
     public function scopeInitiated($query)
     {
         return $query->where('status', Status::PAYMENT_INITIATE);
+    }
+
+    public function scopeRefunded($query)
+    {
+        return $query->where('status', Status::PAYMENT_REFUNDED);
     }
 }
