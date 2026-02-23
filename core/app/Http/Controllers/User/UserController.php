@@ -23,13 +23,18 @@ class UserController extends Controller
     {
         $pageTitle = 'Dashboard'; 
         $user = auth()->user();
+        $latestDeposits = Deposit::where('user_id', $user->id)
+            ->with('apiPayment')
+            ->orderBy('id', 'desc')
+            ->take(10);
         $latestTrx = Transaction::where('user_id', $user->id)->orderBy('id','desc')->take(10);
      
         if($request->export_type){
-            return $latestTrx->export();
+            return $latestDeposits->export();
         }
+        $latestDeposits = $latestDeposits->get();
         $latestTrx = $latestTrx->get();
-        return view('Template::user.dashboard', compact('pageTitle', 'user', 'latestTrx'));
+        return view('Template::user.dashboard', compact('pageTitle', 'user', 'latestTrx', 'latestDeposits'));
     }
 
     public function depositHistory(Request $request)

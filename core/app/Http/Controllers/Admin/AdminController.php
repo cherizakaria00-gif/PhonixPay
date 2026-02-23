@@ -28,6 +28,8 @@ class AdminController extends Controller
         $widget['verified_users']          = User::active()->count();
         $widget['email_unverified_users']  = User::emailUnverified()->count();
         $widget['mobile_unverified_users'] = User::mobileUnverified()->count();
+        $widget['total_transactions']      = Transaction::count();
+        $widget['pending_kyc']             = User::kycPending()->count();
 
 
         // user Browsing, Country, Operating Log

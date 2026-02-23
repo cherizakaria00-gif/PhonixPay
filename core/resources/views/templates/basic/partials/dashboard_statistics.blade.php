@@ -1,73 +1,66 @@
 <div class="col-12">
-    <div class="widget-wrapper">
-        <div class="row">
-            <div class="col-xl-7 border--end position-relative">
-                <div>
-                    <div class="payment_canvas">
-                        <canvas height="190" id="payment_chart" class="mt-4"></canvas>
-                    </div>
-                    <h5 class="payment-statistics">@lang('Payment Statistics')</h5>
-                </div>
+    <div class="dashboard-stat-grid">
+        <div class="stat-card stat-card--payment-succeed">
+            <div class="stat-card__content">
+                <p class="stat-card__label">@lang('Succeed Payment')</p>
+                <h3 class="stat-card__value">{{ showAmount($payment['total_succeed'], currencyFormat:false) }}</h3>
+                <span class="stat-card__delta stat-card__delta--positive">@lang('Updated this month')</span>
             </div>
-            <div class="col-xl-5 ps-xl-0 pe-xl-0">
-                <div class="reports">
-                    <div class="widget-card-wrapper">
-                        <div class="widget-card stat-card stat-card--payment-chargeback">
-                            <h3 class="widget-card__number">{{ showAmount($payment['total_refunded']) }}</h3>
-                            <p>@lang('Payment Chargeback')</p>
-                        </div>
-                        <div class="widget-card stat-card stat-card--payment-succeed">
-                            <h3 class="widget-card__number">{{ showAmount($payment['total_succeed']) }}</h3>
-                            <p>@lang('Succeed Payment')</p>
-                        </div>
-                    </div>
-                    <div class="widget-card-wrapper">
-                        <div class="widget-card stat-card stat-card--withdraw-total">
-                            <h3 class="widget-card__number">{{ showAmount($withdraw['total']) }}</h3>
-                            <p>@lang('Total Withdraw')</p>
-                        </div>
-                        <div class="widget-card stat-card stat-card--withdraw-pending">
-                            <h3 class="widget-card__number">{{ showAmount($withdraw['total_pending']) }}</h3>
-                            <p>@lang('Pending Withdraw')</p>
-                        </div>
-                        <div class="widget-card stat-card stat-card--withdraw-approved">
-                            <h3 class="widget-card__number">{{ showAmount($withdraw['total_approved']) }}</h3>
-                            <p>@lang('Approved Withdraw')</p>
-                        </div>
-                        <div class="widget-card stat-card stat-card--withdraw-rejected">
-                            <h3 class="widget-card__number">{{ showAmount($withdraw['total_rejected']) }}</h3>
-                            <p>@lang('Rejected Withdraw')</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="stat-card__icon">
+                <i class="las la-check-circle"></i>
+            </div>
+        </div>
+        <div class="stat-card stat-card--withdraw-total">
+            <div class="stat-card__content">
+                <p class="stat-card__label">@lang('Total Withdraw')</p>
+                <h3 class="stat-card__value">{{ showAmount($withdraw['total'], currencyFormat:false) }}</h3>
+                <span class="stat-card__delta stat-card__delta--positive">@lang('Updated this month')</span>
+            </div>
+            <div class="stat-card__icon">
+                <i class="las la-wallet"></i>
+            </div>
+        </div>
+        <div class="stat-card stat-card--withdraw-pending">
+            <div class="stat-card__content">
+                <p class="stat-card__label">@lang('Pending Withdraw')</p>
+                <h3 class="stat-card__value">{{ showAmount($withdraw['total_pending'], currencyFormat:false) }}</h3>
+                <span class="stat-card__delta stat-card__delta--neutral">@lang('No pending withdrawals')</span>
+            </div>
+            <div class="stat-card__icon">
+                <i class="las la-hourglass-half"></i>
+            </div>
+        </div>
+        <div class="stat-card stat-card--payment-chargeback">
+            <div class="stat-card__content">
+                <p class="stat-card__label">@lang('Payment Chargeback')</p>
+                <h3 class="stat-card__value">{{ showAmount($payment['total_refunded'], currencyFormat:false) }}</h3>
+                <span class="stat-card__delta stat-card__delta--negative">@lang('Chargebacks this month')</span>
+            </div>
+            <div class="stat-card__icon">
+                <i class="las la-undo-alt"></i>
             </div>
         </div>
     </div>
 
-    <div class="reporting-charts mt-3">
-        <div class="row g-3">
-            <div class="col-xl-6">
-                <div class="card custom--card report-card h-100">
-                    <div class="card-header bg-white">
-                        <h6 class="mb-0">@lang('Payment Status')</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="payment-status-canvas"></div>
-                    </div>
-                </div>
+    <div class="dashboard-chart-grid">
+        <div class="dashboard-panel dashboard-panel--chart">
+            <div class="dashboard-panel__header">
+                <h6 class="payment-statistics payment-overview-title mb-0">@lang('Payment Overview')</h6>
             </div>
-            <div class="col-xl-6">
-                <div class="card custom--card report-card h-100">
-                    <div class="card-header bg-white">
-                        <h6 class="mb-0">@lang('Withdraw Status')</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="withdraw-status-canvas"></div>
-                    </div>
-                </div>
+            <div class="payment-overview-canvas"></div>
+            <div class="dashboard-chart__legend">
+                <span><span class="legend-dot legend-dot--success"></span>@lang('Succeed Payment')</span>
+                <span><span class="legend-dot legend-dot--danger"></span>@lang('Payment Chargeback')</span>
             </div>
         </div>
+        <div class="dashboard-panel dashboard-panel--chart">
+            <div class="dashboard-panel__header">
+                <h6 class="mb-0">@lang('Weekly Withdrawals')</h6>
+            </div>
+            <div class="withdraw-weekly-canvas"></div>
+        </div>
     </div>
+
 </div>
 
 

@@ -29,14 +29,6 @@
                     @lang('2FA Security')
                 </a>
             </li>
-            <li class="nav-item" role="presentation">
-                <a class="nav-link {{ $route == 'user.api.key' ? 'active' : null }}" 
-                    href="{{ route('user.api.key') }}" 
-                    aria-selected="{{ $route == 'user.api.key' ? 'true' : 'false' }}"
-                >
-                    @lang('Api Key') 
-                </a>
-            </li>
         </ul>
     </div>
 </div>

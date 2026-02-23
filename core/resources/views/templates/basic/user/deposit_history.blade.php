@@ -82,15 +82,15 @@
         <div class="card custom--card border-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table--light style--two deposit-table">
+                    <table class="table deposit-history-table">
                         <thead>
                             <tr>
-                                <th>@lang('Amount')</th>
-                                <th>@lang('Fee')</th>
-                                <th>@lang('Status')</th>
-                                <th>@lang('Name')</th>
+                                <th>@lang('Transaction')</th>
+                                <th>@lang('Customer')</th>
                                 <th>@lang('Email')</th>
-                                <th>@lang('Mobile')</th>
+                                <th>@lang('Phone')</th>
+                                <th class="text-end">@lang('Amount')</th>
+                                <th>@lang('Status')</th>
                                 <th>@lang('Date')</th>
                             </tr>
                         </thead>
@@ -98,53 +98,39 @@
                             @forelse ($deposits as $deposit)
                                 @php
                                     $statusLabel = 'Initiated';
-                                    $statusClass = 'dark';
+                                    $statusClass = 'status-badge--warning';
                                     if ($deposit->status == Status::PAYMENT_SUCCESS) {
                                         $statusLabel = 'Succeeded';
-                                        $statusClass = 'success';
+                                        $statusClass = 'status-badge--success';
                                     } elseif ($deposit->status == Status::PAYMENT_REFUNDED) {
                                         $statusLabel = 'Refunded';
-                                        $statusClass = 'warning';
+                                        $statusClass = 'status-badge--warning';
                                     } elseif ($deposit->status == Status::PAYMENT_REJECT) {
                                         $statusLabel = 'Canceled';
-                                        $statusClass = 'danger';
+                                        $statusClass = 'status-badge--danger';
                                     }
-                                    $fee = $deposit->totalCharge ?? 0;
                                     $customer = $deposit->apiPayment->customer ?? null;
-                                    $customerName = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+                                    $customerName = '';
+                                    if ($customer) {
+                                        $customerName = trim($customer->name ?? (($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')));
+                                    }
                                     $customerEmail = $customer->email ?? null;
-                                    $customerPhone = $customer->mobile ?? null;
+                                    $customerPhone = $customer->mobile ?? ($customer->phone ?? null);
                                 @endphp
                                 <tr>
-                                    <td>
-                                        <div class="amount-cell">
-                                            <span class="amount text--success">{{ showAmount(@$deposit->amount) }}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if($fee > 0)
-                                            {{ showAmount($fee) }}
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span class="badge badge--{{ $statusClass }}">{{ __($statusLabel) }}</span>
-                                    </td>
+                                    <td class="fw-semibold">#{{ $deposit->trx }}</td>
                                     <td>{{ $customerName ?: __('N/A') }}</td>
-                                    <td>
-                                        @if($customerEmail)
-                                            <a href="mailto:{{ $customerEmail }}">{{ $customerEmail }}</a>
-                                        @else
-                                            {{ __('N/A') }}
-                                        @endif
-                                    </td>
+                                    <td>{{ $customerEmail ?: __('N/A') }}</td>
                                     <td>{{ $customerPhone ?: __('N/A') }}</td>
-                                    <td>{{ showDateTime(@$deposit->created_at, 'M d, Y @g:i A') }}</td>
+                                    <td class="text-end {{ $deposit->status == Status::PAYMENT_REJECT ? 'amount-negative' : 'amount-positive' }}">
+                                        {{ showAmount(@$deposit->amount) }}
+                                    </td>
+                                    <td><span class="status-badge {{ $statusClass }}">{{ __($statusLabel) }}</span></td>
+                                    <td>{{ showDateTime(@$deposit->created_at, 'M d, Y') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td class="text-muted text-center" colspan="100%">{{ __('Data not found') }}</td>
+                                    <td class="text-muted text-center" colspan="7">{{ __('Data not found') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -217,28 +203,85 @@
     .capitalize{
         text-transform: capitalize;
     }
-    .deposit-table th,
-    .deposit-table td {
-        vertical-align: middle;
-        font-size: 14px;
+    .deposit-history-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
     }
-    .deposit-table td {
-        padding-top: 16px;
-        padding-bottom: 16px;
-    }
-    .amount-cell .amount {
-        font-weight: 600;
-        font-size: 15px;
-    }
-    .deposit-table .badge {
-        font-weight: 600;
+
+    .deposit-history-table thead th {
         font-size: 12px;
-    }
-    .deposit-table thead th {
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 12px 10px;
         white-space: nowrap;
     }
-    .deposit-table a {
-        color: #5c7cfa;
+
+    .deposit-history-table tbody td {
+        font-size: 13px;
+        color: #0f172a;
+        padding: 14px 10px;
+        border-bottom: 1px solid #eef2f6;
+        vertical-align: middle;
+    }
+
+    .deposit-history-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .status-badge--success {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .status-badge--warning {
+        background: #fef9c3;
+        color: #a16207;
+    }
+
+    .status-badge--danger {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    .amount-positive {
+        color: #16a34a;
+        font-weight: 600;
+    }
+
+    .amount-negative {
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+    .customer-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .customer-name {
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .customer-meta {
+        font-size: 12px;
+        color: #6b7280;
     }
 </style>
 @endpush

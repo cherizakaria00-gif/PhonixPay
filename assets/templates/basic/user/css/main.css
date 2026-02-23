@@ -3637,8 +3637,9 @@ label {
     -moz-border-radius: 0 !important;
     -ms-border-radius: 0 !important;
     -o-border-radius: 0 !important;
-    border-right: 1px solid #dddddd91;
+    border-right: 1px solid #1e293b;
     padding-bottom: 90px;
+    background-color: #0f172a;
 }
 .merchant-dashboard .d-sidebar.rounded {
     border-radius: 0 !important;
@@ -3658,6 +3659,121 @@ label {
 }
 .merchant-dashboard .d-sidebar.active {
     left: 0;
+}
+.merchant-dashboard .sidebar-menu__link {
+    color: #cbd5e1;
+}
+.merchant-dashboard .sidebar-menu__link i {
+    color: #94a3b8;
+}
+.merchant-dashboard .sidebar-menu__link:hover {
+    color: #ffffff;
+    background-color: #1e293b;
+}
+.merchant-dashboard .sidebar-menu__item.active .sidebar-menu__link {
+    background-color: #1e293b;
+    color: #ffffff;
+    font-weight: 600;
+}
+.merchant-dashboard .sidebar-menu__item.active .sidebar-menu__link i,
+.merchant-dashboard .sidebar-menu__link:hover i {
+    color: #a5b4fc;
+}
+.merchant-dashboard .sidebar-menu__item.sidebar-dropdown::after {
+    color: #94a3b8;
+}
+.merchant-dashboard .user-profile {
+    background-color: #0f172a;
+    border-top: 1px solid #1e293b;
+}
+.merchant-dashboard .user-profile-info__icon {
+    background-color: rgba(148, 163, 184, 0.15);
+    color: #e2e8f0;
+    border-color: rgba(148, 163, 184, 0.2);
+}
+.merchant-dashboard .user-profile-info__desc {
+    color: #cbd5e1;
+}
+.merchant-dashboard .user-profile-info__name {
+    color: #f8fafc;
+}
+.merchant-dashboard .user-profile-dots {
+    color: #e2e8f0;
+}
+.merchant-dashboard .header-balance {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    margin-right: 12px;
+}
+.merchant-dashboard .header-balance__card {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    min-height: 40px;
+}
+.merchant-dashboard .header-balance__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    color: #0f172a;
+    font-size: 16px;
+}
+.merchant-dashboard .header-balance__content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+}
+.merchant-dashboard .header-balance__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+}
+.merchant-dashboard .header-balance__value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.merchant-dashboard .header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 4px;
+}
+.merchant-dashboard .header-action-btn,
+.merchant-dashboard .header-profile {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    text-decoration: none;
+    font-weight: 600;
+}
+.merchant-dashboard .header-action-btn:hover,
+.merchant-dashboard .header-profile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
+}
+.merchant-dashboard .header-action-btn i {
+    font-size: 18px;
 }
 .merchant-dashboard .merchant-dashboard__body {
     margin-left: calc(250px + 1.875rem);
@@ -3680,6 +3796,10 @@ label {
     .merchant-dashboard .merchant-dashboard__body {
         padding-right: 0.9375rem;
         margin-left: 0.9375rem;
+    }
+    .merchant-dashboard .header-balance {
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 }
 .merchant-dashboard .dashboard-top-nav {

@@ -1,264 +1,106 @@
 @extends('admin.layouts.app')
 
 @section('panel')
+    <div class="pf-admin-dashboard">
+        <div class="pf-admin-header">
+            <h1 class="pf-admin-title">@lang('Admin Overview')</h1>
+        </div>
 
-    <div class="row gy-4">
+        <div class="pf-admin-stat-grid">
+            <a href="{{ route('admin.deposit.list') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-wallet"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Total Revenue')</p>
+                    <h3 class="pf-admin-stat-value">{{ showAmount($deposit['total_deposit_amount']) }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Updated this month')</span>
+                </div>
+            </a>
+            <a href="{{ route('admin.users.active') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-users"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Active Merchants')</p>
+                    <h3 class="pf-admin-stat-value">{{ $widget['verified_users'] }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Active this week')</span>
+                </div>
+            </a>
+            <a href="{{ route('admin.deposit.list') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-exchange-alt"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Total Transactions')</p>
+                    <h3 class="pf-admin-stat-value">{{ $widget['total_transactions'] }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Tracked this month')</span>
+                </div>
+            </a>
+            <a href="{{ route('admin.users.kyc.pending') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-user-clock"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Pending KYC')</p>
+                    <h3 class="pf-admin-stat-value">{{ $widget['pending_kyc'] }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--negative">@lang('Needs attention')</span>
+                </div>
+            </a>
+        </div>
 
-        <div class="col-xxl-3 col-sm-6">
-
-            <x-widget
-                style="6"
-                link="{{route('admin.users.all')}}"
-                icon="las la-users"
-                title="Total Merchants"
-                value="{{$widget['total_users']}}"
-                bg="primary"
-            />
-        </div><!-- dashboard-w1 end -->
-        <div class="col-xxl-3 col-sm-6">
-            <x-widget
-                style="6"
-                link="{{route('admin.users.active')}}"
-                icon="las la-user-check"
-                title="Active Merchants"
-                value="{{$widget['verified_users']}}"
-                bg="success"
-            />
-        </div><!-- dashboard-w1 end -->
-        <div class="col-xxl-3 col-sm-6">
-            <x-widget
-                style="6"
-                link="{{route('admin.users.email.unverified')}}"
-                icon="lar la-envelope"
-                title="Email Unverified Merchants"
-                value="{{$widget['email_unverified_users']}}"
-                bg="danger"
-            />
-        </div><!-- dashboard-w1 end -->
-        <div class="col-xxl-3 col-sm-6">
-            <x-widget
-                style="6"
-                link="{{route('admin.users.mobile.unverified')}}"
-                icon="las la-comment-slash"
-                title="Mobile Unverified Merchants"
-                value="{{$widget['mobile_unverified_users']}}"
-                bg="warning"
-            />
-        </div><!-- dashboard-w1 end -->
-    </div><!-- row end-->
-
-    <div class="row mt-2 gy-4">
-        <div class="col-xxl-6">
-            <div class="card box-shadow3 h-100">
-                <div class="card-body">
-                    <h5 class="card-title">@lang('Payments')</h5>
-                    <div class="widget-card-wrapper">
-
-                        <div class="widget-card bg--success">
-                            <a href="{{ route('admin.deposit.list') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="fas fa-hand-holding-usd"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ showAmount($deposit['total_deposit_amount']) }}</h6>
-                                    <p class="widget-card-title">@lang('Total Payments')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
-
-                        <div class="widget-card bg--warning">
-                            <a href="{{ route('admin.deposit.refunded') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="las la-undo"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ $deposit['total_deposit_refunded'] }}</h6>
-                                    <p class="widget-card-title">@lang('Refunded Payments')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
-
-                        <div class="widget-card bg--danger">
-                            <a href="{{ route('admin.deposit.rejected') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="fas fa-ban"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ $deposit['total_deposit_rejected'] }}</h6>
-                                    <p class="widget-card-title">@lang('Canceled Payments')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
-
-                        <div class="widget-card bg--primary">
-                            <a href="{{ route('admin.deposit.list') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="fas fa-percentage"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ showAmount($deposit['total_deposit_charge']) }}</h6>
-                                    <p class="widget-card-title">@lang('Payment Charge')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
-
+        <div class="pf-admin-chart-grid">
+            <div class="pf-admin-panel">
+                <div class="pf-admin-panel-header">
+                    <h5 class="pf-admin-panel-title">@lang('Revenue Trend')</h5>
+                    <div id="dwDatePicker" class="pf-admin-date-picker">
+                        <i class="la la-calendar"></i>
+                        <span></span>
+                        <i class="la la-caret-down"></i>
                     </div>
                 </div>
+                <div id="dwChartArea" class="pf-admin-chart-area"></div>
+            </div>
+            <div class="pf-admin-panel">
+                <div class="pf-admin-panel-header">
+                    <h5 class="pf-admin-panel-title">@lang('Transactions Report')</h5>
+                    <div id="trxDatePicker" class="pf-admin-date-picker">
+                        <i class="la la-calendar"></i>
+                        <span></span>
+                        <i class="la la-caret-down"></i>
+                    </div>
+                </div>
+                <div id="transactionChartArea" class="pf-admin-chart-area"></div>
             </div>
         </div>
-        <div class="col-xxl-6">
-            <div class="card box-shadow3 h-100">
-                <div class="card-body">
-                    <h5 class="card-title">@lang('Withdrawals')</h5>
-                    <div class="widget-card-wrapper">
-                        <div class="widget-card bg--success">
-                            <a href="{{ route('admin.withdraw.data.all') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="lar la-credit-card"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ showAmount($withdrawals['total_withdraw_amount']) }}</h6>
-                                    <p class="widget-card-title">@lang('Total Withdrawn')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
 
-                        <div class="widget-card bg--warning">
-                            <a href="{{ route('admin.withdraw.data.pending') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="fas fa-spinner"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ $withdrawals['total_withdraw_pending'] }}</h6>
-                                    <p class="widget-card-title">@lang('Pending Withdrawals')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
-
-                        <div class="widget-card bg--danger">
-                            <a href="{{ route('admin.withdraw.data.rejected') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="las la-times-circle"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ $withdrawals['total_withdraw_rejected'] }}</h6>
-                                    <p class="widget-card-title">@lang('Rejected Withdrawals')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
-
-                        <div class="widget-card bg--primary">
-                            <a href="{{ route('admin.withdraw.data.all') }}" class="widget-card-link"></a>
-                            <div class="widget-card-left">
-                                <div class="widget-card-icon">
-                                    <i class="las la-percent"></i>
-                                </div>
-                                <div class="widget-card-content">
-                                    <h6 class="widget-card-amount">{{ showAmount($withdrawals['total_withdraw_charge']) }}</h6>
-                                    <p class="widget-card-title">@lang('Withdrawal Charge')</p>
-                                </div>
-                            </div>
-                            <span class="widget-card-arrow">
-                                <i class="las la-angle-right"></i>
-                            </span>
-                        </div>
-
-                    </div>
+        <div class="pf-admin-chart-grid pf-admin-chart-grid--three">
+            <div class="pf-admin-panel pf-admin-panel--compact">
+                <div class="pf-admin-panel-header">
+                    <h5 class="pf-admin-panel-title">@lang('Login By Browser') (@lang('Last 30 days'))</h5>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-none-30 mt-30">
-        <div class="col-xl-6 mb-30">
-            <div class="card">
-              <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between">
-                    <h5 class="card-title">@lang('Payment & Withdraw Report')</h5>
-
-                    <div id="dwDatePicker" class="border p-1 cursor-pointer rounded">
-                        <i class="la la-calendar"></i>&nbsp;
-                        <span></span> <i class="la la-caret-down"></i>
-                    </div>
-                </div>
-                <div id="dwChartArea"> </div>
-              </div>
-            </div>
-          </div>
-        <div class="col-xl-6 mb-30">
-            <div class="card">
-              <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between">
-                    <h5 class="card-title">@lang('Transactions Report')</h5>
-
-                    <div id="trxDatePicker" class="border p-1 cursor-pointer rounded">
-                        <i class="la la-calendar"></i>&nbsp;
-                        <span></span> <i class="la la-caret-down"></i>
-                    </div>
-                </div>
-
-                <div id="transactionChartArea"></div>
-              </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-none-30 mt-5">
-        <div class="col-xl-4 col-lg-6 mb-30">
-            <div class="card overflow-hidden">
-                <div class="card-body">
-                    <h5 class="card-title">@lang('Login By Browser') (@lang('Last 30 days'))</h5>
+                <div class="pf-admin-mini-chart">
                     <canvas id="userBrowserChart"></canvas>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-4 col-lg-6 mb-30">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">@lang('Login By OS') (@lang('Last 30 days'))</h5>
+            <div class="pf-admin-panel pf-admin-panel--compact">
+                <div class="pf-admin-panel-header">
+                    <h5 class="pf-admin-panel-title">@lang('Login By OS') (@lang('Last 30 days'))</h5>
+                </div>
+                <div class="pf-admin-mini-chart">
                     <canvas id="userOsChart"></canvas>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-4 col-lg-6 mb-30">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">@lang('Login By Country') (@lang('Last 30 days'))</h5>
+            <div class="pf-admin-panel pf-admin-panel--compact">
+                <div class="pf-admin-panel-header">
+                    <h5 class="pf-admin-panel-title">@lang('Login By Country') (@lang('Last 30 days'))</h5>
+                </div>
+                <div class="pf-admin-mini-chart">
                     <canvas id="userCountryChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
-
-
 
     @include('admin.partials.cron_modal')
 @endsection
@@ -287,6 +129,7 @@
 @push('script')
     <script>
         "use strict";
+        document.body.classList.add('pf-admin-dashboard');
 
         const start = moment().subtract(14, 'days');
         const end = moment();
@@ -426,8 +269,208 @@
 @endpush
 @push('style')
     <style>
+        .pf-admin-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .pf-admin-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .pf-admin-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .pf-admin-stat-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .pf-admin-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .pf-admin-stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #64748b;
+        }
+
+        .pf-admin-stat-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+
+        .pf-admin-stat-value {
+            font-size: 22px;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 0 0 6px;
+        }
+
+        .pf-admin-stat-change {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .pf-admin-stat-change--positive {
+            color: #16a34a;
+        }
+
+        .pf-admin-stat-change--negative {
+            color: #dc2626;
+        }
+
+        .pf-admin-chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+        }
+
+        .pf-admin-chart-grid--three {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .pf-admin-panel {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        }
+
+        .pf-admin-panel--compact {
+            padding: 16px;
+        }
+
+        .pf-admin-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .pf-admin-panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .pf-admin-date-picker {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .pf-admin-chart-area {
+            min-height: 280px;
+        }
+
+        .pf-admin-mini-chart {
+            min-height: 220px;
+        }
+
+        .pf-admin-panel canvas {
+            max-width: 100%;
+        }
+
+        body.pf-admin-dashboard .page-wrapper {
+            background: #f8fafc;
+        }
+
+        body.pf-admin-dashboard .navbar-wrapper {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+        }
+
+        body.pf-admin-dashboard .navbar-wrapper .navbar-search-field,
+        body.pf-admin-dashboard .navbar-wrapper .navbar-search-field::placeholder {
+            color: #475569;
+        }
+
+        body.pf-admin-dashboard .navbar-wrapper .navbar__action-list i,
+        body.pf-admin-dashboard .navbar-wrapper .navbar-user__name,
+        body.pf-admin-dashboard .navbar-wrapper .navbar-search i {
+            color: #475569;
+        }
+
+        body.pf-admin-dashboard .sidebar {
+            background-color: #0f172a !important;
+        }
+
+        body.pf-admin-dashboard .sidebar__menu .sidebar-menu-item > a {
+            color: #cbd5e1;
+        }
+
+        body.pf-admin-dashboard .sidebar__menu .sidebar-menu-item > a .menu-icon {
+            color: #94a3b8;
+        }
+
+        body.pf-admin-dashboard .sidebar__menu .sidebar-menu-item.active > a,
+        body.pf-admin-dashboard .sidebar__menu .sidebar-menu-item > a:hover {
+            background: #1e293b;
+            color: #ffffff;
+        }
+
+        body.pf-admin-dashboard .sidebar__menu .sidebar-menu-item.active > a .menu-icon,
+        body.pf-admin-dashboard .sidebar__menu .sidebar-menu-item > a:hover .menu-icon {
+            color: #a5b4fc;
+        }
+
+        body.pf-admin-dashboard .sidebar__menu-header {
+            color: #94a3b8;
+        }
+
         .apexcharts-menu {
             min-width: 120px !important;
+        }
+
+        @media (max-width: 767px) {
+            .pf-admin-stat-card {
+                padding: 16px;
+            }
+
+            .pf-admin-panel {
+                padding: 16px;
+            }
         }
     </style>
 @endpush

@@ -1,7 +1,7 @@
 <div class="d-sidebar h-100 rounded">
     <button class="sidebar-close-btn bg--base text-white"><i class="las la-times"></i></button>
     <div class="d-sidebar__thumb">
-        <a href="{{route('home')}}"><img src="{{ siteLogo('dark') }}" alt=""></a>
+        <a href="{{route('home')}}"><img src="{{ siteLogo() }}" alt=""></a>
     </div>
     <div class="sidebar-menu-wrapper" id="sidebar-menu-wrapper">
         <ul class="sidebar-menu">
@@ -48,7 +48,21 @@
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive(['user.profile.setting', 'user.change.password', 'user.twofactor', 'user.api.key']) }}">
+            <li class="sidebar-menu__item {{ menuActive('ticket.*') }}">
+                <a href="{{ route('ticket.index') }}" class="sidebar-menu__link">
+                    <i class="las la-headset"></i>
+                    @lang('Get Support')
+                </a>
+            </li>
+
+            <li class="sidebar-menu__item {{ menuActive('user.api.key') }}">
+                <a href="{{ route('user.api.key') }}" class="sidebar-menu__link">
+                    <i class="las la-code"></i>
+                    @lang('Developers')
+                </a>
+            </li>
+
+            <li class="sidebar-menu__item {{ menuActive(['user.profile.setting', 'user.change.password', 'user.twofactor']) }}">
                 <a href="{{ route('user.profile.setting') }}" class="sidebar-menu__link">
                     <i class="las la-cogs"></i>
                     @lang('Setting')
