@@ -39,14 +39,20 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>@lang('Username') </label>
-                                    <input type="text" class="form-control" placeholder="@lang('Username')" name="infobip_username" value="{{ @gs('sms_config')->infobip->username }}">
+                                    <label>@lang('API Key') </label>
+                                    <input type="text" class="form-control" placeholder="@lang('Infobip App API Key')" name="infobip_api_key" value="{{ @gs('sms_config')->infobip->api_key }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>@lang('Password') </label>
-                                    <input type="text" class="form-control" placeholder="@lang('Password')" name="infobip_password" value="{{ @gs('sms_config')->infobip->password }}">
+                                    <label>@lang('Base URL') </label>
+                                    <input type="text" class="form-control" placeholder="@lang('https://api.infobip.com')" name="infobip_base_url" value="{{ @gs('sms_config')->infobip->base_url ?? 'https://api.infobip.com' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>@lang('Sender ID (optional)') </label>
+                                    <input type="text" class="form-control" placeholder="@lang('ServiceSMS')" name="infobip_sender_id" value="{{ @gs('sms_config')->infobip->sender_id }}">
                                 </div>
                             </div>
                         </div>

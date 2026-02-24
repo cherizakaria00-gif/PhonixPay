@@ -51,8 +51,68 @@ class SmsGateway{
 	}
 
 	public function infobip(){
-		$message = urlencode($this->message);
-		@file_get_contents("https://api.infobip.com/api/v3/sendsms/plain?user=".$this->config->infobip->username."&password=".$this->config->infobip->password."&sender=$this->from&SMSText=$message&GSM=$this->to&type=longSMS");
+		$infobipConfig = $this->config->infobip ?? null;
+		$apiKey = trim($infobipConfig->api_key ?? '');
+		$baseUrl = rtrim(trim($infobipConfig->base_url ?? 'https://api.infobip.com'), '/');
+		$senderId = trim($infobipConfig->sender_id ?? $this->from ?? '');
+
+		if (!$apiKey) {
+			throw new \Exception('Infobip API key is missing');
+		}
+
+		if (!$senderId) {
+			throw new \Exception('Infobip sender ID is missing');
+		}
+
+		$payload = [
+			'messages' => [
+				[
+					'destinations' => [
+						[
+							'to' => (string) $this->to,
+						],
+					],
+					'from' => $senderId,
+					'text' => (string) $this->message,
+				],
+			],
+		];
+
+		$ch = curl_init($baseUrl . '/sms/2/text/advanced');
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Authorization: App ' . $apiKey,
+			'Content-Type: application/json',
+			'Accept: application/json',
+		]);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+
+		$result = curl_exec($ch);
+		$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$curlError = curl_error($ch);
+		curl_close($ch);
+
+		if ($result === false || $curlError) {
+			throw new \Exception('Infobip cURL error: ' . $curlError);
+		}
+
+		if ($httpCode < 200 || $httpCode >= 300) {
+			$errorMessage = 'HTTP ' . $httpCode;
+			$response = json_decode($result, true);
+
+			if (json_last_error() === JSON_ERROR_NONE && is_array($response)) {
+				$serviceError = $response['requestError']['serviceException']['text'] ?? null;
+				$requestError = $response['requestError']['text'] ?? null;
+				$detail = $serviceError ?: $requestError;
+				if ($detail) {
+					$errorMessage .= ' - ' . $detail;
+				}
+			}
+
+			throw new \Exception('Infobip request failed: ' . $errorMessage);
+		}
 	}
 
 	public function messageBird(){

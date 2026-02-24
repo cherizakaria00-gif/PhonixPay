@@ -223,8 +223,9 @@ class NotificationController extends Controller
             'message_bird_api_key' => 'required_if:sms_method,messageBird',
             'nexmo_api_key' => 'required_if:sms_method,nexmo',
             'nexmo_api_secret' => 'required_if:sms_method,nexmo',
-            'infobip_username' => 'required_if:sms_method,infobip',
-            'infobip_password' => 'required_if:sms_method,infobip',
+            'infobip_api_key' => 'required_if:sms_method,infobip',
+            'infobip_base_url' => 'nullable|url',
+            'infobip_sender_id' => 'nullable|string|max:50',
             'sms_broadcast_username' => 'required_if:sms_method,smsBroadcast',
             'sms_broadcast_password' => 'required_if:sms_method,smsBroadcast',
             'text_magic_username' => 'required_if:sms_method,textMagic',
@@ -242,8 +243,9 @@ class NotificationController extends Controller
                 'api_key'=>$request->clickatell_api_key,
             ],
             'infobip'=>[
-                'username'=>$request->infobip_username,
-                'password'=>$request->infobip_password,
+                'api_key'=>$request->infobip_api_key,
+                'base_url'=>$request->infobip_base_url ?: 'https://api.infobip.com',
+                'sender_id'=>$request->infobip_sender_id,
             ],
             'message_bird'=>[
                 'api_key'=>$request->message_bird_api_key,
