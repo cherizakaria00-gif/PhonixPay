@@ -1,3 +1,8 @@
+@php
+    use App\Constants\Status;
+    $isAccountRestricted = auth()->user()->kv != Status::KYC_VERIFIED;
+@endphp
+
 <div class="d-sidebar h-100 rounded">
     <button class="sidebar-close-btn bg--base text-white"><i class="las la-times"></i></button>
     <div class="d-sidebar__thumb">
@@ -20,19 +25,14 @@
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive('user.payment.links*') }}">
-                <a href="{{ route('user.payment.links.index') }}" class="sidebar-menu__link">
+            <li class="sidebar-menu__item {{ menuActive('user.payment.links*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.payment.links.index') }}"
+                   class="sidebar-menu__link {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-link"></i>
                     @lang('Payment Links')
                 </a>
             </li>
-
-            <li class="sidebar-menu__item {{ menuActive('user.calculate.charge') }}">
-                <a href="{{ route('user.calculate.charge') }}" class="sidebar-menu__link">
-                    <i class="las la-calculator"></i>
-                    @lang('Calculate Charge')
-                </a>
-            </li> 
 
             <li class="sidebar-menu__item {{ menuActive(['user.withdraws', 'user.withdraw.method']) }}">
                 <a href="{{ route('user.withdraws') }}" class="sidebar-menu__link">
@@ -55,8 +55,10 @@
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive('user.api.key') }}">
-                <a href="{{ route('user.api.key') }}" class="sidebar-menu__link">
+            <li class="sidebar-menu__item {{ menuActive('user.api.key') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.api.key') }}"
+                   class="sidebar-menu__link {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-code"></i>
                     @lang('Developers')
                 </a>

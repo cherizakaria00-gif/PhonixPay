@@ -10,7 +10,11 @@ return new class extends Migration
     {
         if (Schema::hasTable('deposits') && !Schema::hasColumn('deposits', 'payment_link_id')) {
             Schema::table('deposits', function (Blueprint $table) {
-                $table->unsignedBigInteger('payment_link_id')->nullable()->after('stripe_session_id');
+                if (Schema::hasColumn('deposits', 'stripe_session_id')) {
+                    $table->unsignedBigInteger('payment_link_id')->nullable()->after('stripe_session_id');
+                    return;
+                }
+                $table->unsignedBigInteger('payment_link_id')->nullable();
             });
         }
     }

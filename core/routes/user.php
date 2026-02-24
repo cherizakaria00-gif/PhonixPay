@@ -58,8 +58,8 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::get('calculate-charge', 'calculateCharge')->name('calculate.charge')->middleware('user.restricted');
                 Route::get('dashboard/statistics', 'dashboardStatistics')->name('dashboard.statistics');
 
-                Route::get('api-key', 'apiKey')->name('api.key');
-                Route::post('api-key', 'generateApiKey')->name('generate.key');
+                Route::get('api-key', 'apiKey')->name('api.key')->middleware('user.restricted');
+                Route::post('api-key', 'generateApiKey')->name('generate.key')->middleware('user.restricted');
 
                 Route::get('gateway/methods', 'gatewayMethods')->name('gateway.methods')->middleware('user.restricted');
 
@@ -80,7 +80,7 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('add-device-token','addDeviceToken')->name('add.device.token');
             });
 
-            Route::controller('PaymentLinkController')->prefix('payment-links')->name('payment.links.')->group(function () {
+            Route::controller('PaymentLinkController')->prefix('payment-links')->name('payment.links.')->middleware('user.restricted')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::get('create', 'create')->name('create');
                 Route::post('create', 'store')->name('store');

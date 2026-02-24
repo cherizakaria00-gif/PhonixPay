@@ -12,8 +12,17 @@ use Illuminate\Support\Facades\Log;
 class ProcessController extends Controller {
     public static function process($deposit) {
         $nowPaymentsAcc = json_decode($deposit->gatewayCurrency()->gateway_parameter);
+        $grossAmount = (float) ($deposit->gateway_amount ?? 0);
+        $expectedGross = (float) ($deposit->final_amount + ($deposit->totalCharge ?? 0) * ($deposit->rate ?? 1));
+        if ($expectedGross > 0) {
+            $grossAmount = max($grossAmount, $expectedGross);
+        }
+        if ($grossAmount <= 0) {
+            $grossAmount = (float) ($deposit->final_amount ?? 0);
+        }
+
         $responseRaw       = CurlRequest::curlPostContent('https://api.nowpayments.io/v1/payment', json_encode([
-            'price_amount'     => $deposit->final_amount,
+            'price_amount'     => $grossAmount,
             'price_currency'   => gs('cur_text'),
             'pay_currency'     => $deposit->method_currency,
             'ipn_callback_url' => route('ipn.NowPaymentsHosted'),

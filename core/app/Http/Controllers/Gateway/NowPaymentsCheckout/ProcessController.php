@@ -13,8 +13,17 @@ class ProcessController extends Controller {
         $nowPaymentsAcc = json_decode($deposit->gatewayCurrency()->gateway_parameter);
         $successUrl = self::buildReturnUrl($deposit->success_url);
         $cancelUrl = self::buildReturnUrl($deposit->failed_url);
+        $grossAmount = (float) ($deposit->gateway_amount ?? 0);
+        $expectedGross = (float) ($deposit->final_amount + ($deposit->totalCharge ?? 0) * ($deposit->rate ?? 1));
+        if ($expectedGross > 0) {
+            $grossAmount = max($grossAmount, $expectedGross);
+        }
+        if ($grossAmount <= 0) {
+            $grossAmount = (float) ($deposit->final_amount ?? 0);
+        }
+
         $responseRaw       = CurlRequest::curlPostContent('https://api.nowpayments.io/v1/invoice', json_encode([
-            'price_amount'     => $deposit->final_amount,
+            'price_amount'     => $grossAmount,
             'price_currency'   => $deposit->method_currency,
             'ipn_callback_url' => route('ipn.NowPaymentsCheckout'),
             'success_url'      => $successUrl,

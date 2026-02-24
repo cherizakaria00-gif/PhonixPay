@@ -76,13 +76,7 @@
                                 </div>
                                 @if(gs('agree'))
                                     <div class="form-group terms-condition">
-                                        <p class="text">@lang('Read our')
-                                            @foreach($policyPages as $policy) 
-                                                <a href="{{ route('policy.pages',[slug($policy->data_values->title)]) }}" class="anchor-color small" target="_blank">
-                                                    {{ __($policy->data_values->title) }}
-                                                </a>@if(!$loop->last), @endif 
-                                            @endforeach
-                                        </p>
+                                        <p class="text">@lang('Choose your preferred payment method — your transaction is fully secure.')</p>
                                     </div>
                                 @endif
                                 <div id="gateway-error" class="alert alert-danger d-none"></div>

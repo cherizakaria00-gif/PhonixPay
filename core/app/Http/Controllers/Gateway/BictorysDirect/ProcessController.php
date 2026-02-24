@@ -17,11 +17,11 @@ class ProcessController extends Controller
         $gatewayParams = json_decode($deposit->gatewayCurrency()->gateway_parameter ?? '{}');
         $apiKey = $gatewayParams->api_key ?? null;
         $merchantReference = $gatewayParams->merchant_reference ?? null;
-        $paymentType = $gatewayParams->payment_type ?? null;
+        $paymentType = $gatewayParams->payment_type ?? 'card';
         $country = $gatewayParams->country ?? null;
         $baseUrl = trim($gatewayParams->api_base_url ?? 'https://api.test.bictorys.com');
 
-        if (!$apiKey || !$merchantReference || !$paymentType) {
+        if (!$apiKey || !$merchantReference) {
             return json_encode([
                 'error' => true,
                 'message' => 'Bictorys credentials not configured',

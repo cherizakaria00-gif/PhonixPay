@@ -266,11 +266,6 @@ class ProcessController extends Controller
 
     protected static function applyPaymentCategory(string $url, ?string $currency): string
     {
-        $currency = strtoupper(trim((string) $currency));
-        if ($currency !== 'USD') {
-            return $url;
-        }
-
         return self::appendQueryParam($url, 'payment_category', 'card');
     }
 
