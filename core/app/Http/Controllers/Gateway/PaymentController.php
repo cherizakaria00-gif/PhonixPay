@@ -51,8 +51,9 @@ class PaymentController extends Controller
 
         if ($request->filled('payment_link_code')) {
             $request->validate([
-                'customer_first_name' => 'required|string|max:100',
-                'customer_last_name' => 'required|string|max:100',
+                'customer_full_name' => 'required_without:customer_first_name,customer_last_name|string|max:200',
+                'customer_first_name' => 'required_without:customer_full_name|string|max:100',
+                'customer_last_name' => 'required_without:customer_full_name|string|max:100',
                 'customer_email' => 'required|email|max:255',
                 'customer_mobile' => 'required|string|max:50',
             ]);
@@ -60,15 +61,32 @@ class PaymentController extends Controller
 
         $paymentLink = null;
 
+        $fullName = trim((string) $request->input('customer_full_name'));
+        $firstName = $request->input('customer_first_name');
+        $lastName = $request->input('customer_last_name');
+
+        if ($fullName) {
+            $parts = preg_split('/\s+/', $fullName);
+            $firstName = $parts ? array_shift($parts) : $fullName;
+            $lastName = trim(implode(' ', $parts));
+            if ($lastName === '') {
+                $lastName = 'N/A';
+            }
+        } else {
+            $fullName = trim(($firstName ?? '') . ' ' . ($lastName ?? ''));
+        }
+
         $customerPayload = [
-            'first_name' => $request->input('customer_first_name'),
-            'last_name' => $request->input('customer_last_name'),
+            'name' => $fullName ?: null,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
             'email' => $request->input('customer_email'),
             'mobile' => $request->input('customer_mobile'),
         ];
 
         if (array_filter($customerPayload)) {
             $apiPayment->customer = [
+                'name' => $customerPayload['name'] ?? null,
                 'first_name' => $customerPayload['first_name'] ?? null,
                 'last_name' => $customerPayload['last_name'] ?? null,
                 'email' => $customerPayload['email'] ?? null,

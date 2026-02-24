@@ -45,19 +45,15 @@
                                 @endif
                                 @if(!empty($showCustomerForm))
                                     <div class="row gy-3 mb-4">
-                                        <div class="col-md-6">
-                                            <label class="form-label">@lang('First Name')</label>
-                                            <input type="text" name="customer_first_name" class="form--control" required>
+                                        <div class="col-12">
+                                            <label class="form-label">@lang('Full Name')</label>
+                                            <input type="text" name="customer_full_name" class="form--control" required>
                                         </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">@lang('Last Name')</label>
-                                            <input type="text" name="customer_last_name" class="form--control" required>
-                                        </div>
-                                        <div class="col-md-6">
+                                        <div class="col-12">
                                             <label class="form-label">@lang('Email')</label>
                                             <input type="email" name="customer_email" class="form--control" required>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-12">
                                             <label class="form-label">@lang('Mobile')</label>
                                             <input type="text" name="customer_mobile" class="form--control" required>
                                         </div>

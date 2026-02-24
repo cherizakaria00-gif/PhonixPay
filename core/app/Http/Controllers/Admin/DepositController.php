@@ -56,9 +56,9 @@ class DepositController extends Controller
     protected function depositData($scope = null,$summary = false,$userId = null, $pageTitle)
     {  
         if ($scope) {
-            $deposits = Deposit::$scope()->with(['user', 'gateway', 'stripeAccount']);
+            $deposits = Deposit::$scope()->with(['user', 'gateway', 'stripeAccount', 'apiPayment']);
         }else{
-            $deposits = Deposit::with(['user', 'gateway', 'stripeAccount']);
+            $deposits = Deposit::with(['user', 'gateway', 'stripeAccount', 'apiPayment']);
         }
 
         if ($userId) {
@@ -105,7 +105,7 @@ class DepositController extends Controller
 
     public function details($id)
     {
-        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount'])->firstOrFail();
+        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount', 'apiPayment'])->firstOrFail();
         $pageTitle = $deposit->user->username.' requested ' . showAmount($deposit->amount);
         $details = ($deposit->detail != null) ? json_encode($deposit->detail) : null;
         return view('admin.deposit.detail', compact('pageTitle', 'deposit','details'));
@@ -113,7 +113,7 @@ class DepositController extends Controller
 
     public function refund($id)
     {
-        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount'])->firstOrFail();
+        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount', 'apiPayment'])->firstOrFail();
 
         if ($deposit->status == Status::PAYMENT_REFUNDED) {
             $notify[] = ['error', 'This payment is already refunded'];

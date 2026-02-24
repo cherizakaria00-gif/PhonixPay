@@ -620,6 +620,18 @@ button .spinner-border {
   }
 }
 
+/* Checkout compact fields */
+.checkout .form--control {
+  padding: 10px 16px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.checkout .form-label {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
 .header-balance {
   display: flex;
   flex-wrap: wrap;

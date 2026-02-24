@@ -19,6 +19,9 @@
                             <th>@lang('Gateway | Transaction')</th>
                             <th>@lang('Initiated')</th>
                             <th>@lang('Merchant')</th>
+                            <th>@lang('Customer')</th>
+                            <th>@lang('Email')</th>
+                            <th>@lang('Phone')</th>
                             <th>@lang('Amount')</th>
                             <th>@lang('Conversion')</th>
                             <th>@lang('Status')</th>
@@ -57,6 +60,18 @@
                                     <a href="{{ appendQuery('search',@$deposit->user->username) }}"><span>@</span>{{ $deposit->user->username }}</a>
                                     </span>
                                 </td>
+                                @php
+                                    $customer = $deposit->apiPayment->customer ?? null;
+                                    $customerName = '';
+                                    if ($customer) {
+                                        $customerName = trim($customer->name ?? (($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')));
+                                    }
+                                    $customerEmail = $customer->email ?? null;
+                                    $customerPhone = $customer->mobile ?? ($customer->phone ?? null);
+                                @endphp
+                                <td>{{ $customerName ?: __('N/A') }}</td>
+                                <td>{{ $customerEmail ?: __('N/A') }}</td>
+                                <td>{{ $customerPhone ?: __('N/A') }}</td>
                                 <td>
                                    {{ showAmount($deposit->amount) }} - <span class="text-danger" title="@lang('Total charge')">{{ showAmount($deposit->totalCharge)}} </span>
                                     <br>
