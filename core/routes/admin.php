@@ -40,6 +40,7 @@ Route::middleware('admin')->group(function () {
         Route::get('notifications','notifications')->name('notifications');
         Route::get('notification/read/{id}','notificationRead')->name('notification.read');
         Route::get('notifications/read-all','readAllNotification')->name('notifications.read.all');
+        Route::get('notifications/poll','notificationPoll')->name('notifications.poll');
         Route::post('notifications/delete-all','deleteAllNotification')->name('notifications.delete.all');
         Route::post('notifications/delete-single/{id}','deleteSingleNotification')->name('notifications.delete.single');
 

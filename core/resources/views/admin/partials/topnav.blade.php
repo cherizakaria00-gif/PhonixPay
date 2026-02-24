@@ -38,24 +38,20 @@
                     <a href="{{ route('home') }}" target="_blank"><i class="las la-globe"></i></a>
                 </button>
             </li>
-            <li class="dropdown">
-                <button type="button" class="primary--layer notification-bell" data-bs-toggle="dropdown" data-display="static"
+            <li class="dropdown" id="adminNotificationDropdown" data-poll-url="{{ route('admin.notifications.poll') }}">
+                <button type="button" class="primary--layer notification-bell" data-bs-toggle="dropdown" data-bs-display="static"
                     aria-haspopup="true" aria-expanded="false">
                     <span data-bs-toggle="tooltip" data-bs-placement="bottom" title="@lang('Unread Notifications')">
-                        <i class="las la-bell @if($adminNotificationCount > 0) icon-left-right @endif"></i>
+                        <i id="adminNotificationBellIcon" class="las la-bell @if($adminNotificationCount > 0) icon-left-right @endif"></i>
                     </span>
-                    @if($adminNotificationCount > 0)
-                    <span class="notification-count">{{ $adminNotificationCount <= 9 ? $adminNotificationCount : '9+'}}</span>
-                    @endif
+                    <span id="adminNotificationCountBadge" class="notification-count {{ $adminNotificationCount > 0 ? '' : 'd-none' }}">{{ $adminNotificationCount <= 9 ? $adminNotificationCount : '9+'}}</span>
                 </button>
                 <div class="dropdown-menu dropdown-menu--md p-0 border-0 box--shadow1 dropdown-menu-right">
                     <div class="dropdown-menu__header">
                         <span class="caption">@lang('Notification')</span>
-                        @if($adminNotificationCount > 0)
-                            <p>@lang('You have') {{ $adminNotificationCount }} @lang('unread notification')</p>
-                        @endif
+                        <p id="adminNotificationSummary" class="{{ $adminNotificationCount > 0 ? '' : 'd-none' }}">@lang('You have') {{ $adminNotificationCount }} @lang('unread notification')</p>
                     </div>
-                    <div class="dropdown-menu__body @if(blank($adminNotifications)) d-flex justify-content-center align-items-center @endif">
+                    <div id="adminNotificationList" class="dropdown-menu__body @if(blank($adminNotifications)) d-flex justify-content-center align-items-center @endif">
                         @forelse($adminNotifications as $notification)
                             <a href="{{ route('admin.notification.read',$notification->id) }}"
                                 class="dropdown-menu__item">
@@ -132,6 +128,108 @@
     $('.navbar__action-list .dropdown-menu').on('click', function(event){
         event.stopPropagation();
     });
+
+    (function ($) {
+        const $dropdown = $('#adminNotificationDropdown');
+        if (!$dropdown.length) return;
+
+        const pollUrl = $dropdown.data('poll-url');
+        const $badge = $('#adminNotificationCountBadge');
+        const $summary = $('#adminNotificationSummary');
+        const $list = $('#adminNotificationList');
+        const $bellIcon = $('#adminNotificationBellIcon');
+        let lastUnreadCount = Number(@json((int) $adminNotificationCount));
+
+        let adminAudioCtx = null;
+        let adminAudioReady = false;
+
+        function ensureAdminAudioCtx() {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return null;
+            if (!adminAudioCtx) adminAudioCtx = new Ctx();
+            return adminAudioCtx;
+        }
+
+        function unlockAdminAudio() {
+            const ctx = ensureAdminAudioCtx();
+            if (!ctx) return;
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+            adminAudioReady = true;
+        }
+
+        function playAdminNotificationSound() {
+            const ctx = ensureAdminAudioCtx();
+            if (!ctx || !adminAudioReady) return;
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(960, ctx.currentTime);
+            gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.18);
+        }
+
+        $(document).one('click keydown touchstart', unlockAdminAudio);
+
+        function escapeHtml(value) {
+            return $('<div/>').text(value || '').html();
+        }
+
+        function renderAdminNotifications(data) {
+            const unreadCount = Number(data.unread_count || 0);
+
+            if (unreadCount > 0) {
+                $badge.text(unreadCount > 9 ? '9+' : unreadCount).removeClass('d-none');
+                $summary.removeClass('d-none').text("{{ __('You have') }} " + unreadCount + " {{ __('unread notification') }}");
+                $bellIcon.addClass('icon-left-right');
+            } else {
+                $badge.addClass('d-none');
+                $summary.addClass('d-none');
+                $bellIcon.removeClass('icon-left-right');
+            }
+
+            if (!Array.isArray(data.notifications) || !data.notifications.length) {
+                $list.removeClass('d-flex justify-content-center align-items-center').html(`
+                    <div class="empty-notification text-center">
+                        <img src="{{ getImage('assets/images/empty_list.png') }}" alt="empty">
+                        <p class="mt-3">@lang('No unread notification found')</p>
+                    </div>
+                `);
+            } else {
+                let html = '';
+                data.notifications.forEach(function (notification) {
+                    html += '<a href="' + escapeHtml(notification.url) + '" class="dropdown-menu__item">';
+                    html += '<div class="navbar-notifi"><div class="navbar-notifi__right">';
+                    html += '<h6 class="notifi__title">' + escapeHtml(notification.title) + '</h6>';
+                    html += '<span class="time"><i class="far fa-clock"></i> ' + escapeHtml(notification.time) + '</span>';
+                    html += '</div></div></a>';
+                });
+                $list.removeClass('d-flex justify-content-center align-items-center').html(html);
+            }
+
+            if (unreadCount > lastUnreadCount) {
+                playAdminNotificationSound();
+            }
+            lastUnreadCount = unreadCount;
+        }
+
+        function pollAdminNotifications() {
+            $.get(pollUrl, function (response) {
+                if (response && response.status === 'success') {
+                    renderAdminNotifications(response);
+                }
+            });
+        }
+
+        setInterval(pollAdminNotifications, 30000);
+        pollAdminNotifications();
+    })(jQuery);
 </script>
 <script src="{{ asset('assets/admin/js/search.js') }}"></script>
 <script>

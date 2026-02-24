@@ -11,9 +11,11 @@ use App\Models\DeviceToken;
 use App\Models\Form;
 use App\Models\Gateway;
 use App\Models\GatewayCurrency;
+use App\Models\NotificationLog;
 use App\Models\Transaction;
 use App\Models\Withdrawal;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -35,6 +37,77 @@ class UserController extends Controller
         $latestDeposits = $latestDeposits->get();
         $latestTrx = $latestTrx->get();
         return view('Template::user.dashboard', compact('pageTitle', 'user', 'latestTrx', 'latestDeposits'));
+    }
+
+    public function notifications()
+    {
+        $pageTitle = 'Notifications';
+        $notifications = NotificationLog::where('user_id', auth()->id())
+            ->orderBy('id', 'desc')
+            ->paginate(getPaginate());
+
+        return view('Template::user.notifications', compact('pageTitle', 'notifications'));
+    }
+
+    public function notificationRead($id)
+    {
+        $notification = NotificationLog::where('user_id', auth()->id())->findOrFail($id);
+
+        if ((int)$notification->user_read === Status::NO) {
+            $notification->user_read = Status::YES;
+            $notification->save();
+        }
+
+        return back();
+    }
+
+    public function notificationReadAll()
+    {
+        NotificationLog::where('user_id', auth()->id())
+            ->where('user_read', Status::NO)
+            ->update(['user_read' => Status::YES]);
+
+        $notify[] = ['success', 'All notifications marked as read'];
+        return back()->withNotify($notify);
+    }
+
+    public function notificationPoll()
+    {
+        $userId = auth()->id();
+
+        $notifications = NotificationLog::where('user_id', $userId)
+            ->orderBy('id', 'desc')
+            ->take(8)
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id'      => $notification->id,
+                    'subject' => __($notification->subject ?: 'Notification'),
+                    'message' => $this->notificationPreview($notification->message),
+                    'time'    => diffForHumans($notification->created_at),
+                    'unread'  => (int) $notification->user_read === Status::NO,
+                    'url'     => route('user.notification.read', $notification->id),
+                ];
+            });
+
+        $unreadCount = NotificationLog::where('user_id', $userId)
+            ->where('user_read', Status::NO)
+            ->count();
+
+        return response()->json([
+            'status'       => 'success',
+            'unread_count' => $unreadCount,
+            'notifications'=> $notifications,
+        ]);
+    }
+
+    private function notificationPreview(?string $message): string
+    {
+        $clean = preg_replace('/<(style|script)\b[^>]*>.*?<\/\1>/is', ' ', $message ?? '');
+        $clean = strip_tags((string) $clean);
+        $clean = preg_replace('/\s+/u', ' ', html_entity_decode($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        return Str::limit(trim((string) $clean), 65);
     }
 
     public function depositHistory(Request $request)

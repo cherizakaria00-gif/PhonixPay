@@ -54,6 +54,10 @@ Route::middleware('auth')->name('user.')->group(function () {
             Route::controller('UserController')->group(function(){
                 Route::get('dashboard', 'home')->name('home');
                 Route::get('download-attachments/{file_hash}', 'downloadAttachment')->name('download.attachment');
+                Route::get('notifications', 'notifications')->name('notifications');
+                Route::get('notification/read/{id}', 'notificationRead')->name('notification.read');
+                Route::post('notifications/read-all', 'notificationReadAll')->name('notifications.read.all');
+                Route::get('notifications/poll', 'notificationPoll')->name('notifications.poll');
 
                 Route::get('calculate-charge', 'calculateCharge')->name('calculate.charge')->middleware('user.restricted');
                 Route::get('dashboard/statistics', 'dashboardStatistics')->name('dashboard.statistics');

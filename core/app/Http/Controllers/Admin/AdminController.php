@@ -281,6 +281,28 @@ class AdminController extends Controller
         return view('admin.notifications',compact('pageTitle','notifications','hasUnread','hasNotification'));
     }
 
+    public function notificationPoll()
+    {
+        $notifications = AdminNotification::where('is_read', Status::NO)
+            ->orderBy('id', 'desc')
+            ->take(10)
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id' => $notification->id,
+                    'title' => trim(strip_tags((string) $notification->title)) ?: 'Notification',
+                    'time' => diffForHumans($notification->created_at),
+                    'url' => route('admin.notification.read', $notification->id),
+                ];
+            });
+
+        return response()->json([
+            'status'       => 'success',
+            'unread_count' => AdminNotification::where('is_read', Status::NO)->count(),
+            'notifications'=> $notifications,
+        ]);
+    }
+
 
     public function notificationRead($id){
         $notification = AdminNotification::findOrFail($id);

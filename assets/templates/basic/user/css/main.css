@@ -3785,6 +3785,120 @@ label {
 .merchant-dashboard .header-action-btn i {
     font-size: 18px;
 }
+.merchant-dashboard .header-notification-dropdown .header-action-btn {
+    position: relative;
+}
+.merchant-dashboard .header-notification-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    padding: 0 5px;
+}
+.merchant-dashboard .header-notification-menu {
+    width: 340px;
+    min-width: 340px;
+    max-width: 420px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+}
+.merchant-dashboard .header-notification-menu__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+.merchant-dashboard .header-notification-menu__head h6 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    flex: 1;
+    margin: 0;
+    white-space: nowrap;
+}
+.merchant-dashboard .header-notification-mark-all {
+    border: 0;
+    background: transparent;
+    color: #4338ca;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0;
+    white-space: nowrap;
+}
+.merchant-dashboard .header-notification-menu__body {
+    max-height: 320px;
+    overflow-y: auto;
+}
+.merchant-dashboard .header-notification-item {
+    display: block;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    text-decoration: none;
+    background: #fff;
+    white-space: normal;
+}
+.merchant-dashboard .header-notification-item:hover {
+    background: #f8fafc;
+}
+.merchant-dashboard .header-notification-item.is-unread {
+    background: #eef2ff;
+}
+.merchant-dashboard .header-notification-item__subject {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 3px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.merchant-dashboard .header-notification-item__message {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 3px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.merchant-dashboard .header-notification-item__time {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.merchant-dashboard .header-notification-empty {
+    padding: 20px 14px;
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+}
+.merchant-dashboard .header-notification-menu__footer {
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+}
+.merchant-dashboard .header-notification-menu__footer a {
+    display: block;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4338ca;
+    text-align: center;
+    text-decoration: none;
+}
+.merchant-dashboard .header-notification-menu__footer a:hover {
+    background: #f8fafc;
+}
 .merchant-dashboard .merchant-dashboard__body {
     margin-left: calc(250px + 1.875rem);
     padding-bottom: 3.125rem;
@@ -3810,6 +3924,10 @@ label {
     .merchant-dashboard .header-balance {
         flex-wrap: wrap;
         justify-content: flex-end;
+    }
+    .merchant-dashboard .header-notification-menu {
+        width: 300px;
+        min-width: 300px;
     }
 }
 .merchant-dashboard .dashboard-top-nav {
