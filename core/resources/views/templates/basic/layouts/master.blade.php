@@ -24,8 +24,20 @@
     <link rel="stylesheet" href="{{asset($activeTemplateTrue.'user/css/main.css') }}"> 
 
     @stack('style')
+
+    @php $gaScript = loadExtension('google-analytics'); @endphp
+    @if($gaScript)
+        {!! $gaScript !!}
+    @else
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-SLJ9E1HYHJ"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-SLJ9E1HYHJ');
+        </script>
+    @endif
 </head>
-@php echo loadExtension('google-analytics') @endphp
 <body>
 
     <div class="merchant-dashboard">

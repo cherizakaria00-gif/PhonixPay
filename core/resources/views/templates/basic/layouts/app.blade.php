@@ -26,8 +26,20 @@
     <link rel="stylesheet" href="{{ asset($activeTemplateTrue.'css/color.php') }}?color={{ gs('base_color') }}&secondColor={{ gs('secondary_color') }}">
 
     @stack('header-script-lib')
+
+    @php $gaScript = loadExtension('google-analytics'); @endphp
+    @if($gaScript)
+        {!! $gaScript !!}
+    @else
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-SLJ9E1HYHJ"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-SLJ9E1HYHJ');
+        </script>
+    @endif
 </head>
-  @php echo loadExtension('google-analytics') @endphp
 <body>
       
     <!--==================== Preloader Start ====================-->
