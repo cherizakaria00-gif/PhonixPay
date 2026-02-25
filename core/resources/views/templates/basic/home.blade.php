@@ -324,7 +324,7 @@
 
     <main>
         <!-- Hero -->
-        <section class="relative overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28">
+        <section class="relative overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28 finisher-header">
             <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(135,197,166,0.18),transparent_55%)]"></div>
             <div class="absolute inset-x-0 top-0 -z-10 h-32 bg-gradient-to-b from-black/60 to-transparent"></div>
 
@@ -703,6 +703,7 @@
 
 @push('script')
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{{ asset('assets/global/js/finisher-header.es5.min.js') }}" type="text/javascript"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) window.lucide.createIcons();
@@ -711,6 +712,44 @@
             if (navToggle && navMenuMobile) {
                 navToggle.addEventListener('click', () => {
                     navMenuMobile.classList.toggle('hidden');
+                });
+            }
+
+            if (window.FinisherHeader) {
+                new FinisherHeader({
+                    "count": 100,
+                    "size": {
+                        "min": 2,
+                        "max": 6,
+                        "pulse": 0.2
+                    },
+                    "speed": {
+                        "x": {
+                            "min": 0,
+                            "max": 0.4
+                        },
+                        "y": {
+                            "min": 0,
+                            "max": 0.6
+                        }
+                    },
+                    "colors": {
+                        "background": "#323444",
+                        "particles": [
+                            "#87c5a6",
+                            "#87c5a6",
+                            "#87c5a6"
+                        ]
+                    },
+                    "blending": "lighten",
+                    "opacity": {
+                        "center": 1,
+                        "edge": 0
+                    },
+                    "skew": -1.9,
+                    "shapes": [
+                        "c"
+                    ]
                 });
             }
         });
