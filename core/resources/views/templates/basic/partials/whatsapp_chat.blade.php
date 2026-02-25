@@ -8,8 +8,8 @@
     <a href="{{ $whatsappUrl }}"
        target="_blank"
        rel="noopener noreferrer"
-       class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill text-white fw-semibold"
-       style="background:#25D366; box-shadow:0 10px 24px rgba(37,211,102,.35); text-decoration:none;">
+       class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 text-white fw-semibold"
+       style="background:#87c5a6; box-shadow:0 10px 24px rgba(135,197,166,.35); text-decoration:none; min-width: 52px; justify-content: center;">
         <i class="lab la-whatsapp" style="font-size: 24px; line-height:1;"></i>
         <span class="d-none d-sm-inline">@lang('WhatsApp Chat')</span>
     </a>
