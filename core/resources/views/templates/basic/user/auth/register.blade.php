@@ -76,7 +76,7 @@
             box-shadow: 0 0 0 1000px var(--input-bg) inset;
         }
         .new-auth .form--control:focus {
-            border-color: #d83000;
+            border-color: #87c5a6;
             box-shadow: 0 0 0 3px rgba(216, 48, 0, 0.25);
             outline: none;
         }
@@ -95,11 +95,11 @@
             border: 1px solid #334155;
         }
         .new-auth .form-check-input:checked {
-            background-color: #d83000;
-            border-color: #d83000;
+            background-color: #87c5a6;
+            border-color: #87c5a6;
         }
-        .new-auth .anchor-color { color: #ffb07a; }
-        .new-auth .anchor-color:hover { color: #ffd0b0; }
+        .new-auth .anchor-color { color: #a7d9c2; }
+        .new-auth .anchor-color:hover { color: #cfe9dc; }
         .new-auth .social-login-btn{
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(148, 163, 184, 0.3);
@@ -112,7 +112,7 @@
             justify-content: center;
         }
         .new-auth .btn.social-login-btn:hover {
-            border-color: #d83000;
+            border-color: #87c5a6;
             color: #ffffff;
         }
         .new-auth .login-or span{
@@ -216,13 +216,13 @@
                         </div>
                     @endif
 
-                    <button type="submit" class="w-full rounded-md bg-[#d83000] px-4 py-3 text-sm font-semibold text-white hover:bg-[#f86000] transition-colors">
+                    <button type="submit" class="w-full rounded-md bg-[#87c5a6] px-4 py-3 text-sm font-semibold text-white hover:bg-[#9ad8bf] transition-colors">
                         @lang('Register')
                     </button>
 
                     <div class="text-center text-sm text-slate-400">@lang("Already have an account?")</div>
 
-                    <a href="{{ route('user.login') }}" class="w-full inline-flex items-center justify-center rounded-md border border-slate-700 px-4 py-3 text-sm font-semibold text-white hover:border-[#d83000] hover:text-[#ffd0b0] transition-colors">
+                    <a href="{{ route('user.login') }}" class="w-full inline-flex items-center justify-center rounded-md border border-slate-700 px-4 py-3 text-sm font-semibold text-white hover:border-[#87c5a6] hover:text-[#cfe9dc] transition-colors">
                         @lang('Login')
                     </a>
                 </form>

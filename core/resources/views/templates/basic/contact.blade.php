@@ -25,7 +25,7 @@
 @endpush
 
 @section('app')
-<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#d83000]/30">
+<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#87c5a6]/30">
     <nav class="absolute w-full z-50 top-3 md:top-4 left-0">
         <div class="max-w-7xl mx-auto px-6">
             <div class="bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-4 md:px-6">
@@ -47,10 +47,10 @@
 
                     <div class="hidden md:flex items-center gap-3">
                         @auth
-                            <a href="{{ route('user.home') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
+                            <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
                         @else
-                            <a href="{{ route('user.login') }}" class="text-[#ff8a4d] hover:text-[#ffb07a] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                            <a href="{{ route('user.register') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
+                            <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
+                            <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
                         @endauth
                     </div>
 
@@ -71,10 +71,10 @@
                         </div>
                         <div class="mt-4 flex items-center gap-3">
                             @auth
-                                <a href="{{ route('user.home') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
+                                <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
                             @else
-                                <a href="{{ route('user.login') }}" class="text-[#ff8a4d] hover:text-[#ffb07a] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                                <a href="{{ route('user.register') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
+                                <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
+                                <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
                             @endauth
                         </div>
                     </div>
@@ -86,7 +86,7 @@
     <main>
         <section class="pt-28 sm:pt-32 pb-10">
             <div class="mx-auto max-w-5xl px-6 text-center">
-                <p class="text-xs uppercase tracking-[0.2em] text-[#ffb07a]">@lang('Contact')</p>
+                <p class="text-xs uppercase tracking-[0.2em] text-[#a7d9c2]">@lang('Contact')</p>
                 <h1 class="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-white">
                     {{ __($pageTitle ?? 'Contact Us') }}
                 </h1>
@@ -98,8 +98,8 @@
             <div class="mx-auto max-w-6xl px-6 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                 <div class="space-y-4">
                     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-start gap-4">
-                        <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-[#d83000]/15 border border-[#d83000]/30">
-                            <i data-lucide="phone" class="w-6 h-6 text-[#f86000]"></i>
+                        <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-[#87c5a6]/15 border border-[#87c5a6]/30">
+                            <i data-lucide="phone" class="w-6 h-6 text-[#9ad8bf]"></i>
                         </div>
                         <div>
                             <p class="text-sm text-slate-400">@lang('Phone')</p>
@@ -107,8 +107,8 @@
                         </div>
                     </div>
                     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-start gap-4">
-                        <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-[#d83000]/15 border border-[#d83000]/30">
-                            <i data-lucide="mail" class="w-6 h-6 text-[#f86000]"></i>
+                        <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-[#87c5a6]/15 border border-[#87c5a6]/30">
+                            <i data-lucide="mail" class="w-6 h-6 text-[#9ad8bf]"></i>
                         </div>
                         <div>
                             <p class="text-sm text-slate-400">@lang('Email')</p>
@@ -116,8 +116,8 @@
                         </div>
                     </div>
                     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-start gap-4">
-                        <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-[#d83000]/15 border border-[#d83000]/30">
-                            <i data-lucide="map-pin" class="w-6 h-6 text-[#f86000]"></i>
+                        <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-[#87c5a6]/15 border border-[#87c5a6]/30">
+                            <i data-lucide="map-pin" class="w-6 h-6 text-[#9ad8bf]"></i>
                         </div>
                         <div>
                             <p class="text-sm text-slate-400">@lang('Office')</p>
@@ -126,7 +126,7 @@
                     </div>
                 </div>
                 <div class="relative">
-                    <div class="absolute -inset-4 bg-[#d83000]/20 blur-2xl rounded-3xl"></div>
+                    <div class="absolute -inset-4 bg-[#87c5a6]/20 blur-2xl rounded-3xl"></div>
                     <img src="{{ getImage('assets/images/frontend/contact_us/' .@$contact->image, '680x585') }}" alt="@lang('Contact')" class="relative rounded-3xl border border-white/10 shadow-2xl w-full object-cover">
                 </div>
             </div>
@@ -140,26 +140,26 @@
                         @csrf
                         <div>
                             <label class="block text-sm text-slate-400 mb-2">@lang('Name')</label>
-                            <input name="name" type="text" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#f86000] focus:ring-2 focus:ring-[#f86000]/30" value="@if(auth()->user()){{ auth()->user()->fullname }}@else{{ old('name') }}@endif" @if(auth()->user()) readonly @endif required>
+                            <input name="name" type="text" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#9ad8bf] focus:ring-2 focus:ring-[#9ad8bf]/30" value="@if(auth()->user()){{ auth()->user()->fullname }}@else{{ old('name') }}@endif" @if(auth()->user()) readonly @endif required>
                         </div>
                         <div>
                             <label class="block text-sm text-slate-400 mb-2">@lang('Email Address')</label>
-                            <input name="email" type="email" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#f86000] focus:ring-2 focus:ring-[#f86000]/30" value="@if(auth()->user()){{ auth()->user()->email }}@else{{  old('email') }}@endif" @if(auth()->user()) readonly @endif required>
+                            <input name="email" type="email" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#9ad8bf] focus:ring-2 focus:ring-[#9ad8bf]/30" value="@if(auth()->user()){{ auth()->user()->email }}@else{{  old('email') }}@endif" @if(auth()->user()) readonly @endif required>
                         </div>
                         <div>
                             <label class="block text-sm text-slate-400 mb-2">@lang('Subject')</label>
-                            <input name="subject" type="text" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#f86000] focus:ring-2 focus:ring-[#f86000]/30" value="{{ old('subject') }}" required>
+                            <input name="subject" type="text" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#9ad8bf] focus:ring-2 focus:ring-[#9ad8bf]/30" value="{{ old('subject') }}" required>
                         </div>
                         <div>
                             <label class="block text-sm text-slate-400 mb-2">@lang('Your Message')</label>
-                            <textarea name="message" rows="5" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#f86000] focus:ring-2 focus:ring-[#f86000]/30" required>{{ old('message') }}</textarea>
+                            <textarea name="message" rows="5" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 focus:border-[#9ad8bf] focus:ring-2 focus:ring-[#9ad8bf]/30" required>{{ old('message') }}</textarea>
                         </div>
 
                         <div>
                             <x-captcha />
                         </div>
 
-                        <button class="w-full rounded-xl bg-[#d83000] px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#f86000]">
+                        <button class="w-full rounded-xl bg-[#87c5a6] px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#9ad8bf]">
                             @lang('Send Message')
                         </button>
                     </form>

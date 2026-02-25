@@ -24,7 +24,7 @@
 @endpush
 
 @section('app')
-<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#d83000]/30">
+<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#87c5a6]/30">
     <nav class="absolute w-full z-50 top-3 md:top-4 left-0">
         <div class="max-w-7xl mx-auto px-6">
             <div class="bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-4 md:px-6">
@@ -46,10 +46,10 @@
 
                     <div class="hidden md:flex items-center gap-3">
                         @auth
-                            <a href="{{ route('user.home') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
+                            <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
                         @else
-                            <a href="{{ route('user.login') }}" class="text-[#ff8a4d] hover:text-[#ffb07a] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                            <a href="{{ route('user.register') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Créer un compte</a>
+                            <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
+                            <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Créer un compte</a>
                         @endauth
                     </div>
 
@@ -70,10 +70,10 @@
                         </div>
                         <div class="mt-4 flex items-center gap-3">
                             @auth
-                                <a href="{{ route('user.home') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
+                                <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
                             @else
-                                <a href="{{ route('user.login') }}" class="text-[#ff8a4d] hover:text-[#ffb07a] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                                <a href="{{ route('user.register') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Créer un compte</a>
+                                <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
+                                <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Créer un compte</a>
                             @endauth
                         </div>
                     </div>
@@ -85,7 +85,7 @@
     <main>
         <section class="pt-28 sm:pt-32 pb-10">
             <div class="mx-auto max-w-5xl px-6 text-center">
-                <p class="text-xs uppercase tracking-[0.2em] text-[#ffb07a]">@lang('Blogs')</p>
+                <p class="text-xs uppercase tracking-[0.2em] text-[#a7d9c2]">@lang('Blogs')</p>
                 <h1 class="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-white">
                     {{ __($pageTitle ?? 'Blogs') }}
                 </h1>
@@ -107,11 +107,11 @@
                             <div class="p-5">
                                 <div class="text-xs text-slate-400">{{ showDateTime($blog->created_at, 'M d, Y') }}</div>
                                 <h3 class="mt-2 text-lg font-semibold text-white">
-                                    <a href="{{ route('blog.details', [slug(@$blog->data_values->title)]) }}" class="hover:text-[#ffb07a] transition-colors">
+                                    <a href="{{ route('blog.details', [slug(@$blog->data_values->title)]) }}" class="hover:text-[#a7d9c2] transition-colors">
                                         {{ strLimit(__($blog->data_values->title), 60) }}
                                     </a>
                                 </h3>
-                                <a href="{{ route('blog.details', [slug(@$blog->data_values->title)]) }}" class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#ff8a4d] hover:text-[#ffb07a]">
+                                <a href="{{ route('blog.details', [slug(@$blog->data_values->title)]) }}" class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#87c5a6] hover:text-[#a7d9c2]">
                                     @lang('Read More')
                                     <span aria-hidden="true">→</span>
                                 </a>

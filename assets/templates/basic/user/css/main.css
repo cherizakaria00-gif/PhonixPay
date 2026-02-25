@@ -68,7 +68,7 @@ a:hover {
     color: #ea5455 !important;
 }
 .text--warning {
-    color: #ff9f43 !important;
+    color: #87c5a6 !important;
 }
 .text--info {
     color: #1e9ff2 !important;
@@ -99,7 +99,7 @@ a:hover {
     background-color: #ea5455 !important;
 }
 .bg--warning {
-    background-color: #ff9f43 !important;
+    background-color: #87c5a6 !important;
 }
 .bg--info {
     background-color: #1e9ff2 !important;
@@ -1237,8 +1237,8 @@ button:focus {
     border-color: #e73d3e !important;
 }
 .btn--warning {
-    background-color: #ff9f43 !important;
-    border-color: #ff9f43 !important;
+    background-color: #87c5a6 !important;
+    border-color: #87c5a6 !important;
 }
 .btn--warning:hover {
     background-color: #ff922a !important;
@@ -1378,11 +1378,11 @@ button:focus {
     color: #ffffff !important;
 }
 .btn-outline--warning {
-    color: #ff9f43 !important;
-    border-color: #ff9f43 !important;
+    color: #87c5a6 !important;
+    border-color: #87c5a6 !important;
 }
 .btn-outline--warning:hover {
-    background-color: #ff9f43 !important;
+    background-color: #87c5a6 !important;
     color: #ffffff !important;
 }
 .btn-outline--info {
@@ -1806,8 +1806,8 @@ button:focus {
 }
 .badge--warning {
     background-color: rgba(255, 159, 67, 0.15);
-    border: 1px solid #ff9f43;
-    color: #ff9f43;
+    border: 1px solid #87c5a6;
+    color: #87c5a6;
 }
 .badge--info {
     background-color: rgba(30, 159, 242, 0.15);
@@ -4693,7 +4693,7 @@ label {
     background-color: #28c76f;
 }
 .warning.card-badge::before {
-    background-color: #ff9f43;
+    background-color: #87c5a6;
 }
 .info.card-badge::before {
     background-color: #1e9ff2;

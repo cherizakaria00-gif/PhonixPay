@@ -7,7 +7,7 @@
     const colors = {
         success: '#28c76f',
         error: '#eb2222',
-        warning: '#ff9f43',
+        warning: '#87c5a6',
         info: '#1e9ff2',
     }
 

@@ -252,7 +252,7 @@
 @endpush
 
 @section('app')
-<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#d83000]/30">
+<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#87c5a6]/30">
     <nav class="absolute w-full z-50 top-3 md:top-4 left-0">
         <div class="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
             <div class="bg-black/60 backdrop-blur-md rounded-2xl md:rounded-full shadow-lg border border-white/10 px-3 sm:px-4 md:px-6">
@@ -274,10 +274,10 @@
 
                     <div class="hidden md:flex items-center gap-3">
                         @auth
-                            <a href="{{ route('user.home') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
+                            <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
                         @else
-                            <a href="{{ route('user.login') }}" class="text-[#ff8a4d] hover:text-[#ffb07a] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                            <a href="{{ route('user.register') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
+                            <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
+                            <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
                         @endauth
                     </div>
 
@@ -298,10 +298,10 @@
                         </div>
                         <div class="mt-4 flex flex-wrap items-center gap-3">
                             @auth
-                                <a href="{{ route('user.home') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
+                                <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
                             @else
-                                <a href="{{ route('user.login') }}" class="text-[#ff8a4d] hover:text-[#ffb07a] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                                <a href="{{ route('user.register') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
+                                <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
+                                <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
                             @endauth
                         </div>
                     </div>
@@ -322,23 +322,23 @@
                     <div class="mb-8 flex justify-center">
                         <div class="relative rounded-full px-3 py-1 text-sm leading-6 text-slate-400 ring-1 ring-white/10 hover:ring-white/20">
                             Specialized in High Risk & Offshore
-                            <a href="#features" class="font-semibold text-[#f86000]">
+                            <a href="#features" class="font-semibold text-[#9ad8bf]">
                                 <span class="absolute inset-0" aria-hidden="true"></span>
                                 Learn more <span aria-hidden="true">&rarr;</span>
                             </a>
                         </div>
                     </div>
                     <h1 class="text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                        The Payment Gateway for <span class="text-[#d83000]">Bold Businesses</span>
+                        The Payment Gateway for <span class="text-[#87c5a6]">Bold Businesses</span>
                     </h1>
                     <p class="mt-5 text-base sm:text-lg leading-7 sm:leading-8 text-slate-300">
                         IPTV, dropshipping, e-books, replicas. Stop letting traditional banks block your growth. WooCommerce integration in 5 minutes.
                     </p>
                     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-x-6">
-                        <a href="{{ @$banner->button_url ?: route('user.register') }}" class="rounded-md bg-[#d83000] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#f86000] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d83000] flex items-center gap-2">
+                        <a href="{{ @$banner->button_url ?: route('user.register') }}" class="rounded-md bg-[#87c5a6] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#9ad8bf] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#87c5a6] flex items-center gap-2">
                             Get started <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </a>
-                        <a href="{{ @$product->btn_url ? url($product->btn_url) : route('contact') }}" class="text-sm font-semibold leading-6 text-white flex items-center gap-2 hover:text-[#ffb07a] transition-colors">
+                        <a href="{{ @$product->btn_url ? url($product->btn_url) : route('contact') }}" class="text-sm font-semibold leading-6 text-white flex items-center gap-2 hover:text-[#a7d9c2] transition-colors">
                             View the demo <i data-lucide="zap" class="w-4 h-4"></i>
                         </a>
                     </div>
@@ -375,43 +375,43 @@
                     Supported Industries
                 </h2>
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#d83000]/50 hover:bg-slate-800 transition-all cursor-default group">
+                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
                         <div class="transform group-hover:scale-110 transition-transform duration-300">
                             <i data-lucide="monitor-play" class="w-8 h-8 mb-4 text-pink-500"></i>
                         </div>
                         <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">IPTV</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#d83000]/50 hover:bg-slate-800 transition-all cursor-default group">
+                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
                         <div class="transform group-hover:scale-110 transition-transform duration-300">
                             <i data-lucide="layers" class="w-8 h-8 mb-4 text-blue-500"></i>
                         </div>
                         <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Digital Products</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#d83000]/50 hover:bg-slate-800 transition-all cursor-default group">
+                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
                         <div class="transform group-hover:scale-110 transition-transform duration-300">
                             <i data-lucide="shopping-bag" class="w-8 h-8 mb-4 text-purple-500"></i>
                         </div>
                         <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Replica</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#d83000]/50 hover:bg-slate-800 transition-all cursor-default group">
+                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
                         <div class="transform group-hover:scale-110 transition-transform duration-300">
                             <i data-lucide="book-open" class="w-8 h-8 mb-4 text-yellow-500"></i>
                         </div>
                         <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">E-Books & Info</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#d83000]/50 hover:bg-slate-800 transition-all cursor-default group">
+                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
                         <div class="transform group-hover:scale-110 transition-transform duration-300">
                             <i data-lucide="plane" class="w-8 h-8 mb-4 text-cyan-500"></i>
                         </div>
                         <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Travel</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#d83000]/50 hover:bg-slate-800 transition-all cursor-default group">
+                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
                         <div class="transform group-hover:scale-110 transition-transform duration-300">
                             <i data-lucide="gamepad-2" class="w-8 h-8 mb-4 text-green-500"></i>
                         </div>
                         <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Gaming</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#d83000]/50 hover:bg-slate-800 transition-all cursor-default group">
+                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
                         <div class="transform group-hover:scale-110 transition-transform duration-300">
                             <i data-lucide="coins" class="w-8 h-8 mb-4 text-orange-500"></i>
                         </div>
@@ -421,7 +421,7 @@
                 <div class="mt-12 text-center">
                     <p class="text-slate-400">
                         Is your industry not listed?
-                        <a href="{{ route('contact') }}" class="text-[#f86000] hover:underline">Contact our support</a>
+                        <a href="{{ route('contact') }}" class="text-[#9ad8bf] hover:underline">Contact our support</a>
                         or use the AI assistant.
                     </p>
                 </div>
@@ -434,7 +434,7 @@
         <div id="features" class="bg-slate-900 py-16 sm:py-24 lg:py-32">
             <div class="mx-auto max-w-7xl px-6 lg:px-8">
                 <div class="mx-auto max-w-2xl lg:text-center">
-                    <h2 class="text-base font-semibold leading-7 text-[#f86000]">Everything you need</h2>
+                    <h2 class="text-base font-semibold leading-7 text-[#9ad8bf]">Everything you need</h2>
                     <p class="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                         Built for High Risk, secure for everyone
                     </p>
@@ -444,54 +444,54 @@
                 </div>
                 <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
                     <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
-                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#d83000]/50 transition-colors">
+                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#87c5a6]/50 transition-colors">
                             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
-                                <i data-lucide="percent" class="h-6 w-6 text-[#f86000]"></i>
+                                <i data-lucide="percent" class="h-6 w-6 text-[#9ad8bf]"></i>
                                 Flat 10% Commission
                             </dt>
                             <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-400">
                                 <p class="flex-auto">A simple, transparent model. 10% per successful transaction. No monthly fees, no hidden fees.</p>
                             </dd>
                         </div>
-                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#d83000]/50 transition-colors">
+                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#87c5a6]/50 transition-colors">
                             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
-                                <i data-lucide="refresh-ccw" class="h-6 w-6 text-[#f86000]"></i>
+                                <i data-lucide="refresh-ccw" class="h-6 w-6 text-[#9ad8bf]"></i>
                                 Weekly Payouts
                             </dt>
                             <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-400">
                                 <p class="flex-auto">Optimized cashflow. Receive your funds weekly directly to your bank account or crypto.</p>
                             </dd>
                         </div>
-                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#d83000]/50 transition-colors">
+                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#87c5a6]/50 transition-colors">
                             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
-                                <i data-lucide="plug" class="h-6 w-6 text-[#f86000]"></i>
+                                <i data-lucide="plug" class="h-6 w-6 text-[#9ad8bf]"></i>
                                 WooCommerce Plugin
                             </dt>
                             <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-400">
                                 <p class="flex-auto">Our WordPress plugin installs in one click. Connect your store and start getting paid immediately.</p>
                             </dd>
                         </div>
-                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#d83000]/50 transition-colors">
+                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#87c5a6]/50 transition-colors">
                             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
-                                <i data-lucide="lock" class="h-6 w-6 text-[#f86000]"></i>
+                                <i data-lucide="lock" class="h-6 w-6 text-[#9ad8bf]"></i>
                                 KYC & Security
                             </dt>
                             <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-400">
                                 <p class="flex-auto">KYC is required to ensure network security and the long-term reliability of your payouts.</p>
                             </dd>
                         </div>
-                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#d83000]/50 transition-colors">
+                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#87c5a6]/50 transition-colors">
                             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
-                                <i data-lucide="globe" class="h-6 w-6 text-[#f86000]"></i>
+                                <i data-lucide="globe" class="h-6 w-6 text-[#9ad8bf]"></i>
                                 Global Support
                             </dt>
                             <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-400">
                                 <p class="flex-auto">Accept payments worldwide. We handle multiple currencies and international cards.</p>
                             </dd>
                         </div>
-                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#d83000]/50 transition-colors">
+                        <div class="flex flex-col bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 hover:border-[#87c5a6]/50 transition-colors">
                             <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
-                                <i data-lucide="zap" class="h-6 w-6 text-[#f86000]"></i>
+                                <i data-lucide="zap" class="h-6 w-6 text-[#9ad8bf]"></i>
                                 Fast Activation
                             </dt>
                             <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-400">
@@ -517,7 +517,7 @@
 
                         <div class="space-y-8">
                             <div class="flex gap-4">
-                                <div class="flex-none flex items-center justify-center w-10 h-10 rounded-lg bg-[#d83000]/10 text-[#f86000]">
+                                <div class="flex-none flex items-center justify-center w-10 h-10 rounded-lg bg-[#87c5a6]/10 text-[#9ad8bf]">
                                     <i data-lucide="download" class="w-6 h-6"></i>
                                 </div>
                                 <div>
@@ -527,7 +527,7 @@
                             </div>
 
                             <div class="flex gap-4">
-                                <div class="flex-none flex items-center justify-center w-10 h-10 rounded-lg bg-[#d83000]/10 text-[#f86000]">
+                                <div class="flex-none flex items-center justify-center w-10 h-10 rounded-lg bg-[#87c5a6]/10 text-[#9ad8bf]">
                                     <i data-lucide="settings" class="w-6 h-6"></i>
                                 </div>
                                 <div>
@@ -537,7 +537,7 @@
                             </div>
 
                             <div class="flex gap-4">
-                                <div class="flex-none flex items-center justify-center w-10 h-10 rounded-lg bg-[#d83000]/10 text-[#f86000]">
+                                <div class="flex-none flex items-center justify-center w-10 h-10 rounded-lg bg-[#87c5a6]/10 text-[#9ad8bf]">
                                     <i data-lucide="check-circle" class="w-6 h-6"></i>
                                 </div>
                                 <div>
@@ -549,7 +549,7 @@
                     </div>
 
                     <div class="relative">
-                        <div class="absolute -inset-4 bg-[#d83000]/20 blur-xl rounded-full"></div>
+                        <div class="absolute -inset-4 bg-[#87c5a6]/20 blur-xl rounded-full"></div>
                         <div class="relative bg-slate-800 rounded-xl border border-slate-700 p-6 shadow-2xl">
                             <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-4">
                                 <div class="w-3 h-3 rounded-full bg-red-500"></div>
@@ -572,11 +572,11 @@
                                 </div>
                                 <div class="pt-2">
                                     <div class="flex items-center gap-2">
-                                        <div class="w-4 h-4 rounded border border-[#d83000] bg-[#d83000] flex items-center justify-center text-xs text-white">✓</div>
+                                        <div class="w-4 h-4 rounded border border-[#87c5a6] bg-[#87c5a6] flex items-center justify-center text-xs text-white">✓</div>
                                         <span class="text-sm text-white">Enable {{ __(gs('site_name')) }} Gateway</span>
                                     </div>
                                 </div>
-                                <button class="bg-[#d83000] text-white text-sm px-4 py-2 rounded mt-2">Save Changes</button>
+                                <button class="bg-[#87c5a6] text-white text-sm px-4 py-2 rounded mt-2">Save Changes</button>
                             </div>
                         </div>
                     </div>
@@ -586,7 +586,7 @@
 
         <!-- KYC -->
         <div id="kyc" class="bg-slate-950 py-16 sm:py-24 relative">
-            <div class="absolute inset-0 bg-[#d83000]/5 bg-[radial-gradient(#d83000_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+            <div class="absolute inset-0 bg-[#87c5a6]/5 bg-[radial-gradient(#87c5a6_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
 
             <div class="relative mx-auto max-w-7xl px-6 lg:px-8 text-center">
                 <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl mb-4">
@@ -598,32 +598,32 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800">
-                        <div class="mx-auto w-12 h-12 bg-[#d83000]/50 rounded-full flex items-center justify-center mb-4">
-                            <i data-lucide="user-check" class="w-6 h-6 text-[#f86000]"></i>
+                        <div class="mx-auto w-12 h-12 bg-[#87c5a6]/50 rounded-full flex items-center justify-center mb-4">
+                            <i data-lucide="user-check" class="w-6 h-6 text-[#9ad8bf]"></i>
                         </div>
                         <h3 class="text-xl font-semibold text-white mb-2">Identity</h3>
                         <p class="text-slate-400">Valid passport or national ID of the company director.</p>
                     </div>
 
                     <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800">
-                        <div class="mx-auto w-12 h-12 bg-[#d83000]/50 rounded-full flex items-center justify-center mb-4">
-                            <i data-lucide="building-2" class="w-6 h-6 text-[#f86000]"></i>
+                        <div class="mx-auto w-12 h-12 bg-[#87c5a6]/50 rounded-full flex items-center justify-center mb-4">
+                            <i data-lucide="building-2" class="w-6 h-6 text-[#9ad8bf]"></i>
                         </div>
                         <h3 class="text-xl font-semibold text-white mb-2">Company</h3>
                         <p class="text-slate-400">Certificate of incorporation and proof of company address (less than 3 months old).</p>
                     </div>
 
                     <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800">
-                        <div class="mx-auto w-12 h-12 bg-[#d83000]/50 rounded-full flex items-center justify-center mb-4">
-                            <i data-lucide="file-text" class="w-6 h-6 text-[#f86000]"></i>
+                        <div class="mx-auto w-12 h-12 bg-[#87c5a6]/50 rounded-full flex items-center justify-center mb-4">
+                            <i data-lucide="file-text" class="w-6 h-6 text-[#9ad8bf]"></i>
                         </div>
                         <h3 class="text-xl font-semibold text-white mb-2">Activity</h3>
                         <p class="text-slate-400">Proof of domain ownership (invoice) and transaction history (optional but recommended).</p>
                     </div>
                 </div>
 
-                <div class="mt-12 bg-[#d83000]/15 border border-[#d83000]/20 rounded-lg p-4 inline-block">
-                    <p class="text-[#ffb07a] font-medium">Average verification time: 24 business hours</p>
+                <div class="mt-12 bg-[#87c5a6]/15 border border-[#87c5a6]/20 rounded-lg p-4 inline-block">
+                    <p class="text-[#a7d9c2] font-medium">Average verification time: 24 business hours</p>
                 </div>
             </div>
         </div>
