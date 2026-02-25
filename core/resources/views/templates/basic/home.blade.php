@@ -229,6 +229,20 @@
             pointer-events: none;
         }
 
+        .finisher-header {
+            position: relative;
+            z-index: 0;
+        }
+
+        .finisher-header > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .finisher-header #finisher-canvas {
+            z-index: 0 !important;
+        }
+
         @media (max-width: 1024px) {
             .scanner-shell {
                 min-height: 320px;
