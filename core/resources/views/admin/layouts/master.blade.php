@@ -17,7 +17,11 @@
     @stack('style-lib')
 
     <link rel="stylesheet" href="{{asset('assets/global/css/select2.min.css')}}">
-    <link rel="stylesheet" href="{{asset('assets/admin/css/app.css')}}">
+    @php
+        $adminCssPath = 'assets/admin/css/app.css';
+        $adminCssVersion = @filemtime(public_path($adminCssPath)) ?: time();
+    @endphp
+    <link rel="stylesheet" href="{{ asset($adminCssPath) }}?v={{ $adminCssVersion }}">
 
 
     @stack('style')

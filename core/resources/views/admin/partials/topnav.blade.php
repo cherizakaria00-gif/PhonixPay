@@ -46,33 +46,31 @@
                     </span>
                     <span id="adminNotificationCountBadge" class="notification-count {{ $adminNotificationCount > 0 ? '' : 'd-none' }}">{{ $adminNotificationCount <= 9 ? $adminNotificationCount : '9+'}}</span>
                 </button>
-                <div class="dropdown-menu dropdown-menu--md p-0 border-0 box--shadow1 dropdown-menu-right">
-                    <div class="dropdown-menu__header">
-                        <span class="caption">@lang('Notification')</span>
-                        <p id="adminNotificationSummary" class="{{ $adminNotificationCount > 0 ? '' : 'd-none' }}">@lang('You have') {{ $adminNotificationCount }} @lang('unread notification')</p>
+                <div class="dropdown-menu dropdown-menu--md p-0 border-0 dropdown-menu-right admin-notification-menu">
+                    <div class="admin-notification-menu__head">
+                        <h6 class="mb-0">@lang('Notifications')</h6>
+                        <a id="adminNotificationMarkAllLink"
+                           href="{{ route('admin.notifications.read.all') }}"
+                           class="admin-notification-mark-all {{ $adminNotificationCount > 0 ? '' : 'd-none' }}">
+                            @lang('Mark all')
+                        </a>
                     </div>
-                    <div id="adminNotificationList" class="dropdown-menu__body @if(blank($adminNotifications)) d-flex justify-content-center align-items-center @endif">
+                    <div id="adminNotificationList" class="admin-notification-menu__body">
                         @forelse($adminNotifications as $notification)
                             <a href="{{ route('admin.notification.read',$notification->id) }}"
-                                class="dropdown-menu__item">
-                                <div class="navbar-notifi">
-                                    <div class="navbar-notifi__right">
-                                        <h6 class="notifi__title">{{ __($notification->title) }}</h6>
-                                        <span class="time"><i class="far fa-clock"></i>
-                                            {{ diffForHumans($notification->created_at) }}</span>
-                                    </div>
+                                class="admin-notification-item">
+                                <div class="admin-notification-item__subject">{{ __($notification->title) }}</div>
+                                <div class="admin-notification-item__time">
+                                    <i class="far fa-clock"></i> {{ diffForHumans($notification->created_at) }}
                                 </div>
                             </a>
                         @empty
-                        <div class="empty-notification text-center">
-                            <img src="{{ getImage('assets/images/empty_list.png') }}" alt="empty">
-                            <p class="mt-3">@lang('No unread notification found')</p>
-                        </div>
+                            <div class="admin-notification-empty">@lang('No unread notification found')</div>
                         @endforelse
                     </div>
-                    <div class="dropdown-menu__footer">
+                    <div class="admin-notification-menu__footer">
                         <a href="{{ route('admin.notifications') }}"
-                            class="view-all-message">@lang('View all notifications')</a>
+                            class="admin-notification-view-all">@lang('View all notifications')</a>
                     </div>
                 </div>
             </li>
@@ -135,9 +133,10 @@
 
         const pollUrl = $dropdown.data('poll-url');
         const $badge = $('#adminNotificationCountBadge');
-        const $summary = $('#adminNotificationSummary');
+        const $markAllLink = $('#adminNotificationMarkAllLink');
         const $list = $('#adminNotificationList');
         const $bellIcon = $('#adminNotificationBellIcon');
+        const emptyHtml = '<div class="admin-notification-empty">' + @json(__('No unread notification found')) + '</div>';
         let lastUnreadCount = Number(@json((int) $adminNotificationCount));
 
         let adminAudioCtx = null;
@@ -186,31 +185,25 @@
 
             if (unreadCount > 0) {
                 $badge.text(unreadCount > 9 ? '9+' : unreadCount).removeClass('d-none');
-                $summary.removeClass('d-none').text("{{ __('You have') }} " + unreadCount + " {{ __('unread notification') }}");
+                $markAllLink.removeClass('d-none');
                 $bellIcon.addClass('icon-left-right');
             } else {
                 $badge.addClass('d-none');
-                $summary.addClass('d-none');
+                $markAllLink.addClass('d-none');
                 $bellIcon.removeClass('icon-left-right');
             }
 
             if (!Array.isArray(data.notifications) || !data.notifications.length) {
-                $list.removeClass('d-flex justify-content-center align-items-center').html(`
-                    <div class="empty-notification text-center">
-                        <img src="{{ getImage('assets/images/empty_list.png') }}" alt="empty">
-                        <p class="mt-3">@lang('No unread notification found')</p>
-                    </div>
-                `);
+                $list.html(emptyHtml);
             } else {
                 let html = '';
                 data.notifications.forEach(function (notification) {
-                    html += '<a href="' + escapeHtml(notification.url) + '" class="dropdown-menu__item">';
-                    html += '<div class="navbar-notifi"><div class="navbar-notifi__right">';
-                    html += '<h6 class="notifi__title">' + escapeHtml(notification.title) + '</h6>';
-                    html += '<span class="time"><i class="far fa-clock"></i> ' + escapeHtml(notification.time) + '</span>';
-                    html += '</div></div></a>';
+                    html += '<a href="' + escapeHtml(notification.url) + '" class="admin-notification-item">';
+                    html += '<div class="admin-notification-item__subject">' + escapeHtml(notification.title) + '</div>';
+                    html += '<div class="admin-notification-item__time"><i class="far fa-clock"></i> ' + escapeHtml(notification.time) + '</div>';
+                    html += '</a>';
                 });
-                $list.removeClass('d-flex justify-content-center align-items-center').html(html);
+                $list.html(html);
             }
 
             if (unreadCount > lastUnreadCount) {
