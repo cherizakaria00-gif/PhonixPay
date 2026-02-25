@@ -86,17 +86,17 @@
             <div class="card-header d-flex flex-wrap justify-content-between bg-white pf-dev-card__header">
                 <div class="card-title mb-0">
                     <h6 class="mb-1">@lang('WooCommerce Plugin')</h6>
-                    <p class="pf-dev-card__desc mb-0">@lang('Easily integrate PhonixPay into your WordPress store.')</p>
+                    <p class="pf-dev-card__desc mb-0">@lang('Easily integrate FlujiPay into your WordPress store.')</p>
                 </div>
                 <div class="pf-dev-actions">
-                    <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}" download="PhonixPay Pluging.zip">
-                        <i class="las la-download"></i> @lang('PhonixPay Pluging')
+                    <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}" download="FlujiPay Pluging.zip">
+                        <i class="las la-download"></i> @lang('FlujiPay Pluging')
                     </a>
                 </div>
             </div>
             <div class="card-body">
                 <div class="pf-dev-plugin__content">
-                    <h6 class="mb-2">@lang('PhonixPay for WooCommerce v1.2.0')</h6>
+                    <h6 class="mb-2">@lang('FlujiPay for WooCommerce v1.2.0')</h6>
                     <ol class="pf-dev-plugin__list mb-0">
                         <li>@lang('Download the ZIP file.')</li>
                         <li>@lang('Go to WordPress Admin > Plugins > Add New > Upload.')</li>

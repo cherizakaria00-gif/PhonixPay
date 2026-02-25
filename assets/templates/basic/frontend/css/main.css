@@ -2741,7 +2741,10 @@ select.form-control.form--control:has(option) ~ .form--label {
 .header {
     position: absolute;
     z-index: 99;
-    background-color: hsl(var(--base));
+    background-color: hsl(var(--base)/0.35);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    backdrop-filter: blur(16px) saturate(1.2);
+    border-bottom: 1px solid hsl(var(--white)/0.08);
     left: 0;
     right: 0;
     width: 100%;
@@ -2763,13 +2766,25 @@ select.form-control.form--control:has(option) ~ .form--label {
 }
 
 .header.fixed-header {
-    background-color: hsl(var(--base));
-    border-bottom: 1px solid hsl(var(--white)/0.1);
+    background-color: hsl(var(--base)/0.6);
+    -webkit-backdrop-filter: blur(18px) saturate(1.15);
+    backdrop-filter: blur(18px) saturate(1.15);
+    border-bottom: 1px solid hsl(var(--white)/0.12);
     position: fixed;
     transition: 0.3s linear;
     top: 0px;
     animation: slide-down 0.8s;
     width: 100%;
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .header {
+        background-color: hsl(var(--base)/0.8);
+    }
+
+    .header.fixed-header {
+        background-color: hsl(var(--base)/0.9);
+    }
 }
 
 @keyframes slide-down {

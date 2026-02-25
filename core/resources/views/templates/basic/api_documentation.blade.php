@@ -2,7 +2,7 @@
 
 @php
     $pages = App\Models\Page::where('tempname', $activeTemplate)->where('is_default', \App\Constants\Status::NO)->get();
-    $apiBaseUrl = 'https://www.phonixpay.com';
+    $apiBaseUrl = 'https://www.flujipay.com';
 @endphp
 
 @push('style-lib')

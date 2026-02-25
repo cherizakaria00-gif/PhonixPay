@@ -58,7 +58,7 @@ a { color: #1d4ed8; text-decoration: none; }
                           <tbody>
                             <tr><td height="18"></td></tr>
                             <tr>
-                              <td align="center" style="font-family: 'Open Sans', Arial, sans-serif; color:#FFFFFF; font-size:16px; font-weight: bold;">PhonixPay System Notification</td>
+                              <td align="center" style="font-family: 'Open Sans', Arial, sans-serif; color:#FFFFFF; font-size:16px; font-weight: bold;">FlujiPay System Notification</td>
                             </tr>
                             <tr><td height="18"></td></tr>
                           </tbody>
@@ -77,8 +77,8 @@ a { color: #1d4ed8; text-decoration: none; }
                             <tr><td height="32"></td></tr>
                             <tr>
                               <td align="center" style="vertical-align:top;font-size:0;">
-                                <a href="https://phonixpay.com">
-                                  <img style="display:block; line-height:0px; font-size:0px; border:0px; height:48px;" src="https://phonixpay.com/assets/images/logoIcon/logo.png" alt="PhonixPay">
+                                <a href="https://flujipay.com">
+                                  <img style="display:block; line-height:0px; font-size:0px; border:0px; height:48px;" src="https://flujipay.com/assets/images/logoIcon/logo.png" alt="FlujiPay">
                                 </a>
                               </td>
                             </tr>
@@ -109,7 +109,7 @@ a { color: #1d4ed8; text-decoration: none; }
                             <tr><td height="10"></td></tr>
                             <tr>
                               <td class="preference-link" align="center" style="font-family: 'Open Sans', Arial, sans-serif; color:#94a3b8; font-size:13px;">
-                                © {{site_name}} · All Rights Reserved · <a href="https://phonixpay.com">phonixpay.com</a>
+                                © {{site_name}} · All Rights Reserved · <a href="https://flujipay.com">flujipay.com</a>
                               </td>
                             </tr>
                             <tr><td height="10"></td></tr>

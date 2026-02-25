@@ -161,11 +161,11 @@
     <header class="policy-topbar">
         <div class="container policy-topbar__inner">
             <a href="{{ route('home') }}" class="policy-brand">
-                <img src="{{ siteLogo() }}" alt="PhonixPay">
-                <span>PhonixPay</span>
+                <img src="{{ siteLogo() }}" alt="FlujiPay">
+                <span>FlujiPay</span>
             </a>
-            <a href="https://phonixpay.com" class="policy-domain" target="_blank" rel="noopener">
-                phonixpay.com
+            <a href="https://flujipay.com" class="policy-domain" target="_blank" rel="noopener">
+                flujipay.com
             </a>
         </div>
     </header>
@@ -175,8 +175,8 @@
             <div class="policy-hero__card">
                 <span class="policy-hero__badge">Legal</span>
                 <h1 class="policy-hero__title">{{ __($pageTitle) }}</h1>
-                <p class="policy-hero__subtitle">Official PhonixPay policy page for services provided at phonixpay.com.</p>
-                <a href="{{ route('home') }}" class="policy-back">Back to PhonixPay</a>
+                <p class="policy-hero__subtitle">Official FlujiPay policy page for services provided at flujipay.com.</p>
+                <a href="{{ route('home') }}" class="policy-back">Back to FlujiPay</a>
             </div>
         </div>
     </section>
@@ -195,8 +195,8 @@
 
     <footer class="policy-footer">
         <div class="container policy-footer__inner">
-            <span>© {{ date('Y') }} PhonixPay. All rights reserved.</span>
-            <span>phonixpay.com</span>
+            <span>© {{ date('Y') }} FlujiPay. All rights reserved.</span>
+            <span>flujipay.com</span>
         </div>
     </footer>
 </div>

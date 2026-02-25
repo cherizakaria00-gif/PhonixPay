@@ -19,8 +19,8 @@ return new class extends Migration
 
         $template = $general->email_template;
         $template = str_replace(
-            'https://phonixpay.com/assets/images/logoIcon/logo.png',
-            'https://phonixpay.com/assets/images/logoIcon/logo_dark.png',
+            'https://flujipay.com/assets/images/logoIcon/logo.png',
+            'https://flujipay.com/assets/images/logoIcon/logo_dark.png',
             $template
         );
 

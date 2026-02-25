@@ -1,0 +1,5 @@
+{
+  "name": "PayFlow Gateway",
+  "description": "A robust multi-merchant SaaS payment gateway dashboard featuring role-based access for Super Admins and Merchants. Includes payment tracking, withdrawals, KYC management, and developer tools.",
+  "requestFramePermissions": []
+}

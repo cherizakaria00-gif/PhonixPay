@@ -2,6 +2,8 @@
 @php
     $contact = @getContent('contact_us.content', true)->data_values;
     $pages = App\Models\Page::where('tempname', $activeTemplate)->where('is_default', \App\Constants\Status::NO)->get();
+    $contactPhone = '+19707807495';
+    $contactEmail = 'contact@flujipay.com';
 @endphp
 
 @push('style-lib')
@@ -101,7 +103,7 @@
                         </div>
                         <div>
                             <p class="text-sm text-slate-400">@lang('Phone')</p>
-                            <p class="text-base font-semibold text-white">{{ @$contact->phone }}</p>
+                            <p class="text-base font-semibold text-white">{{ $contactPhone }}</p>
                         </div>
                     </div>
                     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-start gap-4">
@@ -110,7 +112,7 @@
                         </div>
                         <div>
                             <p class="text-sm text-slate-400">@lang('Email')</p>
-                            <p class="text-base font-semibold text-white">{{ @$contact->email }}</p>
+                            <p class="text-base font-semibold text-white">{{ $contactEmail }}</p>
                         </div>
                     </div>
                     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-start gap-4">
