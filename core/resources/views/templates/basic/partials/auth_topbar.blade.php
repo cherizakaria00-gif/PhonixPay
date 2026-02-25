@@ -166,17 +166,20 @@
             function playMerchantNotificationSound() {
                 const ctx = ensureMerchantAudioCtx();
                 if (!ctx || !merchantAudioReady) return;
-                const oscillator = ctx.createOscillator();
-                const gainNode = ctx.createGain();
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(920, ctx.currentTime);
-                gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.07, ctx.currentTime + 0.01);
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
-                oscillator.connect(gainNode);
-                gainNode.connect(ctx.destination);
-                oscillator.start(ctx.currentTime);
-                oscillator.stop(ctx.currentTime + 0.2);
+                [880, 1175].forEach((freq, index) => {
+                    const now = ctx.currentTime + (index * 0.11);
+                    const oscillator = ctx.createOscillator();
+                    const gainNode = ctx.createGain();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(freq, now);
+                    gainNode.gain.setValueAtTime(0.0001, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.075, now + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+                    oscillator.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.1);
+                });
             }
 
             $(document).one('click keydown touchstart', unlockMerchantAudio);

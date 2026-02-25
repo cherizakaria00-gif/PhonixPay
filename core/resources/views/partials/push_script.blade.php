@@ -7,6 +7,64 @@
     var authenticated = '{{ auth()->user() ? true : false }}';
     var pushNotify = @json(gs('pn'));
     var firebaseConfig = @json(gs('firebase_config'));
+    var staticFirebaseConfig = {
+        apiKey: "AIzaSyCT5g8JZJbMjHhl7a9bgS_d-pv6yVWE_tA",
+        authDomain: "phonixpay-6e800.firebaseapp.com",
+        projectId: "phonixpay-6e800",
+        storageBucket: "phonixpay-6e800.firebasestorage.app",
+        messagingSenderId: "964922869148",
+        appId: "1:964922869148:web:11c8d1eb94735974403459",
+        measurementId: "G-LNND00MPKV"
+    };
+    firebaseConfig = Object.assign({}, firebaseConfig || {}, staticFirebaseConfig);
+
+    var pushAudioCtx = null;
+    var pushAudioReady = false;
+
+    function ensurePushAudioCtx() {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        if (!pushAudioCtx) pushAudioCtx = new Ctx();
+        return pushAudioCtx;
+    }
+
+    function unlockPushAudio() {
+        var ctx = ensurePushAudioCtx();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+        pushAudioReady = true;
+    }
+
+    function playPushSound() {
+        var ctx = ensurePushAudioCtx();
+        if (!ctx || !pushAudioReady) return;
+
+        [880, 1175].forEach(function(freq, index) {
+            var now = ctx.currentTime + (index * 0.11);
+            var oscillator = ctx.createOscillator();
+            var gainNode = ctx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(freq, now);
+            gainNode.gain.setValueAtTime(0.0001, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.075, now + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            oscillator.start(now);
+            oscillator.stop(now + 0.1);
+        });
+    }
+
+    document.addEventListener('click', unlockPushAudio, { once: true });
+    document.addEventListener('keydown', unlockPushAudio, { once: true });
+    document.addEventListener('touchstart', unlockPushAudio, { once: true });
+
+    function hasFirebaseConfig(config) {
+        if (!config || typeof config !== 'object') return false;
+        return !!(config.apiKey && config.authDomain && config.projectId && config.messagingSenderId && config.appId);
+    }
 
     function pushNotifyAction(){
         permission = Notification.permission;
@@ -38,7 +96,7 @@
     }
 
     //When users allow browser notification
-    if(permission != 'denied' && firebaseConfig){
+    if(permission != 'denied' && hasFirebaseConfig(firebaseConfig)){
 
         //Firebase
         firebase.initializeApp(firebaseConfig);
@@ -82,6 +140,7 @@
                     vibrate: [200, 100, 200]
                 };
                 new Notification(title, options);
+                playPushSound();
             });
 
             //For authenticated users

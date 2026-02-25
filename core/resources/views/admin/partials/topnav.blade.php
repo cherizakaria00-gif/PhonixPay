@@ -161,17 +161,20 @@
         function playAdminNotificationSound() {
             const ctx = ensureAdminAudioCtx();
             if (!ctx || !adminAudioReady) return;
-            const oscillator = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(960, ctx.currentTime);
-            gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.01);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
-            oscillator.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.18);
+            [900, 1200].forEach((freq, index) => {
+                const now = ctx.currentTime + (index * 0.11);
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, now);
+                gainNode.gain.setValueAtTime(0.0001, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                oscillator.start(now);
+                oscillator.stop(now + 0.1);
+            });
         }
 
         $(document).one('click keydown touchstart', unlockAdminAudio);
