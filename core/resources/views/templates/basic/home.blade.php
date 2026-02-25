@@ -253,57 +253,68 @@
 
 @section('app')
 <div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#87c5a6]/30">
-    <nav class="absolute w-full z-50 top-3 md:top-4 left-0">
-        <div class="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
-            <div class="bg-black/60 backdrop-blur-md rounded-2xl md:rounded-full shadow-lg border border-white/10 px-3 sm:px-4 md:px-6">
-                <div class="flex items-center gap-3 py-1.5">
-                    <a href="{{ route('home') }}" class="flex items-center gap-3">
-                        <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-6 sm:h-7 w-auto max-w-[180px] sm:max-w-none">
-                    </a>
+    <nav class="absolute w-full z-50 top-4 left-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4 rounded-2xl lg:rounded-full border border-white/10 bg-black/60 backdrop-blur-md px-4 sm:px-6 py-3 shadow-lg">
+                <a href="{{ route('home') }}" class="flex items-center gap-3">
+                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-7 sm:h-8 w-auto">
+                    <span class="text-sm sm:text-base font-semibold text-[#87c5a6]">{{ __(gs('site_name')) }}</span>
+                </a>
 
-                    <div class="hidden md:flex flex-1 justify-center">
-                        <div class="flex items-center gap-5 text-[12px] font-medium text-slate-200">
-                            <a href="{{ route('home') }}" class="hover:text-white transition-colors">@lang('Home')</a>
-                            @foreach($pages as $data)
-                                <a href="{{ route('pages',[$data->slug]) }}" class="hover:text-white transition-colors">{{ __($data->name) }}</a>
-                            @endforeach
-                            <a href="{{ route('blogs') }}" class="hover:text-white transition-colors">@lang('Blogs')</a>
-                            <a href="{{ route('api.documentation') }}" class="hover:text-white transition-colors">@lang('Developer')</a>
-                        </div>
-                    </div>
-
-                    <div class="hidden md:flex items-center gap-3">
-                        @auth
-                            <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
-                        @else
-                            <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                            <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
-                        @endauth
-                    </div>
-
-                    <button id="nav-toggle" class="md:hidden ml-auto inline-flex items-center justify-center h-9 w-9 rounded-lg bg-white/5 border border-white/10 text-slate-200 hover:text-white hover:bg-white/10 hover:border-white/20">
-                        <i data-lucide="menu" class="w-5 h-5"></i>
-                    </button>
+                <div class="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
+                    <a href="#features" class="hover:text-[#87c5a6] transition-colors">@lang('Features')</a>
+                    <a href="#integration" class="hover:text-[#87c5a6] transition-colors">@lang('Integrations')</a>
+                    <a href="#pricing" class="hover:text-[#87c5a6] transition-colors">@lang('Pricing')</a>
+                    <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('BYOK')</a>
+                    <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact')</a>
                 </div>
 
-                <div class="md:hidden pb-2 sm:pb-3">
-                    <div id="nav-menu-mobile" class="hidden bg-slate-950/60 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 p-3">
-                        <div class="flex flex-col gap-3 text-[12px] font-medium text-slate-200">
-                            <a href="{{ route('home') }}" class="hover:text-white transition-colors">@lang('Home')</a>
-                            @foreach($pages as $data)
-                                <a href="{{ route('pages',[$data->slug]) }}" class="hover:text-white transition-colors">{{ __($data->name) }}</a>
-                            @endforeach
-                            <a href="{{ route('blogs') }}" class="hover:text-white transition-colors">@lang('Blogs')</a>
-                            <a href="{{ route('api.documentation') }}" class="hover:text-white transition-colors">@lang('Developer')</a>
-                        </div>
-                        <div class="mt-4 flex flex-wrap items-center gap-3">
-                            @auth
-                                <a href="{{ route('user.home') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
-                            @else
-                                <a href="{{ route('user.login') }}" class="text-[#87c5a6] hover:text-[#a7d9c2] text-[12px] font-semibold transition-colors">@lang('Login')</a>
-                                <a href="{{ route('user.register') }}" class="bg-[#87c5a6] hover:bg-[#9ad8bf] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">Create an account</a>
-                            @endauth
-                        </div>
+                <div class="hidden lg:flex items-center gap-3">
+                    @auth
+                        <a href="{{ route('user.home') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
+                            <i data-lucide="grid" class="w-4 h-4"></i>
+                            @lang('Dashboard')
+                        </a>
+                    @else
+                        <a href="{{ route('user.login') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
+                            <i data-lucide="log-in" class="w-4 h-4"></i>
+                            @lang('Sign In')
+                        </a>
+                        <a href="{{ route('user.register') }}" class="inline-flex items-center gap-2 rounded-full bg-[#87c5a6] px-4 py-2 text-xs font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 hover:bg-[#9ad8bf] transition-colors">
+                            @lang('Get Started')
+                        </a>
+                    @endauth
+                </div>
+
+                <button id="nav-toggle" class="lg:hidden ml-auto inline-flex items-center justify-center h-10 w-10 rounded-xl bg-white/5 border border-white/10 text-slate-200 hover:text-white hover:bg-white/10 hover:border-white/20">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="lg:hidden mt-3">
+                <div id="nav-menu-mobile" class="hidden rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-4 shadow-2xl">
+                    <div class="flex flex-col gap-3 text-sm font-medium text-slate-200">
+                        <a href="#features" class="hover:text-[#87c5a6] transition-colors">@lang('Features')</a>
+                        <a href="#integration" class="hover:text-[#87c5a6] transition-colors">@lang('Integrations')</a>
+                        <a href="#pricing" class="hover:text-[#87c5a6] transition-colors">@lang('Pricing')</a>
+                        <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('BYOK')</a>
+                        <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact')</a>
+                    </div>
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        @auth
+                            <a href="{{ route('user.home') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
+                                <i data-lucide="grid" class="w-4 h-4"></i>
+                                @lang('Dashboard')
+                            </a>
+                        @else
+                            <a href="{{ route('user.login') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
+                                <i data-lucide="log-in" class="w-4 h-4"></i>
+                                @lang('Sign In')
+                            </a>
+                            <a href="{{ route('user.register') }}" class="inline-flex items-center gap-2 rounded-full bg-[#87c5a6] px-4 py-2 text-xs font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 hover:bg-[#9ad8bf] transition-colors">
+                                @lang('Get Started')
+                            </a>
+                        @endauth
                     </div>
                 </div>
             </div>
@@ -312,47 +323,86 @@
 
     <main>
         <!-- Hero -->
-        <div class="relative bg-slate-950 overflow-hidden isolate pt-20 pb-16 sm:pt-24 sm:pb-24 lg:pt-28 lg:pb-32">
-            <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-                <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%);"></div>
-            </div>
+        <section class="relative overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28">
+            <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(135,197,166,0.18),transparent_55%)]"></div>
+            <div class="absolute inset-x-0 top-0 -z-10 h-32 bg-gradient-to-b from-black/60 to-transparent"></div>
 
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="mx-auto max-w-2xl text-center">
-                    <div class="mb-8 flex justify-center">
-                        <div class="relative rounded-full px-3 py-1 text-sm leading-6 text-slate-400 ring-1 ring-white/10 hover:ring-white/20">
-                            Specialized in High Risk & Offshore
-                            <a href="#features" class="font-semibold text-[#9ad8bf]">
-                                <span class="absolute inset-0" aria-hidden="true"></span>
-                                Learn more <span aria-hidden="true">&rarr;</span>
-                            </a>
-                        </div>
-                    </div>
-                    <h1 class="text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                        The Payment Gateway for <span class="text-[#87c5a6]">Bold Businesses</span>
-                    </h1>
-                    <p class="mt-5 text-base sm:text-lg leading-7 sm:leading-8 text-slate-300">
-                        IPTV, dropshipping, e-books, replicas. Stop letting traditional banks block your growth. WooCommerce integration in 5 minutes.
-                    </p>
-                    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-x-6">
-                        <a href="{{ @$banner->button_url ?: route('user.register') }}" class="rounded-md bg-[#87c5a6] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#9ad8bf] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#87c5a6] flex items-center gap-2">
-                            Get started <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </a>
-                        <a href="{{ @$product->btn_url ? url($product->btn_url) : route('contact') }}" class="text-sm font-semibold leading-6 text-white flex items-center gap-2 hover:text-[#a7d9c2] transition-colors">
-                            View the demo <i data-lucide="zap" class="w-4 h-4"></i>
-                        </a>
-                    </div>
+            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
+                <div class="flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-300">
+                        <span class="h-2 w-2 rounded-full bg-[#87c5a6]"></span>
+                        793+ merchants trust {{ __(gs('site_name')) }} for payments
+                    </span>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-[#87c5a6]/30 bg-[#87c5a6]/10 px-3 py-1 text-[#87c5a6]">
+                        <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                        128 new merchants joined this month
+                    </span>
                 </div>
 
-                <div class="mt-12 sm:mt-16 flex flex-wrap justify-center items-center gap-x-5 gap-y-3 sm:gap-x-8 grayscale opacity-60">
-                    <div class="flex shrink-0 items-center gap-2 text-white font-bold text-base sm:text-lg lg:text-xl whitespace-nowrap">
-                        <i data-lucide="shield-check" class="w-6 h-6 text-green-500"></i> SecurePayments
-                    </div>
-                    <div class="hidden sm:flex shrink-0 items-center gap-2 text-white font-bold text-base sm:text-lg lg:text-xl whitespace-nowrap">WooCommerce</div>
-                    <div class="flex shrink-0 items-center gap-2 text-white font-bold text-base sm:text-lg lg:text-xl whitespace-nowrap">Visa / MasterCard</div>
+                <h1 class="mt-8 text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
+                    Accept <span class="text-[#87c5a6]">Payments</span>
+                    <span class="block text-white">Without the Headaches</span>
+                </h1>
+
+                <p class="mt-5 text-base sm:text-lg font-semibold text-[#87c5a6]">
+                    Zero setup fees. No monthly charges. Same-day payouts.
+                </p>
+                <p class="mt-3 text-base sm:text-lg text-slate-300">
+                    Start accepting Apple Pay, Google Pay, Cash App & Crypto in under 5 minutes.
+                </p>
+
+                <div class="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm text-slate-300">
+                    <span class="inline-flex items-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4 text-[#87c5a6]"></i> 5-Min Setup
+                    </span>
+                    <span class="inline-flex items-center gap-2">
+                        <i data-lucide="wallet" class="w-4 h-4 text-[#87c5a6]"></i> $0 Monthly Fee
+                    </span>
+                    <span class="inline-flex items-center gap-2">
+                        <i data-lucide="layers" class="w-4 h-4 text-[#87c5a6]"></i> Smart Gateways
+                    </span>
+                    <span class="inline-flex items-center gap-2">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-[#87c5a6]"></i> Fraud Protection
+                    </span>
+                </div>
+
+                <div class="mt-10 flex flex-wrap justify-center gap-4">
+                    <a href="{{ @$banner->button_url ?: route('user.register') }}" class="inline-flex items-center gap-2 rounded-full bg-[#87c5a6] px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 hover:bg-[#9ad8bf] transition-colors">
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        @lang('Get Started Free')
+                    </a>
+                    <a href="{{ @$product->btn_url ? url($product->btn_url) : route('contact') }}" class="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg hover:bg-slate-100 transition-colors">
+                        <i data-lucide="phone" class="w-4 h-4"></i>
+                        @lang('Talk to Sales')
+                    </a>
+                </div>
+
+                <p class="mt-4 text-xs text-slate-500">No credit card required • Setup in 5 minutes</p>
+
+                <div class="mt-8 flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs sm:text-sm text-slate-200">
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">A</span>
+                        Apple Pay
+                    </span>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">G</span>
+                        Google Pay
+                    </span>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">$</span>
+                        Cash App
+                    </span>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">B</span>
+                        Crypto
+                    </span>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">C</span>
+                        Cards
+                    </span>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Scanner Section -->
         <section class="scanner-section">
