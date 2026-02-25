@@ -270,18 +270,31 @@
 <div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#87c5a6]/30">
     <nav class="absolute w-full z-50 top-4 left-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between gap-4 rounded-2xl lg:rounded-full border border-white/10 bg-black/60 backdrop-blur-md px-4 sm:px-6 py-3 shadow-lg">
+            <div class="flex items-center justify-between gap-4 rounded-2xl lg:rounded-full border border-white/10 bg-[#323444]/60 backdrop-blur-xl px-4 sm:px-6 py-3 shadow-lg">
                 <a href="{{ route('home') }}" class="flex items-center gap-3">
                     <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-7 sm:h-8 w-auto">
                     <span class="text-sm sm:text-base font-semibold text-[#87c5a6]">{{ __(gs('site_name')) }}</span>
                 </a>
 
+                @php
+                    $aboutPage = $pages->first(function ($page) {
+                        $name = strtolower($page->name ?? '');
+                        $slug = strtolower($page->slug ?? '');
+                        return str_contains($name, 'about') || $slug === 'about' || $slug === 'about-us';
+                    });
+                    $partnerPage = $pages->first(function ($page) {
+                        $name = strtolower($page->name ?? '');
+                        $slug = strtolower($page->slug ?? '');
+                        return str_contains($name, 'partnership') || str_contains($slug, 'partnership');
+                    });
+                @endphp
+
                 <div class="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
-                    <a href="#features" class="hover:text-[#87c5a6] transition-colors">@lang('Features')</a>
-                    <a href="#integration" class="hover:text-[#87c5a6] transition-colors">@lang('Integrations')</a>
-                    <a href="#pricing" class="hover:text-[#87c5a6] transition-colors">@lang('Pricing')</a>
-                    <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('BYOK')</a>
-                    <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact')</a>
+                    <a href="{{ route('home') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Home')</a>
+                    <a href="{{ $aboutPage ? route('pages', [$aboutPage->slug]) : '#features' }}" class="hover:text-[#87c5a6] transition-colors">@lang('About Us')</a>
+                    <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact Us')</a>
+                    <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Docs')</a>
+                    <a href="{{ $partnerPage ? route('pages', [$partnerPage->slug]) : '#integration' }}" class="hover:text-[#87c5a6] transition-colors">@lang('Partnership')</a>
                 </div>
 
                 <div class="hidden lg:flex items-center gap-3">
@@ -309,11 +322,11 @@
             <div class="lg:hidden mt-3">
                 <div id="nav-menu-mobile" class="hidden rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-4 shadow-2xl">
                     <div class="flex flex-col gap-3 text-sm font-medium text-slate-200">
-                        <a href="#features" class="hover:text-[#87c5a6] transition-colors">@lang('Features')</a>
-                        <a href="#integration" class="hover:text-[#87c5a6] transition-colors">@lang('Integrations')</a>
-                        <a href="#pricing" class="hover:text-[#87c5a6] transition-colors">@lang('Pricing')</a>
-                        <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('BYOK')</a>
-                        <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact')</a>
+                        <a href="{{ route('home') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Home')</a>
+                        <a href="{{ $aboutPage ? route('pages', [$aboutPage->slug]) : '#features' }}" class="hover:text-[#87c5a6] transition-colors">@lang('About Us')</a>
+                        <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact Us')</a>
+                        <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Docs')</a>
+                        <a href="{{ $partnerPage ? route('pages', [$partnerPage->slug]) : '#integration' }}" class="hover:text-[#87c5a6] transition-colors">@lang('Partnership')</a>
                     </div>
                     <div class="mt-4 flex flex-wrap items-center gap-3">
                         @auth
