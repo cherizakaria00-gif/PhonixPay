@@ -647,29 +647,6 @@
         </div>
     </footer>
 
-    <!-- Support Widget (static) -->
-    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-        <div id="support-panel" class="hidden mb-4 w-[min(360px,calc(100vw-24px))] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-            <div class="bg-[#d83000] p-4 flex justify-between items-center">
-                <div class="flex items-center gap-2 text-white font-semibold">
-                    <i data-lucide="bot" class="w-5 h-5"></i>
-                    <span>Compliance Assistant</span>
-                </div>
-                <button type="button" id="support-close" class="text-white/80 hover:text-white">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="p-4 bg-slate-900 space-y-3">
-                <p class="text-sm text-slate-200">Hi! Ask your questions about your business or KYC.</p>
-                <a href="{{ route('contact') }}" class="inline-flex items-center gap-2 text-sm text-[#ffb07a] hover:text-[#ffd0b0]">
-                    Contact support <i data-lucide="message-square" class="w-4 h-4"></i>
-                </a>
-            </div>
-        </div>
-        <button id="support-toggle" class="group relative flex items-center justify-center w-14 h-14 bg-[#d83000] rounded-full shadow-lg hover:bg-[#f86000] transition-all hover:scale-105 active:scale-95">
-            <i data-lucide="message-square" class="w-6 h-6 text-white"></i>
-        </button>
-    </div>
 </div>
 @endsection
 
@@ -685,12 +662,6 @@
                     navMenuMobile.classList.toggle('hidden');
                 });
             }
-            const panel = document.getElementById('support-panel');
-            const toggle = document.getElementById('support-toggle');
-            const closeBtn = document.getElementById('support-close');
-            const togglePanel = () => panel && panel.classList.toggle('hidden');
-            if (toggle) toggle.addEventListener('click', togglePanel);
-            if (closeBtn) closeBtn.addEventListener('click', togglePanel);
         });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

@@ -61,6 +61,8 @@
     <!-- ==================== Scroll to Top End Here ==================== -->
 
     @yield('app')
+
+    @include($activeTemplate.'partials.whatsapp_chat')
   
     <!-- jQuery library -->
     <script src="{{ asset('assets/global/js/jquery-3.7.1.min.js') }}"></script>
