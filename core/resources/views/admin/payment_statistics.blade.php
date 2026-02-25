@@ -846,32 +846,10 @@
             })
 
             function planColors() {
-                return [
-                    '#ff7675',
-                    '#6c5ce7',
-                    '#ffa62b',
-                    '#ffeaa7',
-                    '#D980FA',
-                    '#fccbcb',
-                    '#45aaf2',
-                    '#05dfd7',
-                    '#FF00F6',
-                    '#1e90ff',
-                    '#2ed573',
-                    '#eccc68',
-                    '#ff5200',
-                    '#cd84f1',
-                    '#7efff5',
-                    '#7158e2',
-                    '#fff200',
-                    '#ff9ff3',
-                    '#08ffc8',
-                    '#3742fa',
-                    '#1089ff',
-                    '#70FF61',
-                    '#bf9fee',
-                    '#574b90'
-                ]
+                const baseColors = ['#87c5a6', '#323444'];
+                const total = planPointInterests.length || 0;
+                const needed = Math.max(total, baseColors.length);
+                return Array.from({ length: needed }, (_, index) => baseColors[index % baseColors.length]);
             }
 
             let chartToggle = $('.chart-info-toggle');

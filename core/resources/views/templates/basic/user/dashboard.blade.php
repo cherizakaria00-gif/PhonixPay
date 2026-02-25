@@ -845,7 +845,10 @@
 
             var chartData = data;
             var chartLabels = labels;
-            var chartColors = ['#ff9f43', '#28c76f', '#ea5455'];
+            var baseChartColors = ['#87c5a6', '#323444'];
+            var chartColors = chartLabels.map(function(_, index) {
+                return baseChartColors[index % baseChartColors.length];
+            });
             var showLegend = true;
 
             if (total === 0) {

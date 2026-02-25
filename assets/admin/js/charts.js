@@ -1,3 +1,6 @@
+const PF_CHART_COLORS = ['#87c5a6', '#323444'];
+const pfBuildPalette = (size) => Array.from({ length: size }, (_, index) => PF_CHART_COLORS[index % PF_CHART_COLORS.length]);
+
 // doughnut
 function piChart(element, labels, data) {
 
@@ -7,34 +10,9 @@ function piChart(element, labels, data) {
               labels: labels,
               datasets: [{
                    data: data,
-                   backgroundColor: [
-                        '#ff7675',
-                        '#6c5ce7',
-                        '#ffa62b',
-                        '#ffeaa7',
-                        '#D980FA',
-                        '#fccbcb',
-                        '#45aaf2',
-                        '#05dfd7',
-                        '#FF00F6',
-                        '#1e90ff',
-                        '#2ed573',
-                        '#eccc68',
-                        '#ff5200',
-                        '#cd84f1',
-                        '#7efff5',
-                        '#7158e2',
-                        '#fff200',
-                        '#ff9ff3',
-                        '#08ffc8',
-                        '#3742fa',
-                        '#1089ff',
-                        '#70FF61',
-                        '#bf9fee',
-                        '#574b90'
-                   ],
+                   backgroundColor: pfBuildPalette(labels.length),
                    borderColor: [
-                        'rgba(231, 80, 90, 0.75)'
+                        'rgba(50, 52, 68, 0.35)'
                    ],
                    borderWidth: 0,
 
@@ -65,7 +43,7 @@ function piChart(element, labels, data) {
 }
 
 function barChart(element, currency, series, categories, height = 380) {
-    let colors = ['#00e396', '#d92027'];
+    const colors = PF_CHART_COLORS;
 
     let options = {
          series: series,
@@ -176,7 +154,7 @@ function barChart(element, currency, series, categories, height = 380) {
 }
 
 function lineChart(element, series, categories, height = 380) {
-    let colors = ['#00e396', '#d92027'];
+    const colors = PF_CHART_COLORS;
     var options = {
          chart: {
               height: height,
