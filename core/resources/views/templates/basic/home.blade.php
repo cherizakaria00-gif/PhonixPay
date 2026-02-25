@@ -229,38 +229,6 @@
             pointer-events: none;
         }
 
-        .neo-lottie-wrapper {
-            position: relative;
-            width: min(360px, 70vw);
-            aspect-ratio: 1 / 1;
-            margin: 0 auto;
-            display: grid;
-            place-items: center;
-        }
-
-        .neo-lottie-glow {
-            position: absolute;
-            inset: 12%;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(135, 197, 166, 0.35), rgba(0, 0, 0, 0) 70%);
-            filter: blur(18px);
-            animation: neoGlow 3s ease-in-out infinite;
-            z-index: 0;
-        }
-
-        .neo-lottie {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            z-index: 1;
-            filter: drop-shadow(0 0 32px rgba(135, 197, 166, 0.45));
-        }
-
-        @keyframes neoGlow {
-            0% { transform: scale(0.92); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(0.92); opacity: 0.8; }
-        }
         @media (max-width: 1024px) {
             .scanner-shell {
                 min-height: 320px;
@@ -408,13 +376,6 @@
                         <i data-lucide="phone" class="w-4 h-4"></i>
                         @lang('Talk to Sales')
                     </a>
-                </div>
-
-                <div class="mt-10 flex justify-center">
-                    <div class="neo-lottie-wrapper">
-                        <div class="neo-lottie-glow"></div>
-                        <div id="neo-lottie" class="neo-lottie" aria-hidden="true"></div>
-                    </div>
                 </div>
 
                 <p class="mt-4 text-xs text-slate-500">No credit card required • Setup in 5 minutes</p>
@@ -742,7 +703,6 @@
 
 @push('script')
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) window.lucide.createIcons();
@@ -751,17 +711,6 @@
             if (navToggle && navMenuMobile) {
                 navToggle.addEventListener('click', () => {
                     navMenuMobile.classList.toggle('hidden');
-                });
-            }
-
-            const lottieContainer = document.getElementById('neo-lottie');
-            if (lottieContainer && window.lottie) {
-                window.lottie.loadAnimation({
-                    container: lottieContainer,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: "{{ asset($activeTemplateTrue.'frontend/lottie/neo-pulse.json') }}"
                 });
             }
         });
