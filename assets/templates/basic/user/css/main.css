@@ -3717,6 +3717,10 @@ label {
     flex-wrap: nowrap;
     margin-right: 12px;
 }
+.merchant-dashboard .header-toolbar {
+    gap: 10px;
+    row-gap: 10px;
+}
 .merchant-dashboard .header-balance__card {
     display: inline-flex;
     align-items: center;
@@ -3804,8 +3808,8 @@ label {
     padding: 0 5px;
 }
 .merchant-dashboard .header-notification-menu {
-    width: 340px;
-    min-width: 340px;
+    width: min(340px, calc(100vw - 24px));
+    min-width: min(340px, calc(100vw - 24px));
     max-width: 420px;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -3923,11 +3927,41 @@ label {
     }
     .merchant-dashboard .header-balance {
         flex-wrap: wrap;
+        width: 100%;
         justify-content: flex-end;
+        margin-right: 0;
+    }
+    .merchant-dashboard .header-balance__card {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 0;
+        padding: 7px 10px;
+        border-radius: 10px;
+    }
+    .merchant-dashboard .header-balance__content {
+        min-width: 0;
+        gap: 4px;
+    }
+    .merchant-dashboard .header-balance__label {
+        font-size: 11px;
+    }
+    .merchant-dashboard .header-balance__value {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .merchant-dashboard .header-notification-menu {
-        width: 300px;
-        min-width: 300px;
+        width: min(320px, calc(100vw - 24px));
+        min-width: min(320px, calc(100vw - 24px));
+        max-width: min(320px, calc(100vw - 24px));
+    }
+}
+@media (max-width: 575px) {
+    .merchant-dashboard .header-balance__card {
+        flex-basis: 100%;
+    }
+    .merchant-dashboard .header-actions {
+        margin-left: 0;
     }
 }
 .merchant-dashboard .dashboard-top-nav {

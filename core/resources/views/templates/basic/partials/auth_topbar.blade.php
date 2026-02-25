@@ -88,7 +88,7 @@
                                 {{ $headerUnreadNotificationCount > 9 ? '9+' : $headerUnreadNotificationCount }}
                             </span>
                         </button>
-                        <div class="dropdown-menu dropdown-menu-end header-notification-menu">
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-right header-notification-menu">
                             <div class="header-notification-menu__head d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">@lang('Notifications')</h6>
                                 <form id="merchantNotificationMarkAllForm" action="{{ route('user.notifications.read.all') }}" method="POST" class="{{ $headerUnreadNotificationCount > 0 ? '' : 'd-none' }}">

@@ -31,6 +31,9 @@
         .scanner-shell {
             position: relative;
             min-height: 360px;
+            --scanner-card-width: 400px;
+            --scanner-card-height: 250px;
+            --scanner-card-gap: 60px;
         }
         .scanner-container {
             position: relative;
@@ -52,7 +55,7 @@
         .card-line {
             display: flex;
             align-items: center;
-            gap: 60px;
+            gap: var(--scanner-card-gap);
             white-space: nowrap;
             cursor: grab;
             user-select: none;
@@ -71,16 +74,16 @@
         }
         .card-wrapper {
             position: relative;
-            width: 400px;
-            height: 250px;
+            width: var(--scanner-card-width);
+            height: var(--scanner-card-height);
             flex-shrink: 0;
         }
         .card {
             position: absolute;
             top: 0;
             left: 0;
-            width: 400px;
-            height: 250px;
+            width: var(--scanner-card-width);
+            height: var(--scanner-card-height);
             border-radius: 15px;
             overflow: hidden;
         }
@@ -109,8 +112,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 400px;
-            height: 250px;
+            width: var(--scanner-card-width);
+            height: var(--scanner-card-height);
             border-radius: 15px;
             overflow: hidden;
             clip-path: inset(0 calc(100% - var(--clip-left, 0%)) 0 0);
@@ -166,7 +169,7 @@
             top: 50%;
             transform: translate(-50%, -50%);
             width: 4px;
-            height: 300px;
+            height: calc(var(--scanner-card-height) + 50px);
             border-radius: 30px;
             background: linear-gradient(
                 to bottom,
@@ -211,7 +214,7 @@
             left: 0;
             transform: translateY(-50%);
             width: 100vw;
-            height: 250px;
+            height: var(--scanner-card-height);
             z-index: 0;
             pointer-events: none;
         }
@@ -221,16 +224,28 @@
             left: -3px;
             transform: translateY(-50%);
             width: 100vw;
-            height: 300px;
+            height: calc(var(--scanner-card-height) + 50px);
             z-index: 15;
             pointer-events: none;
+        }
+        @media (max-width: 1024px) {
+            .scanner-shell {
+                min-height: 320px;
+                --scanner-card-width: 340px;
+                --scanner-card-height: 213px;
+                --scanner-card-gap: 40px;
+            }
         }
         @media (max-width: 768px) {
             .scanner-shell {
                 padding-top: 16px;
+                min-height: 290px;
+                --scanner-card-width: min(82vw, 320px);
+                --scanner-card-height: calc(var(--scanner-card-width) * 0.625);
+                --scanner-card-gap: 26px;
             }
             .scanner-container {
-                height: 280px;
+                height: 260px;
             }
         }
     </style>
@@ -239,11 +254,11 @@
 @section('app')
 <div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#d83000]/30">
     <nav class="absolute w-full z-50 top-3 md:top-4 left-0">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-4 md:px-6">
-                <div class="flex items-center gap-4 py-1.5">
+        <div class="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
+            <div class="bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-3 sm:px-4 md:px-6">
+                <div class="flex items-center gap-3 py-1.5">
                     <a href="{{ route('home') }}" class="flex items-center gap-3">
-                        <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-7 w-auto">
+                        <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-6 sm:h-7 w-auto max-w-[180px] sm:max-w-none">
                     </a>
 
                     <div class="hidden md:flex flex-1 justify-center">
@@ -266,13 +281,13 @@
                         @endauth
                     </div>
 
-                    <button id="nav-toggle" class="md:hidden ml-auto inline-flex items-center justify-center h-8 w-8 rounded-full border border-white/20 text-slate-200 hover:text-white hover:border-white/30">
+                    <button id="nav-toggle" class="md:hidden ml-auto inline-flex items-center justify-center h-9 w-9 rounded-full border border-white/20 text-slate-200 hover:text-white hover:border-white/30">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
                 </div>
 
-                <div class="md:hidden pb-3">
-                    <div id="nav-menu-mobile" class="hidden bg-black/80 rounded-2xl shadow-lg border border-white/10 p-4">
+                <div class="md:hidden pb-2 sm:pb-3">
+                    <div id="nav-menu-mobile" class="hidden bg-black/80 rounded-2xl shadow-lg border border-white/10 p-3">
                         <div class="flex flex-col gap-3 text-[12px] font-medium text-slate-200">
                             <a href="{{ route('home') }}" class="hover:text-white transition-colors">@lang('Home')</a>
                             @foreach($pages as $data)
@@ -281,7 +296,7 @@
                             <a href="{{ route('blogs') }}" class="hover:text-white transition-colors">@lang('Blogs')</a>
                             <a href="{{ route('api.documentation') }}" class="hover:text-white transition-colors">@lang('Developer')</a>
                         </div>
-                        <div class="mt-4 flex items-center gap-3">
+                        <div class="mt-4 flex flex-wrap items-center gap-3">
                             @auth
                                 <a href="{{ route('user.home') }}" class="bg-[#d83000] hover:bg-[#f86000] text-white px-3 py-1.5 rounded-full text-[12px] font-semibold shadow-md transition-colors">@lang('Dashboard')</a>
                             @else
@@ -302,7 +317,7 @@
                 <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%);"></div>
             </div>
 
-            <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="mx-auto max-w-2xl text-center">
                     <div class="mb-8 flex justify-center">
                         <div class="relative rounded-full px-3 py-1 text-sm leading-6 text-slate-400 ring-1 ring-white/10 hover:ring-white/20">
@@ -313,13 +328,13 @@
                             </a>
                         </div>
                     </div>
-                    <h1 class="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+                    <h1 class="text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
                         The Payment Gateway for <span class="text-[#d83000]">Bold Businesses</span>
                     </h1>
-                    <p class="mt-6 text-lg leading-8 text-slate-300">
+                    <p class="mt-5 text-base sm:text-lg leading-7 sm:leading-8 text-slate-300">
                         IPTV, dropshipping, e-books, replicas. Stop letting traditional banks block your growth. WooCommerce integration in 5 minutes.
                     </p>
-                    <div class="mt-10 flex items-center justify-center gap-x-6">
+                    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-x-6">
                         <a href="{{ @$banner->button_url ?: route('user.register') }}" class="rounded-md bg-[#d83000] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#f86000] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d83000] flex items-center gap-2">
                             Get started <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </a>
@@ -329,12 +344,12 @@
                     </div>
                 </div>
 
-                <div class="mt-16 flex justify-center gap-8 grayscale opacity-50">
-                    <div class="flex items-center gap-2 text-white font-bold text-xl">
+                <div class="mt-12 sm:mt-16 flex flex-wrap justify-center items-center gap-x-5 gap-y-3 sm:gap-x-8 grayscale opacity-60">
+                    <div class="flex shrink-0 items-center gap-2 text-white font-bold text-base sm:text-lg lg:text-xl whitespace-nowrap">
                         <i data-lucide="shield-check" class="w-6 h-6 text-green-500"></i> SecurePayments
                     </div>
-                    <div class="hidden sm:flex items-center gap-2 text-white font-bold text-xl">WooCommerce</div>
-                    <div class="flex items-center gap-2 text-white font-bold text-xl">Visa / MasterCard</div>
+                    <div class="hidden sm:flex shrink-0 items-center gap-2 text-white font-bold text-base sm:text-lg lg:text-xl whitespace-nowrap">WooCommerce</div>
+                    <div class="flex shrink-0 items-center gap-2 text-white font-bold text-base sm:text-lg lg:text-xl whitespace-nowrap">Visa / MasterCard</div>
                 </div>
             </div>
         </div>
@@ -354,7 +369,7 @@
         </section>
 
         <!-- Industries -->
-        <div class="bg-slate-950 py-24 sm:py-32">
+        <div class="bg-slate-950 py-16 sm:py-24 lg:py-32">
             <div class="mx-auto max-w-7xl px-6 lg:px-8">
                 <h2 class="text-center text-3xl font-bold tracking-tight text-white sm:text-4xl mb-16">
                     Supported Industries
@@ -416,7 +431,7 @@
         <div id="pricing"></div>
 
         <!-- Features -->
-        <div id="features" class="bg-slate-900 py-24 sm:py-32">
+        <div id="features" class="bg-slate-900 py-16 sm:py-24 lg:py-32">
             <div class="mx-auto max-w-7xl px-6 lg:px-8">
                 <div class="mx-auto max-w-2xl lg:text-center">
                     <h2 class="text-base font-semibold leading-7 text-[#f86000]">Everything you need</h2>
@@ -489,7 +504,7 @@
         </div>
 
         <!-- Integration -->
-        <div id="integration" class="bg-slate-900 py-24 overflow-hidden">
+        <div id="integration" class="bg-slate-900 py-16 sm:py-24 overflow-hidden">
             <div class="mx-auto max-w-7xl px-6 lg:px-8">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     <div>
@@ -570,7 +585,7 @@
         </div>
 
         <!-- KYC -->
-        <div id="kyc" class="bg-slate-950 py-24 relative">
+        <div id="kyc" class="bg-slate-950 py-16 sm:py-24 relative">
             <div class="absolute inset-0 bg-[#d83000]/5 bg-[radial-gradient(#d83000_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
 
             <div class="relative mx-auto max-w-7xl px-6 lg:px-8 text-center">
@@ -634,7 +649,7 @@
 
     <!-- Support Widget (static) -->
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-        <div id="support-panel" class="hidden mb-4 w-[320px] sm:w-[360px] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div id="support-panel" class="hidden mb-4 w-[min(360px,calc(100vw-24px))] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
             <div class="bg-[#d83000] p-4 flex justify-between items-center">
                 <div class="flex items-center gap-2 text-white font-semibold">
                     <i data-lucide="bot" class="w-5 h-5"></i>
@@ -717,12 +732,66 @@
                 this.startPeriodicUpdates();
             }
 
+            getCardMetrics() {
+                const viewport = window.innerWidth;
+                if (viewport <= 640) {
+                    const width = Math.max(220, Math.min(300, viewport - 80));
+                    return {
+                        width,
+                        height: Math.round(width * 0.625),
+                        gap: 26,
+                    };
+                }
+                if (viewport <= 1024) {
+                    return {
+                        width: 340,
+                        height: 213,
+                        gap: 40,
+                    };
+                }
+                return {
+                    width: 400,
+                    height: 250,
+                    gap: 60,
+                };
+            }
+
             calculateDimensions() {
                 this.containerWidth = this.container.offsetWidth;
-                const cardWidth = 400;
-                const cardGap = 60;
+                const { width: cardWidth, gap: cardGap } = this.getCardMetrics();
+                this.cardLine.style.gap = `${cardGap}px`;
                 const cardCount = this.cardLine.children.length;
                 this.cardLineWidth = (cardWidth + cardGap) * cardCount;
+            }
+
+            applyCardSizing(wrapper, regenerateAscii = false) {
+                const { width, height } = this.getCardMetrics();
+                wrapper.style.width = `${width}px`;
+                wrapper.style.height = `${height}px`;
+
+                wrapper.querySelectorAll(".card").forEach((card) => {
+                    card.style.width = `${width}px`;
+                    card.style.height = `${height}px`;
+                });
+
+                if (regenerateAscii) {
+                    const asciiContent = wrapper.querySelector(".ascii-content");
+                    if (asciiContent) {
+                        const { width: codeWidth, height: codeHeight, fontSize, lineHeight } =
+                            this.calculateCodeDimensions(width, height);
+                        asciiContent.style.fontSize = fontSize + "px";
+                        asciiContent.style.lineHeight = lineHeight + "px";
+                        asciiContent.textContent = this.generateCode(codeWidth, codeHeight);
+                    }
+                }
+            }
+
+            handleResize() {
+                this.cardLine.querySelectorAll(".card-wrapper").forEach((wrapper) => {
+                    this.applyCardSizing(wrapper, true);
+                });
+                this.calculateDimensions();
+                this.updateCardPosition();
             }
 
             setupEventListeners() {
@@ -746,7 +815,10 @@
                 this.cardLine.addEventListener("selectstart", (e) => e.preventDefault());
                 this.cardLine.addEventListener("dragstart", (e) => e.preventDefault());
 
-                window.addEventListener("resize", () => this.calculateDimensions());
+                window.addEventListener("resize", () => {
+                    clearTimeout(this.resizeTimer);
+                    this.resizeTimer = setTimeout(() => this.handleResize(), 120);
+                });
             }
 
             startDrag(e) {
@@ -995,11 +1067,16 @@
             }
 
             createCardWrapper(index) {
+                const { width: cardWidth, height: cardHeight } = this.getCardMetrics();
                 const wrapper = document.createElement("div");
                 wrapper.className = "card-wrapper";
+                wrapper.style.width = `${cardWidth}px`;
+                wrapper.style.height = `${cardHeight}px`;
 
                 const normalCard = document.createElement("div");
                 normalCard.className = "card card-normal";
+                normalCard.style.width = `${cardWidth}px`;
+                normalCard.style.height = `${cardHeight}px`;
 
                 const cardImages = [
                     "https://cdn.prod.website-files.com/68789c86c8bc802d61932544/689f20b55e654d1341fb06f8_4.1.png",
@@ -1016,16 +1093,16 @@
 
                 cardImage.onerror = () => {
                     const canvas = document.createElement("canvas");
-                    canvas.width = 400;
-                    canvas.height = 250;
+                    canvas.width = cardWidth;
+                    canvas.height = cardHeight;
                     const ctx = canvas.getContext("2d");
 
-                    const gradient = ctx.createLinearGradient(0, 0, 400, 250);
+                    const gradient = ctx.createLinearGradient(0, 0, cardWidth, cardHeight);
                     gradient.addColorStop(0, "#667eea");
                     gradient.addColorStop(1, "#764ba2");
 
                     ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, 400, 250);
+                    ctx.fillRect(0, 0, cardWidth, cardHeight);
 
                     cardImage.src = canvas.toDataURL();
                 };
@@ -1034,12 +1111,14 @@
 
                 const asciiCard = document.createElement("div");
                 asciiCard.className = "card card-ascii";
+                asciiCard.style.width = `${cardWidth}px`;
+                asciiCard.style.height = `${cardHeight}px`;
 
                 const asciiContent = document.createElement("div");
                 asciiContent.className = "ascii-content";
 
                 const { width, height, fontSize, lineHeight } =
-                    this.calculateCodeDimensions(400, 250);
+                    this.calculateCodeDimensions(cardWidth, cardHeight);
                 asciiContent.style.fontSize = fontSize + "px";
                 asciiContent.style.lineHeight = lineHeight + "px";
                 asciiContent.textContent = this.generateCode(width, height);
@@ -1110,9 +1189,10 @@
             }
 
             updateAsciiContent() {
+                const { width: cardWidth, height: cardHeight } = this.getCardMetrics();
                 document.querySelectorAll(".ascii-content").forEach((content) => {
                     if (Math.random() < 0.15) {
-                        const { width, height } = this.calculateCodeDimensions(400, 250);
+                        const { width, height } = this.calculateCodeDimensions(cardWidth, cardHeight);
                         content.textContent = this.generateCode(width, height);
                     }
                 });
