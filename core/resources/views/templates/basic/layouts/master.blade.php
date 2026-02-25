@@ -21,7 +21,11 @@
     @stack('style-lib')
 
     <!-- main css -->
-    <link rel="stylesheet" href="{{asset($activeTemplateTrue.'user/css/main.css') }}"> 
+    @php
+        $userMainCssPath = $activeTemplateTrue . 'user/css/main.css';
+        $userMainCssVersion = @filemtime(public_path($userMainCssPath)) ?: time();
+    @endphp
+    <link rel="stylesheet" href="{{ asset($userMainCssPath) }}?v={{ $userMainCssVersion }}">
 
     @stack('style')
 
