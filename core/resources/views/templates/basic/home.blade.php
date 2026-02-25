@@ -255,7 +255,7 @@
 <div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#d83000]/30">
     <nav class="absolute w-full z-50 top-3 md:top-4 left-0">
         <div class="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
-            <div class="bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-3 sm:px-4 md:px-6">
+            <div class="bg-black/60 backdrop-blur-md rounded-2xl md:rounded-full shadow-lg border border-white/10 px-3 sm:px-4 md:px-6">
                 <div class="flex items-center gap-3 py-1.5">
                     <a href="{{ route('home') }}" class="flex items-center gap-3">
                         <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-6 sm:h-7 w-auto max-w-[180px] sm:max-w-none">
@@ -281,13 +281,13 @@
                         @endauth
                     </div>
 
-                    <button id="nav-toggle" class="md:hidden ml-auto inline-flex items-center justify-center h-9 w-9 rounded-full border border-white/20 text-slate-200 hover:text-white hover:border-white/30">
+                    <button id="nav-toggle" class="md:hidden ml-auto inline-flex items-center justify-center h-9 w-9 rounded-lg bg-white/5 border border-white/10 text-slate-200 hover:text-white hover:bg-white/10 hover:border-white/20">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
                 </div>
 
                 <div class="md:hidden pb-2 sm:pb-3">
-                    <div id="nav-menu-mobile" class="hidden bg-black/80 rounded-2xl shadow-lg border border-white/10 p-3">
+                    <div id="nav-menu-mobile" class="hidden bg-slate-950/60 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 p-3">
                         <div class="flex flex-col gap-3 text-[12px] font-medium text-slate-200">
                             <a href="{{ route('home') }}" class="hover:text-white transition-colors">@lang('Home')</a>
                             @foreach($pages as $data)
