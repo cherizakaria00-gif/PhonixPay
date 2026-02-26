@@ -272,7 +272,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between gap-4 rounded-2xl lg:rounded-full border border-white/10 bg-[#323444]/60 backdrop-blur-xl px-4 sm:px-6 py-3 shadow-lg">
                 <a href="{{ route('home') }}" class="flex items-center">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-12 sm:h-14 lg:h-16 w-auto">
+                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-14 sm:h-16 lg:h-20 w-auto">
                 </a>
 
                 @php
