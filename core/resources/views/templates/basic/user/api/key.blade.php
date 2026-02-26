@@ -89,14 +89,14 @@
                     <p class="pf-dev-card__desc mb-0">@lang('Easily integrate FlujiPay into your WordPress store.')</p>
                 </div>
                 <div class="pf-dev-actions">
-                    <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}" download="FlujiPay Pluging.zip">
-                        <i class="las la-download"></i> @lang('FlujiPay Pluging')
+                    <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}" download="FlujiPay Plug V2.1.zip">
+                        <i class="las la-download"></i> @lang('FlujiPay Plugin v2.1')
                     </a>
                 </div>
             </div>
             <div class="card-body">
                 <div class="pf-dev-plugin__content">
-                    <h6 class="mb-2">@lang('FlujiPay for WooCommerce v1.2.0')</h6>
+                    <h6 class="mb-2">@lang('FlujiPay for WooCommerce v2.1.0')</h6>
                     <ol class="pf-dev-plugin__list mb-0">
                         <li>@lang('Download the ZIP file.')</li>
                         <li>@lang('Go to WordPress Admin > Plugins > Add New > Upload.')</li>
@@ -263,4 +263,3 @@
         })(jQuery);
     </script>
 @endpush
-
