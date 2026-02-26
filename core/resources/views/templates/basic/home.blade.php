@@ -271,9 +271,8 @@
     <nav class="absolute w-full z-50 top-4 left-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between gap-4 rounded-2xl lg:rounded-full border border-white/10 bg-[#323444]/60 backdrop-blur-xl px-4 sm:px-6 py-3 shadow-lg">
-                <a href="{{ route('home') }}" class="flex items-center gap-3">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-7 sm:h-8 w-auto">
-                    <span class="text-sm sm:text-base font-semibold text-[#87c5a6]">{{ __(gs('site_name')) }}</span>
+                <a href="{{ route('home') }}" class="flex items-center">
+                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-10 sm:h-12 w-auto">
                 </a>
 
                 @php
