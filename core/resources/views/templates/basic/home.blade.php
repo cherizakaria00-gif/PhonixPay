@@ -267,86 +267,8 @@
 @endpush
 
 @section('app')
-<div class="min-h-screen bg-slate-950 text-white font-sans selection:bg-[#87c5a6]/30">
-    <nav class="absolute w-full z-50 top-4 left-0">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between gap-4 rounded-2xl lg:rounded-full border border-white/10 bg-[#323444]/60 backdrop-blur-xl px-4 sm:px-6 py-3 shadow-lg">
-                <a href="{{ route('home') }}" class="flex items-center">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-12 sm:h-14 lg:h-18 w-auto">
-                </a>
-
-                @php
-                    $aboutPage = $pages->first(function ($page) {
-                        $name = strtolower($page->name ?? '');
-                        $slug = strtolower($page->slug ?? '');
-                        return str_contains($name, 'about') || $slug === 'about' || $slug === 'about-us';
-                    });
-                    $partnerPage = $pages->first(function ($page) {
-                        $name = strtolower($page->name ?? '');
-                        $slug = strtolower($page->slug ?? '');
-                        return str_contains($name, 'partnership') || str_contains($slug, 'partnership');
-                    });
-                @endphp
-
-                <div class="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
-                    <a href="{{ route('home') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Home')</a>
-                    <a href="{{ $aboutPage ? route('pages', [$aboutPage->slug]) : '#features' }}" class="hover:text-[#87c5a6] transition-colors">@lang('About Us')</a>
-                    <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact Us')</a>
-                    <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Docs')</a>
-                    <a href="{{ $partnerPage ? route('pages', [$partnerPage->slug]) : '#integration' }}" class="hover:text-[#87c5a6] transition-colors">@lang('Partnership')</a>
-                </div>
-
-                <div class="hidden lg:flex items-center gap-3">
-                    @auth
-                        <a href="{{ route('user.home') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
-                            <i data-lucide="grid" class="w-4 h-4"></i>
-                            @lang('Dashboard')
-                        </a>
-                    @else
-                        <a href="{{ route('user.login') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
-                            <i data-lucide="log-in" class="w-4 h-4"></i>
-                            @lang('Sign In')
-                        </a>
-                        <a href="{{ route('user.register') }}" class="inline-flex items-center gap-2 rounded-full bg-[#87c5a6] px-4 py-2 text-xs font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 hover:bg-[#9ad8bf] transition-colors">
-                            @lang('Get Started')
-                        </a>
-                    @endauth
-                </div>
-
-                <button id="nav-toggle" class="lg:hidden ml-auto inline-flex items-center justify-center h-10 w-10 rounded-xl bg-white/5 border border-white/10 text-slate-200 hover:text-white hover:bg-white/10 hover:border-white/20">
-                    <i data-lucide="menu" class="w-5 h-5"></i>
-                </button>
-            </div>
-
-            <div class="lg:hidden mt-3">
-                <div id="nav-menu-mobile" class="hidden rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-4 shadow-2xl">
-                    <div class="flex flex-col gap-3 text-sm font-medium text-slate-200">
-                        <a href="{{ route('home') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Home')</a>
-                        <a href="{{ $aboutPage ? route('pages', [$aboutPage->slug]) : '#features' }}" class="hover:text-[#87c5a6] transition-colors">@lang('About Us')</a>
-                        <a href="{{ route('contact') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Contact Us')</a>
-                        <a href="{{ route('api.documentation') }}" class="hover:text-[#87c5a6] transition-colors">@lang('Docs')</a>
-                        <a href="{{ $partnerPage ? route('pages', [$partnerPage->slug]) : '#integration' }}" class="hover:text-[#87c5a6] transition-colors">@lang('Partnership')</a>
-                    </div>
-                    <div class="mt-4 flex flex-wrap items-center gap-3">
-                        @auth
-                            <a href="{{ route('user.home') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
-                                <i data-lucide="grid" class="w-4 h-4"></i>
-                                @lang('Dashboard')
-                            </a>
-                        @else
-                            <a href="{{ route('user.login') }}" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-[#87c5a6]/40 hover:text-[#a7d9c2] transition-colors">
-                                <i data-lucide="log-in" class="w-4 h-4"></i>
-                                @lang('Sign In')
-                            </a>
-                            <a href="{{ route('user.register') }}" class="inline-flex items-center gap-2 rounded-full bg-[#87c5a6] px-4 py-2 text-xs font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 hover:bg-[#9ad8bf] transition-colors">
-                                @lang('Get Started')
-                            </a>
-                        @endauth
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+<div class="min-h-screen bg-[#020618] text-white font-sans selection:bg-[#87c5a6]/30">
+    @include($activeTemplate.'partials.new_nav')
 
     <main>
         <!-- Hero -->
@@ -358,11 +280,11 @@
                 <div class="flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
                     <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-300">
                         <span class="h-2 w-2 rounded-full bg-[#87c5a6]"></span>
-                        793+ merchants trust {{ __(gs('site_name')) }} for payments
+                        59 merchants trust FlujiPay for payments
                     </span>
                     <span class="inline-flex items-center gap-2 rounded-full border border-[#87c5a6]/30 bg-[#87c5a6]/10 px-3 py-1 text-[#87c5a6]">
                         <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-                        128 new merchants joined this month
+                        28 new merchants joined this month
                     </span>
                 </div>
 
@@ -408,23 +330,33 @@
 
                 <div class="mt-8 flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs sm:text-sm text-slate-200">
                     <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">A</span>
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
+                            <i class="fab fa-apple-pay text-slate-900" aria-hidden="true"></i>
+                        </span>
                         Apple Pay
                     </span>
                     <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">G</span>
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
+                            <i class="fab fa-google-pay text-[#4285F4]" aria-hidden="true"></i>
+                        </span>
                         Google Pay
                     </span>
                     <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">$</span>
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
+                            <i class="fas fa-dollar-sign text-[#00D632]" aria-hidden="true"></i>
+                        </span>
                         Cash App
                     </span>
                     <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">B</span>
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
+                            <i class="fab fa-bitcoin text-[#F7931A]" aria-hidden="true"></i>
+                        </span>
                         Crypto
                     </span>
                     <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-900 text-[10px] font-semibold">C</span>
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
+                            <i class="fas fa-credit-card text-[#2563EB]" aria-hidden="true"></i>
+                        </span>
                         Cards
                     </span>
                 </div>
@@ -733,14 +665,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) window.lucide.createIcons();
-            const navToggle = document.getElementById('nav-toggle');
-            const navMenuMobile = document.getElementById('nav-menu-mobile');
-            if (navToggle && navMenuMobile) {
-                navToggle.addEventListener('click', () => {
-                    navMenuMobile.classList.toggle('hidden');
-                });
-            }
-
             if (window.FinisherHeader) {
                 new FinisherHeader({
                     "count": 100,
@@ -760,7 +684,7 @@
                         }
                     },
                     "colors": {
-                        "background": "#323444",
+                        "background": "#020618",
                         "particles": [
                             "#87c5a6",
                             "#87c5a6",

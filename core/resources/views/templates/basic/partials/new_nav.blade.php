@@ -6,8 +6,8 @@
     <div class="max-w-7xl mx-auto px-6">
         <div class="bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 px-4 md:px-6">
             <div class="flex items-center gap-4 py-1.5">
-                <a href="{{ route('home') }}" class="flex items-center">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-12 sm:h-14 lg:h-18 w-auto">
+                <a href="{{ route('home') }}" class="flex items-center gap-3">
+                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-7 w-auto">
                 </a>
 
                 <div class="hidden md:flex flex-1 justify-center">
@@ -58,3 +58,17 @@
         </div>
     </div>
 </nav>
+
+@push('script')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navToggle = document.getElementById('nav-toggle');
+            const navMenuMobile = document.getElementById('nav-menu-mobile');
+            if (navToggle && navMenuMobile) {
+                navToggle.addEventListener('click', () => {
+                    navMenuMobile.classList.toggle('hidden');
+                });
+            }
+        });
+    </script>
+@endpush

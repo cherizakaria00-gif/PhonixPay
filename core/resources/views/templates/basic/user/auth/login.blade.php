@@ -40,6 +40,9 @@
             padding: 12px 14px;
             border-radius: 12px;
             width: 100%;
+            box-shadow:
+                0 0 0 1px rgba(136, 198, 166, 0.15),
+                0 0 18px rgba(136, 198, 166, 0.12);
         }
         .new-auth .form--control::placeholder {
             color: var(--input-placeholder);
@@ -52,8 +55,10 @@
             box-shadow: 0 0 0 1000px var(--input-bg) inset;
         }
         .new-auth .form--control:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+            border-color: #88c6a6;
+            box-shadow:
+                0 0 0 2px rgba(136, 198, 166, 0.35),
+                0 0 24px rgba(136, 198, 166, 0.35);
             outline: none;
         }
         .new-auth .input--group { position: relative; }
@@ -71,11 +76,11 @@
             border: 1px solid #334155;
         }
         .new-auth .form-check-input:checked {
-            background-color: #6366f1;
-            border-color: #6366f1;
+            background-color: #88c6a6;
+            border-color: #88c6a6;
         }
-        .new-auth .anchor-color { color: #a5b4fc; }
-        .new-auth .anchor-color:hover { color: #c7d2fe; }
+        .new-auth .anchor-color { color: #88c6a6; }
+        .new-auth .anchor-color:hover { color: #9ad8bf; }
         .new-auth .social-login-btn{
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(148, 163, 184, 0.3);
@@ -86,10 +91,15 @@
             align-items: center;
             gap: 10px;
             justify-content: center;
+            box-shadow: none;
         }
         .new-auth .btn.social-login-btn:hover {
-            border-color: #6366f1;
+            border-color: #88c6a6;
             color: #ffffff;
+        }
+        .new-auth .btn,
+        .new-auth button {
+            box-shadow: none !important;
         }
         .new-auth .login-or span{
             background-color: #0b1220;
@@ -98,6 +108,7 @@
         .new-auth .login-or:before{
             background-color: rgba(148, 163, 184, 0.2);
         }
+
     </style>
 @endpush
 
@@ -115,13 +126,13 @@
         <div class="hidden lg:flex lg:w-1/2 items-center justify-center px-12 py-12">
             <div class="max-w-md">
                 <div class="flex items-center gap-3 mb-6">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-10">
+                    <img src="{{ siteLogo() }}" alt="Logo" class="h-10">
                 </div>
                 <h1 class="text-4xl font-bold tracking-tight text-white mb-4">
-                    Accedez a votre espace marchand
+                    Access your merchant dashboard
                 </h1>
                 <p class="text-slate-300 text-lg">
-                    Suivez vos paiements, gerez vos integrations et lancez votre croissance en toute confiance.
+                    Track payments, manage integrations, and grow with confidence.
                 </p>
                 <div class="mt-10">
                     <div class="relative bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-2xl">
@@ -133,8 +144,8 @@
 
         <div class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
             <div class="w-full max-w-md bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-                <h2 class="text-2xl font-bold text-white mb-2">@lang('Login Your Account')</h2>
-                <p class="text-slate-400 mb-6">Bienvenue ! Connectez-vous pour continuer.</p>
+                <h2 class="text-2xl font-bold text-white mb-2">Login to your account</h2>
+                <p class="text-slate-400 mb-6">Welcome back! Sign in to continue.</p>
 
                 <form method="POST" action="{{ route('user.login') }}" class="verify-gcaptcha space-y-5">
                     @csrf
@@ -142,11 +153,11 @@
                     @include($activeTemplate.'partials.social_login')
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Username or Email')</label>
-                        <input type="text" name="username" value="{{ old('username') }}" class="form--control" required>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Email address</label>
+                        <input type="text" name="username" value="{{ old('username') }}" class="form--control" autocomplete="email" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Password')</label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Password</label>
                         <div class="input--group">
                             <input id="password" type="password" class="form--control" name="password" required>
                             <div class="password-show-hide fa-solid toggle-password fa-eye-slash" id="#password"></div>
@@ -158,21 +169,21 @@
                     <div class="flex items-center justify-between text-sm">
                         <label class="inline-flex items-center gap-2 text-slate-300">
                             <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
-                            @lang('Remember Me')
+                            Remember me
                         </label>
-                        <a href="{{ route('user.password.request') }}" class="anchor-color">@lang('Forgot Password')?</a>
+                        <a href="{{ route('user.password.request') }}" class="anchor-color">Forgot password?</a>
                     </div>
 
-                    <button type="submit" id="recaptcha" class="w-full rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors">
-                        @lang('Login')
+                    <button type="submit" id="recaptcha" class="w-full rounded-md bg-[#88c6a6] px-4 py-3 text-sm font-semibold text-slate-900 hover:bg-[#9ad8bf] transition-colors">
+                        Log in
                     </button>
 
                     <div class="text-center text-sm text-slate-400">
-                        @lang("Don't have an account?")
+                        Don't have an account?
                     </div>
 
-                    <a href="{{ route('user.register') }}" class="w-full inline-flex items-center justify-center rounded-md border border-slate-700 px-4 py-3 text-sm font-semibold text-white hover:border-indigo-500 hover:text-indigo-200 transition-colors">
-                        @lang('Become a Merchant')
+                    <a href="{{ route('user.register') }}" class="w-full inline-flex items-center justify-center rounded-md border border-[#88c6a6] px-4 py-3 text-sm font-semibold text-white hover:border-[#9ad8bf] hover:text-[#9ad8bf] transition-colors">
+                        Become a merchant
                     </a>
                 </form>
             </div>
