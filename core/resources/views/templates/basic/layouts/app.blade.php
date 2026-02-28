@@ -62,7 +62,15 @@
 
     @yield('app')
 
-    @include($activeTemplate.'partials.whatsapp_chat')
+    @php
+        $hideWhatsappWidget = ($hideWhatsappWidget ?? false)
+            || request()->routeIs('payment.checkout')
+            || request()->routeIs('test.payment.checkout')
+            || request()->routeIs('payment.link.show');
+    @endphp
+    @if(!$hideWhatsappWidget)
+        @include($activeTemplate.'partials.whatsapp_chat')
+    @endif
   
     <!-- jQuery library -->
     <script src="{{ asset('assets/global/js/jquery-3.7.1.min.js') }}"></script>
