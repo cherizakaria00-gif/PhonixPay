@@ -158,11 +158,16 @@ class PaymentLinkController extends Controller
 
     protected function availableCurrencies(?string $currentCurrency = null): array
     {
-        $currencies = GatewayCurrency::query()
+        $query = GatewayCurrency::query()
             ->whereHas('method', function ($query) {
                 $query->where('status', Status::ENABLE);
-            })
-            ->where('status', Status::ENABLE)
+            });
+
+        if (Schema::hasColumn('gateway_currencies', 'status')) {
+            $query->where('status', Status::ENABLE);
+        }
+
+        $currencies = $query
             ->pluck('currency')
             ->map(fn ($currency) => strtoupper((string) $currency))
             ->filter()
