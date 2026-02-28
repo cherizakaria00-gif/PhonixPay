@@ -28,10 +28,6 @@
                     allow="payment *"
                 ></iframe>
             </div>
-
-            <a href="{{ $redirectUrl }}" target="_blank" rel="noopener" class="payment-gateway-preview__button">
-                @lang('Open in New Tab')
-            </a>
         </div>
     </div>
 </div>

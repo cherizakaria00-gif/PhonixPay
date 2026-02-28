@@ -616,6 +616,18 @@
             height: min(76vh, 760px);
         }
 
+        .payment-gateway-preview .payment-gateway-preview__frame-wrap::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 58px;
+            background: #ffffff;
+            z-index: 3;
+            pointer-events: none;
+        }
+
         .payment-gateway-preview .payment-gateway-preview__frame-wrap::after {
             content: "";
             position: absolute;
@@ -664,6 +676,10 @@
         @media (max-width: 767px) {
             .payment-gateway-preview .payment-gateway-preview__frame-wrap {
                 height: 74vh;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__frame-wrap::before {
+                height: 52px;
             }
 
             .payment-gateway-preview .payment-gateway-preview__frame-wrap::after {
