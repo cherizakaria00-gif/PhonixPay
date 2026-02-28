@@ -53,6 +53,8 @@ return new class extends Migration
         $supportedCurrencies = json_encode([
             'XOF' => 'XOF',
             'USD' => 'USD',
+            'EUR' => 'EUR',
+            'CAD' => 'CAD',
         ]);
 
         $extra = json_encode([
