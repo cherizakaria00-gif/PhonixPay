@@ -126,7 +126,11 @@ class ProcessController extends Controller
                 'deposit_id' => $deposit->id,
                 'response' => $response,
             ]);
-            $message = $response['message'] ?? $response['error'] ?? 'Invalid API response';
+            $message = $response['message']
+                ?? $response['details']
+                ?? $response['error']
+                ?? $response['title']
+                ?? 'Invalid API response';
             return json_encode([
                 'error' => true,
                 'message' => $message,

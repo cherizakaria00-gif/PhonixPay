@@ -18,7 +18,7 @@ class ProcessController extends Controller
         $apiKey = $gatewayParams->api_key ?? null;
         $merchantReference = $gatewayParams->merchant_reference ?? null;
         $paymentType = $gatewayParams->payment_type ?? 'card';
-        $country = $gatewayParams->country ?? null;
+        $country = self::normalizeCountryCode($gatewayParams->country ?? null);
         $baseUrl = trim($gatewayParams->api_base_url ?? 'https://api.test.bictorys.com');
 
         if (!$apiKey || !$merchantReference) {
@@ -89,7 +89,7 @@ class ProcessController extends Controller
                 'email' => $customer->email ?? null,
                 'city' => $customer->city ?? null,
                 'postal_code' => $customer->zip ?? null,
-                'country' => $country ?: ($customer->country ?? null),
+                'country' => $country ?: self::normalizeCountryCode($customer->country ?? null),
                 'locale' => $customer->locale ?? null,
             ]);
         }
@@ -136,7 +136,11 @@ class ProcessController extends Controller
                 'deposit_id' => $deposit->id,
                 'response' => $response,
             ]);
-            $message = $response['message'] ?? $response['error'] ?? 'Invalid API response';
+            $message = $response['message']
+                ?? $response['details']
+                ?? $response['error']
+                ?? $response['title']
+                ?? 'Invalid API response';
             return json_encode([
                 'error' => true,
                 'message' => $message,
@@ -270,5 +274,15 @@ class ProcessController extends Controller
         }
 
         return null;
+    }
+
+    protected static function normalizeCountryCode($value): ?string
+    {
+        $value = strtoupper(trim((string) $value));
+        if ($value === '' || in_array($value, ['ALL', 'ANY', 'AUTO', '*'], true)) {
+            return null;
+        }
+
+        return preg_match('/^[A-Z]{2}$/', $value) ? $value : null;
     }
 }
