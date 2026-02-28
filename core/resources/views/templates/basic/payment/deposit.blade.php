@@ -615,11 +615,14 @@
         }
 
         .payment-gateway-preview .payment-gateway-preview__frame {
-            width: 100%;
+            width: 200%;
             height: min(76vh, 760px);
             border: 0;
             display: block;
             background: #ffffff;
+            max-width: none;
+            transform: translateX(-50%);
+            transform-origin: top left;
         }
 
         .payment-gateway-preview .payment-gateway-preview__button {
@@ -644,7 +647,9 @@
 
         @media (max-width: 767px) {
             .payment-gateway-preview .payment-gateway-preview__frame {
+                width: 100%;
                 height: 74vh;
+                transform: none;
             }
 
             .payment-gateway-preview .payment-gateway-preview__title {
