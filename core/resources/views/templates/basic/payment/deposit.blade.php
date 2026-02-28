@@ -555,5 +555,67 @@
             border-color: #1f1f1f;
             box-shadow: 0 0 0 2px rgba(31, 31, 31, 0.15);
         }
+
+        .payment-gateway-preview .payment-gateway-preview__content {
+            position: relative;
+            z-index: 1;
+            padding: 28px 24px;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__eyebrow {
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__title {
+            margin-bottom: 18px;
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+            font-size: 14px;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__row:last-of-type {
+            margin-bottom: 20px;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__amount {
+            color: #87c5a6;
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__button {
+            display: inline-flex;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            padding: 14px 16px;
+            background: #0f172a;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__button:hover {
+            background: #1e293b;
+            color: #ffffff;
+        }
     </style>
 @endpush
