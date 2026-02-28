@@ -65,50 +65,6 @@
             </div>
         </section>
 
-        @if(($plans ?? collect())->count())
-            <section class="pb-20 sm:pb-28">
-                <div class="mx-auto max-w-7xl px-6">
-                    <div class="mx-auto max-w-3xl text-center">
-                        <h2 class="text-3xl font-bold sm:text-5xl">Plans that scale with you</h2>
-                        <p class="mt-3 text-slate-300">Choose the right plan for your transaction volume and payout needs.</p>
-                    </div>
-
-                    <div class="mt-10 grid gap-5 lg:grid-cols-4 md:grid-cols-2">
-                        @foreach($plans as $plan)
-                            @php
-                                $isStarter = $plan->slug === 'starter';
-                                $payoutLabel = match($plan->payout_frequency) {
-                                    'twice_weekly' => '2x per week (Tue/Fri)',
-                                    'every_2_days' => 'Every 2 days',
-                                    default => 'Every 7 days',
-                                };
-                                $ctaText = $isStarter ? 'Get Started Free' : 'Start with ' . $plan->name;
-                                $features = $plan->features ?? [];
-                            @endphp
-                            <article class="rounded-3xl border border-white/15 bg-white/[0.04] p-6 backdrop-blur-md">
-                                <h3 class="text-xl font-semibold">{{ $plan->name }}</h3>
-                                <p class="mt-1 text-3xl font-bold">${{ number_format($plan->price_monthly_cents / 100, 0) }}<span class="text-sm font-medium text-slate-300">/month</span></p>
-
-                                <ul class="mt-5 space-y-2 text-sm text-slate-200">
-                                    <li><span class="text-[#87c5a6]">Limit:</span> {{ $plan->tx_limit_monthly ?? 'Unlimited' }}</li>
-                                    <li><span class="text-[#87c5a6]">Fees:</span> {{ number_format($plan->fee_percent, 2) }}% + ${{ number_format($plan->fee_fixed, 2) }}</li>
-                                    <li><span class="text-[#87c5a6]">Payout:</span> {{ $payoutLabel }}</li>
-                                    <li><span class="text-[#87c5a6]">Support:</span> {{ implode(', ', $plan->support_channels ?? ['email']) }}</li>
-                                    <li><span class="text-[#87c5a6]">Notifications:</span> {{ implode(', ', $plan->notification_channels ?? ['push']) }}</li>
-                                    <li><span class="text-[#87c5a6]">Payment Links:</span> {{ ($features['payment_links'] ?? false) ? 'Enabled' : 'Not included' }}</li>
-                                </ul>
-
-                                <a href="{{ route('user.register') }}" class="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#87c5a6] px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-[#9ad8bf]">
-                                    {{ $ctaText }}
-                                </a>
-                            </article>
-                        @endforeach
-                    </div>
-
-                    <p class="mt-6 text-center text-xs text-slate-400">Fees apply per successful transaction.</p>
-                </div>
-            </section>
-        @endif
     </main>
 </div>
 @endsection

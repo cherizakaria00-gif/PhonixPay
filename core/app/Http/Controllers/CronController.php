@@ -67,6 +67,8 @@ class CronController extends Controller
             $cronLog->save();
         }
 
+        app(PlanService::class)->sendUpcomingRenewalNotifications(now()->utc());
+        app(PlanService::class)->processMonthlyRenewals(now()->utc());
         $this->processPlanPayouts();
 
         if (request()->target == 'all') {

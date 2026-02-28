@@ -146,6 +146,7 @@ class PlanController extends Controller
     public function assignMerchantPlan(Request $request, $id)
     {
         $merchant = User::findOrFail($id);
+        $currentPlan = $merchant->plan;
         $request->validate([
             'plan_id' => ['required', Rule::exists('plans', 'id')],
         ]);
@@ -155,6 +156,16 @@ class PlanController extends Controller
 
         $merchant->plan_custom_overrides = null;
         $merchant->save();
+
+        $currentPrice = (int) ($currentPlan?->price_monthly_cents ?? 0);
+        if ((int) $plan->price_monthly_cents > $currentPrice) {
+            $this->planService->sendPlanUpgradeNotification(
+                $merchant,
+                $plan->name,
+                $currentPlan?->name,
+                $merchant->plan_renews_at
+            );
+        }
 
         $notify[] = ['success', 'Plan assigned successfully'];
         return back()->withNotify($notify);
@@ -239,11 +250,22 @@ class PlanController extends Controller
             return back()->withNotify($notify);
         }
 
+        $currentPlan = $changeRequest->user->plan;
         $this->planService->assignPlan($changeRequest->user, $changeRequest->toPlan, false);
         $changeRequest->user->plan_custom_overrides = null;
         $changeRequest->user->save();
         $changeRequest->status = 'approved';
         $changeRequest->save();
+
+        $currentPrice = (int) ($currentPlan?->price_monthly_cents ?? 0);
+        if ((int) $changeRequest->toPlan->price_monthly_cents > $currentPrice) {
+            $this->planService->sendPlanUpgradeNotification(
+                $changeRequest->user,
+                $changeRequest->toPlan->name,
+                $currentPlan?->name,
+                $changeRequest->user->plan_renews_at
+            );
+        }
 
         $notify[] = ['success', 'Plan change request approved'];
         return back()->withNotify($notify);

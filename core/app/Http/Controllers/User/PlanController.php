@@ -90,6 +90,8 @@ class PlanController extends Controller
         $user = auth()->user();
         $effectivePlan = $this->planService->getEffectivePlan($user);
         $currentPlanId = $effectivePlan['id'] ?? $user->plan_id;
+        $fromPlanName = $effectivePlan['name'] ?? null;
+        $fromPlanPrice = (int) ($effectivePlan['price_monthly_cents'] ?? 0);
 
         if ((int) $currentPlanId === (int) $targetPlan->id) {
             $notify[] = ['error', 'You are already on this plan'];
@@ -101,6 +103,19 @@ class PlanController extends Controller
         try {
             DB::transaction(function () use ($targetPlan, $priceAmount) {
                 $merchant = User::lockForUpdate()->findOrFail(auth()->id());
+
+                PlanChangeRequest::where('user_id', $merchant->id)
+                    ->where('status', 'pending')
+                    ->update([
+                        'status' => 'rejected',
+                        'note' => 'Closed automatically after direct plan upgrade attempt',
+                        'updated_at' => now(),
+                    ]);
+
+                if ($merchant->plan_status !== 'active') {
+                    $merchant->plan_status = 'active';
+                    $merchant->save();
+                }
 
                 if ($priceAmount > 0) {
                     if ((float) $merchant->balance < $priceAmount) {
@@ -125,14 +140,6 @@ class PlanController extends Controller
                 $this->planService->assignPlan($merchant, $targetPlan, false);
                 $merchant->plan_custom_overrides = null;
                 $merchant->save();
-
-                PlanChangeRequest::where('user_id', $merchant->id)
-                    ->where('status', 'pending')
-                    ->update([
-                        'status' => 'approved',
-                        'note' => 'Auto-approved after successful plan payment',
-                        'updated_at' => now(),
-                    ]);
             });
         } catch (Throwable $e) {
             if ($e->getMessage() === 'INSUFFICIENT_BALANCE') {
@@ -144,7 +151,21 @@ class PlanController extends Controller
             return back()->withNotify($notify);
         }
 
-        $notify[] = ['success', 'Plan updated successfully' . ($priceAmount > 0 ? ' after payment of $' . number_format($priceAmount, 2) : '') . '.'];
+        $freshUser = auth()->user()->fresh();
+        $renewText = $freshUser?->plan_renews_at
+            ? ' Next renewal: ' . showDateTime($freshUser->plan_renews_at, 'M d, Y')
+            : '';
+
+        if ((int) $targetPlan->price_monthly_cents > $fromPlanPrice && $freshUser) {
+            $this->planService->sendPlanUpgradeNotification(
+                $freshUser,
+                $targetPlan->name,
+                $fromPlanName,
+                $freshUser->plan_renews_at
+            );
+        }
+
+        $notify[] = ['success', 'Plan updated successfully' . ($priceAmount > 0 ? ' after payment of $' . number_format($priceAmount, 2) : '') . '. Billing cycle is monthly.' . $renewText];
         return back()->withNotify($notify);
     }
 }

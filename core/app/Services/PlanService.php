@@ -3,11 +3,14 @@
 namespace App\Services;
 
 use App\Models\Deposit;
+use App\Models\NotificationLog;
 use App\Models\Plan;
 use App\Models\Payout;
+use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
@@ -204,6 +207,155 @@ class PlanService
         }
 
         $user->save();
+    }
+
+    public function processMonthlyRenewals(?Carbon $now = null): void
+    {
+        if (!Schema::hasTable('plans') || !Schema::hasColumn('users', 'plan_renews_at')) {
+            return;
+        }
+
+        $now = ($now ?: Carbon::now())->utc();
+
+        User::query()
+            ->whereNotNull('plan_id')
+            ->whereNotNull('plan_renews_at')
+            ->where(function ($query) {
+                $query->whereNull('plan_status')->orWhere('plan_status', 'active');
+            })
+            ->where('plan_renews_at', '<=', $now)
+            ->orderBy('id')
+            ->chunkById(100, function ($users) use ($now) {
+                foreach ($users as $dueUser) {
+                    DB::transaction(function () use ($dueUser, $now) {
+                        $merchant = User::lockForUpdate()->with('plan')->find($dueUser->id);
+                        if (!$merchant || !$merchant->plan_id) {
+                            return;
+                        }
+
+                        if (!$merchant->plan_renews_at || Carbon::parse($merchant->plan_renews_at)->utc()->gt($now)) {
+                            return;
+                        }
+
+                        $plan = $merchant->plan;
+                        if (!$plan || !$plan->is_active) {
+                            return;
+                        }
+
+                        $priceAmount = round((int) $plan->price_monthly_cents / 100, 2);
+
+                        if ($priceAmount <= 0) {
+                            $merchant->plan_status = 'active';
+                            $merchant->plan_started_at = $now;
+                            $merchant->plan_renews_at = null;
+                            $merchant->save();
+                            return;
+                        }
+
+                        if ((float) $merchant->balance < $priceAmount) {
+                            $starterPlan = Plan::starter();
+
+                            if ($starterPlan && (int) $starterPlan->id !== (int) $merchant->plan_id) {
+                                $this->assignPlan($merchant, $starterPlan, false);
+                                $merchant->plan_custom_overrides = null;
+                                $merchant->save();
+                            } else {
+                                $merchant->plan_status = 'canceled';
+                                $merchant->plan_renews_at = null;
+                                $merchant->save();
+                            }
+
+                            return;
+                        }
+
+                        $merchant->balance = round((float) $merchant->balance - $priceAmount, 8);
+                        $merchant->save();
+
+                        $transaction = new Transaction();
+                        $transaction->user_id = $merchant->id;
+                        $transaction->amount = $priceAmount;
+                        $transaction->post_balance = $merchant->balance;
+                        $transaction->charge = 0;
+                        $transaction->trx_type = '-';
+                        $transaction->details = 'Monthly subscription renewal for ' . $plan->name . ' plan';
+                        $transaction->trx = getTrx();
+                        $transaction->remark = 'plan_renewal';
+                        $transaction->save();
+
+                        $this->assignPlan($merchant, $plan, false);
+                    });
+                }
+            });
+    }
+
+    public function sendUpcomingRenewalNotifications(?Carbon $now = null): void
+    {
+        if (!Schema::hasTable('plans') || !Schema::hasColumn('users', 'plan_renews_at')) {
+            return;
+        }
+
+        $now = ($now ?: Carbon::now())->utc();
+        $maxDate = $now->copy()->addDays(3);
+
+        User::query()
+            ->with('plan')
+            ->whereNotNull('plan_id')
+            ->whereNotNull('plan_renews_at')
+            ->where(function ($query) {
+                $query->whereNull('plan_status')->orWhere('plan_status', 'active');
+            })
+            ->whereBetween('plan_renews_at', [$now, $maxDate])
+            ->orderBy('id')
+            ->chunkById(100, function ($users) use ($now) {
+                foreach ($users as $user) {
+                    if (!$user->plan || (int) $user->plan->price_monthly_cents <= 0) {
+                        continue;
+                    }
+
+                    $renewAt = Carbon::parse($user->plan_renews_at)->utc();
+                    $hoursLeft = max(0, $now->diffInHours($renewAt, false));
+                    $daysLeft = max(0, (int) ceil($hoursLeft / 24));
+                    $subject = 'Plan renewal reminder [' . $renewAt->toDateString() . ']';
+
+                    $alreadySent = NotificationLog::query()
+                        ->where('user_id', $user->id)
+                        ->where('notification_type', 'email')
+                        ->where('subject', $subject)
+                        ->exists();
+
+                    if ($alreadySent) {
+                        continue;
+                    }
+
+                    $daysText = $daysLeft <= 1 ? 'in less than 24 hours' : 'in ' . $daysLeft . ' days';
+                    $renewDateText = $renewAt->format('M d, Y H:i') . ' UTC';
+                    $amount = number_format(((int) $user->plan->price_monthly_cents / 100), 2);
+
+                    notify($user, 'DEFAULT', [
+                        'subject' => $subject,
+                        'message' => 'Your ' . $user->plan->name . ' plan will renew ' . $daysText . ' (' . $renewDateText . '). Subscription amount: $' . $amount . '. Please keep enough balance to avoid downgrade to Starter.',
+                    ], ['email', 'push']);
+                }
+            });
+    }
+
+    public function sendPlanUpgradeNotification(User $user, string $toPlanName, ?string $fromPlanName = null, ?Carbon $renewsAt = null): void
+    {
+        $subject = 'Plan upgraded successfully';
+        $message = 'Your subscription is now active on the ' . $toPlanName . ' plan.';
+
+        if ($fromPlanName && strtolower($fromPlanName) !== strtolower($toPlanName)) {
+            $message .= ' Previous plan: ' . $fromPlanName . '.';
+        }
+
+        if ($renewsAt) {
+            $message .= ' Next renewal: ' . $renewsAt->utc()->format('M d, Y H:i') . ' UTC.';
+        }
+
+        notify($user, 'DEFAULT', [
+            'subject' => $subject,
+            'message' => $message,
+        ], ['email']);
     }
 
     public function isPayoutRunDue(User $user, ?Carbon $now = null): bool

@@ -36,16 +36,9 @@
                             <p class="mb-0"><strong>@lang('Notifications'):</strong> {{ implode(', ', $currentPlan['notification_channels'] ?? ['push']) }}</p>
                         </div>
                         <div class="col-lg-4">
-                            @if($pendingRequest)
-                                <div class="alert alert-warning mb-0">
-                                    <strong>@lang('Pending Request')</strong><br>
-                                    @lang('Your request to switch to') <strong>{{ $pendingRequest->toPlan->name ?? '' }}</strong> @lang('is awaiting admin approval.')
-                                </div>
-                            @else
-                                <div class="alert alert-info mb-0">
-                                    @lang('Choose a plan below. Paid plans are activated immediately after successful payment.')
-                                </div>
-                            @endif
+                            <div class="alert alert-info mb-0">
+                                @lang('Choose a plan below. Paid plans are activated immediately after successful payment from your balance and run on a monthly cycle.')
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -95,7 +88,7 @@
                                             <form action="{{ route('user.plan.change') }}" method="POST" class="mt-auto">
                                                 @csrf
                                                 <input type="hidden" name="plan_id" value="{{ $plan->id }}">
-                                                <button type="submit" class="btn btn--base w-100" {{ $pendingRequest ? 'disabled' : '' }}>
+                                                <button type="submit" class="btn btn--base w-100">
                                                     {{ $isStarter ? __('Switch to Free') : __('Pay & Upgrade to ') . $plan->name }}
                                                 </button>
                                             </form>
