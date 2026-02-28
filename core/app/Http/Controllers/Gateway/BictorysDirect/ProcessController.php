@@ -147,6 +147,8 @@ class ProcessController extends Controller
             ]);
         }
 
+        $redirectUrl = self::appendQueryParam($redirectUrl, 'payment_category', 'card');
+
         $reference = self::extractReference($response);
         if ($reference) {
             $deposit->btc_wallet = $reference;
@@ -309,5 +311,30 @@ class ProcessController extends Controller
         ];
 
         return $aliases[$normalized] ?? 'card';
+    }
+
+    protected static function appendQueryParam(string $url, string $key, string $value): string
+    {
+        $parts = parse_url($url);
+        if ($parts === false) {
+            return $url;
+        }
+
+        $query = [];
+        if (!empty($parts['query'])) {
+            parse_str($parts['query'], $query);
+        }
+        $query[$key] = $value;
+
+        $scheme = $parts['scheme'] ?? '';
+        $host = $parts['host'] ?? '';
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $path = $parts['path'] ?? '';
+        $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
+
+        $base = $scheme && $host ? ($scheme . '://' . $host . $port . $path) : $path;
+        $queryString = http_build_query($query);
+
+        return $base . ($queryString ? '?' . $queryString : '') . $fragment;
     }
 }
