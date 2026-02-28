@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Constants\Status;
 use App\Http\Controllers\Controller;
+use App\Models\GatewayCurrency;
 use App\Models\PaymentLink;
 use App\Services\PlanService;
 use Illuminate\Http\Request;
@@ -38,7 +40,9 @@ class PaymentLinkController extends Controller
         }
 
         $pageTitle = 'Create Payment Link';
-        return view('Template::user.payment_links.create', compact('pageTitle'));
+        $currencies = $this->availableCurrencies();
+
+        return view('Template::user.payment_links.create', compact('pageTitle', 'currencies'));
     }
 
     public function store(Request $request)
@@ -47,8 +51,11 @@ class PaymentLinkController extends Controller
             return $redirect;
         }
 
+        $currencies = $this->availableCurrencies();
+
         $request->validate([
             'amount' => 'required|numeric|gt:0',
+            'currency' => 'required|string|in:' . implode(',', $currencies),
             'description' => 'required|string|max:255',
             'redirect_url' => 'required|url|max:255',
             'expires_at' => 'required|date|after:now',
@@ -58,7 +65,7 @@ class PaymentLinkController extends Controller
         $paymentLink->user_id = auth()->id();
         $paymentLink->code = $this->generateCode();
         $paymentLink->amount = $request->amount;
-        $paymentLink->currency = 'USD';
+        $paymentLink->currency = strtoupper($request->currency);
         $paymentLink->description = $request->description;
         $paymentLink->redirect_url = $request->redirect_url;
         $paymentLink->expires_at = $request->expires_at;
@@ -84,7 +91,9 @@ class PaymentLinkController extends Controller
             return back()->withNotify($notify);
         }
 
-        return view('Template::user.payment_links.edit', compact('pageTitle', 'paymentLink'));
+        $currencies = $this->availableCurrencies($paymentLink->currency);
+
+        return view('Template::user.payment_links.edit', compact('pageTitle', 'paymentLink', 'currencies'));
     }
 
     public function update(Request $request, $id)
@@ -101,15 +110,18 @@ class PaymentLinkController extends Controller
             return back()->withNotify($notify);
         }
 
+        $currencies = $this->availableCurrencies($paymentLink->currency);
+
         $request->validate([
             'amount' => 'required|numeric|gt:0',
+            'currency' => 'required|string|in:' . implode(',', $currencies),
             'description' => 'required|string|max:255',
             'redirect_url' => 'required|url|max:255',
             'expires_at' => 'required|date|after:now',
         ]);
 
         $paymentLink->amount = $request->amount;
-        $paymentLink->currency = 'USD';
+        $paymentLink->currency = strtoupper($request->currency);
         $paymentLink->description = $request->description;
         $paymentLink->redirect_url = $request->redirect_url;
         $paymentLink->expires_at = $request->expires_at;
@@ -142,5 +154,31 @@ class PaymentLinkController extends Controller
 
         $notify[] = ['error', 'Payment Links are not available on your current plan. Please upgrade to continue.'];
         return to_route('user.plan.billing')->withNotify($notify);
+    }
+
+    protected function availableCurrencies(?string $currentCurrency = null): array
+    {
+        $currencies = GatewayCurrency::query()
+            ->whereHas('method', function ($query) {
+                $query->where('status', Status::ENABLE);
+            })
+            ->where('status', Status::ENABLE)
+            ->pluck('currency')
+            ->map(fn ($currency) => strtoupper((string) $currency))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        if ($currentCurrency) {
+            $currentCurrency = strtoupper($currentCurrency);
+            if (!in_array($currentCurrency, $currencies, true)) {
+                $currencies[] = $currentCurrency;
+                sort($currencies);
+            }
+        }
+
+        return !empty($currencies) ? $currencies : ['USD'];
     }
 }

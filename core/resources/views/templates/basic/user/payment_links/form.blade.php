@@ -1,11 +1,19 @@
 @csrf
 <div class="form-group">
+    <label>@lang('Currency')</label>
+    <select name="currency" class="form--control form-select" required>
+        @foreach($currencies as $currency)
+            <option value="{{ $currency }}"
+                @selected(old('currency', $paymentLink->currency ?? 'USD') === $currency)>
+                {{ $currency }}
+            </option>
+        @endforeach
+    </select>
+</div>
+<div class="form-group">
     <label>@lang('Amount')</label>
-    <div class="input-group">
-        <span class="input-group-text">USD</span>
-        <input type="number" step="0.01" name="amount" class="form--control"
-               value="{{ old('amount', $paymentLink->amount ?? '') }}" required>
-    </div>
+    <input type="number" step="0.01" name="amount" class="form--control"
+           value="{{ old('amount', $paymentLink->amount ?? '') }}" required>
 </div>
 <div class="form-group">
     <label>@lang('Description')</label>
