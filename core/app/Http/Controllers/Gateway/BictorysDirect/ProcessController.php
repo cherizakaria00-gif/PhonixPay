@@ -17,7 +17,7 @@ class ProcessController extends Controller
         $gatewayParams = json_decode($deposit->gatewayCurrency()->gateway_parameter ?? '{}');
         $apiKey = $gatewayParams->api_key ?? null;
         $merchantReference = $gatewayParams->merchant_reference ?? null;
-        $paymentType = $gatewayParams->payment_type ?? 'card';
+        $paymentType = self::normalizePaymentType($gatewayParams->payment_type ?? null);
         $country = self::normalizeCountryCode($gatewayParams->country ?? null);
         $baseUrl = trim($gatewayParams->api_base_url ?? 'https://api.test.bictorys.com');
 
@@ -284,5 +284,30 @@ class ProcessController extends Controller
         }
 
         return preg_match('/^[A-Z]{2}$/', $value) ? $value : null;
+    }
+
+    protected static function normalizePaymentType($value): string
+    {
+        $raw = strtolower(trim((string) $value));
+        if ($raw === '') {
+            return 'card';
+        }
+
+        $normalized = preg_replace('/[^a-z0-9]+/', '_', $raw);
+        $normalized = trim((string) $normalized, '_');
+
+        $aliases = [
+            'credit_card' => 'card',
+            'creditcard' => 'card',
+            'card' => 'card',
+            'bank_card' => 'card',
+            'debit_card' => 'card',
+            'crypto' => 'crypto',
+            'cryptocurrency' => 'crypto',
+            'mobile_money' => 'mobile_money',
+            'momo' => 'mobile_money',
+        ];
+
+        return $aliases[$normalized] ?? 'card';
     }
 }
