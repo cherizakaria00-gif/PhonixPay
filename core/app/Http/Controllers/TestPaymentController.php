@@ -15,19 +15,33 @@ class TestPaymentController extends Controller{
     protected $paymentType = 'test';
 
     public function paymentCheckout(Request $request){
-        
+
         $pageTitle = "Payment Checkout";
 		$trx = $request->payment_trx;
 
-		$apiPayment = $this->getApiPayment($trx);  	
+		$apiPayment = $this->getApiPayment($trx);
+        if (@$apiPayment['status'] == 'error') {
+            $notify[] = ['error', $apiPayment['message'] ?? 'Invalid transaction request'];
+            return back()->withNotify($notify);
+        }
 
-        return view('Template::payment.test_deposit',compact('pageTitle', 'apiPayment', 'trx'));
+        $checkUserPayment = $this->checkUserPayment($apiPayment->user);
+        if (@$checkUserPayment['status'] == 'error') {
+            $notify[] = ['error', implode(' ', $checkUserPayment['message'] ?? [])];
+            return back()->withNotify($notify);
+        }
+
+		$gatewayCurrency = $this->paymentMethods(@$apiPayment->currency, @$apiPayment->gateway_methods)->orderby('method_code')->get();
+        $isTestMode = true;
+
+        return view('Template::payment.deposit', compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'isTestMode'));
     }
 
     public function paymentSuccess(Request $request){
 
         $request->validate([
             'payment_trx' => 'required',
+            'method_code' => 'required',
         ]); 
         
         try{

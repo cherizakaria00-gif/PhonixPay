@@ -2,6 +2,7 @@
 
 @php
     $policyPages = getContent('policy_pages.element', orderById:true);
+    $isTestMode = $isTestMode ?? false;
 @endphp
 
 @section('app')  
@@ -12,7 +13,7 @@
                 @if(@$apiPayment['status'] == 'error')
                     <h3 class="text-danger text-center">{{ __(@$apiPayment['message']) }}</h3>
                 @else
-                    <form action="{{route('deposit.insert')}}" method="post" id="checkout-form">
+                    <form action="{{ $isTestMode ? route('test.payment.success') : route('deposit.insert') }}" method="post" id="checkout-form">
                         @csrf
                         <input type="hidden" name="payment_trx" required value="{{ @$trx }}">
                         @if(isset($paymentLink))
@@ -22,9 +23,14 @@
 
                             <div class="card-header border-0">
                                 <div class='d-flex flex-wrap justify-content-between align-items-center'>
-                                    <h4 class="card-title mb-0">@lang('Payment')</h4>
+                                    <h4 class="card-title mb-0">
+                                        @lang('Payment')
+                                        @if($isTestMode)
+                                            <span class="badge badge--warning ms-2">@lang('Test Mode')</span>
+                                        @endif
+                                    </h4>
                                     <div class='payment-cancel'>
-                                        <a href="{{ route('payment.cancel', $trx) }}" class='btn btn-danger btn--sm'>@lang('Cancel')</a>
+                                        <a href="{{ $isTestMode ? route('test.payment.cancel', $trx) : route('payment.cancel', $trx) }}" class='btn btn-danger btn--sm'>@lang('Cancel')</a>
                                     </div>
                                 </div>
                             </div>
@@ -76,7 +82,9 @@
                                     </div>
                                 @endif
                                 <div id="gateway-error" class="alert alert-danger d-none"></div>
-                                <button type="submit" class="btn btn--base w-100" id="gateway-continue">@lang('Pay Now')</button>
+                                <button type="submit" class="btn btn--base w-100" id="gateway-continue">
+                                    {{ $isTestMode ? __('Complete Test Payment') : __('Pay Now') }}
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -98,6 +106,7 @@
         const $details = $('#gateway-details');
         const $error = $('#gateway-error');
         const continueText = $continueBtn.text();
+        const isTestMode = @json($isTestMode);
         const tLoading = @json(__('Loading'));
         const tStripeCheckout = @json(__('Stripe Checkout'));
         const tPayNow = @json(__('Pay Now'));
@@ -223,12 +232,18 @@
         });
 
         $form.on('submit', function(e){
-            e.preventDefault();
             const methodCode = $methodInput.val();
             if (!methodCode) {
+                e.preventDefault();
                 showError(tSelectMethod);
                 return;
             }
+
+            if (isTestMode) {
+                return;
+            }
+
+            e.preventDefault();
 
             setLoading();
             $.ajax({
