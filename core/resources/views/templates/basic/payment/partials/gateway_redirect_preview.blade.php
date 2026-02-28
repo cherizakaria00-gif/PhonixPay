@@ -7,8 +7,8 @@
             <h4 class="payment-gateway-preview__title">@lang('Complete Payment')</h4>
 
             <div class="payment-gateway-preview__row">
-                <span>@lang('Gateway')</span>
-                <strong>{{ $gatewayName }}</strong>
+                <span>@lang($summaryLabel ?? 'Gateway')</span>
+                <strong class="payment-gateway-preview__value">{{ $summaryValue ?? $gatewayName }}</strong>
             </div>
             <div class="payment-gateway-preview__row">
                 <span>@lang('Reference')</span>

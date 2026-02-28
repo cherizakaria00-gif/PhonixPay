@@ -595,6 +595,12 @@
             font-size: 14px;
         }
 
+        .payment-gateway-preview .payment-gateway-preview__value {
+            max-width: 70%;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
         .payment-gateway-preview .payment-gateway-preview__row:last-of-type {
             margin-bottom: 20px;
         }

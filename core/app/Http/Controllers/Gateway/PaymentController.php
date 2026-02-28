@@ -257,9 +257,18 @@ class PaymentController extends Controller
                     $amountText = $amountValue !== null
                         ? showAmount((float) $amountValue, currencyFormat: false) . ' ' . $amountCurrency
                         : showAmount((float) $data->amount, currencyFormat: false) . ' ' . strtoupper((string) (data_get($apiPayment, 'currency') ?: $data->method_currency));
+                    $summaryLabel = 'Gateway';
+                    $summaryValue = $data->gateway->name;
+
+                    if ($paymentLink) {
+                        $summaryLabel = 'Description';
+                        $summaryValue = $paymentLink->description ?: ($apiPayment->details ?: 'Payment Link');
+                    }
 
                     $html = view('Template::payment.partials.gateway_redirect_preview', [
                         'gatewayName' => $data->gateway->name,
+                        'summaryLabel' => $summaryLabel,
+                        'summaryValue' => $summaryValue,
                         'redirectUrl' => $processResponse->redirect_url ?? route('deposit.confirm'),
                         'reference' => $data->trx,
                         'amountText' => $amountText,
