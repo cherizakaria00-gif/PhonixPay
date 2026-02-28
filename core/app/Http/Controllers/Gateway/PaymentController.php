@@ -252,11 +252,11 @@ class PaymentController extends Controller
             if (isset($processResponse->redirect)) {
                 if (in_array($dirName, ['BictorysCheckout', 'BictorysDirect'], true)) {
                     $conversion = (array) ($processResponse->conversion ?? []);
-                    $amountValue = data_get($conversion, 'converted_amount');
-                    $amountCurrency = strtoupper((string) (data_get($conversion, 'converted_currency') ?: $data->method_currency));
+                    $amountValue = data_get($conversion, 'original_amount');
+                    $amountCurrency = strtoupper((string) (data_get($conversion, 'original_currency') ?: data_get($apiPayment, 'currency') ?: $data->method_currency));
                     $amountText = $amountValue !== null
                         ? showAmount((float) $amountValue, currencyFormat: false) . ' ' . $amountCurrency
-                        : showAmount((float) $data->gateway_amount, currencyFormat: false) . ' ' . strtoupper((string) $data->method_currency);
+                        : showAmount((float) $data->amount, currencyFormat: false) . ' ' . strtoupper((string) (data_get($apiPayment, 'currency') ?: $data->method_currency));
 
                     $html = view('Template::payment.partials.gateway_redirect_preview', [
                         'gatewayName' => $data->gateway->name,
