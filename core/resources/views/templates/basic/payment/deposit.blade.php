@@ -560,7 +560,12 @@
         .payment-gateway-preview .payment-gateway-preview__content {
             position: relative;
             z-index: 1;
-            padding: 28px 24px;
+            padding: 28px 24px 24px;
+        }
+
+        .payment-gateway-preview.modal {
+            max-width: min(1080px, 96vw);
+            width: 100%;
         }
 
         .payment-gateway-preview .payment-gateway-preview__eyebrow {
@@ -600,6 +605,23 @@
             font-weight: 800;
         }
 
+        .payment-gateway-preview .payment-gateway-preview__frame-wrap {
+            width: 100%;
+            border: 1px solid #dbe1ea;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #ffffff;
+            margin-bottom: 14px;
+        }
+
+        .payment-gateway-preview .payment-gateway-preview__frame {
+            width: 100%;
+            height: min(76vh, 760px);
+            border: 0;
+            display: block;
+            background: #ffffff;
+        }
+
         .payment-gateway-preview .payment-gateway-preview__button {
             display: inline-flex;
             width: 100%;
@@ -612,11 +634,23 @@
             font-weight: 700;
             font-size: 15px;
             transition: all 0.2s ease;
+            text-decoration: none;
         }
 
         .payment-gateway-preview .payment-gateway-preview__button:hover {
             background: #1e293b;
             color: #ffffff;
+        }
+
+        @media (max-width: 767px) {
+            .payment-gateway-preview .payment-gateway-preview__frame {
+                height: 74vh;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__title {
+                font-size: 22px;
+                line-height: 1.1;
+            }
         }
     </style>
 @endpush
