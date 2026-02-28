@@ -317,6 +317,7 @@
         }
 
         .payment-modal .modal {
+            display: block;
             position: relative;
             z-index: 1;
         }
