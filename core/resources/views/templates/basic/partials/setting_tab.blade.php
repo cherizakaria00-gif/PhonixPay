@@ -29,6 +29,14 @@
                     @lang('2FA Security')
                 </a>
             </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {{ $route == 'user.plan.billing' ? 'active' : null }}"
+                    href="{{ route('user.plan.billing') }}"
+                    aria-selected="{{ $route == 'user.plan.billing' ? 'true' : 'false' }}"
+                >
+                    @lang('Plan & Billing')
+                </a>
+            </li>
         </ul>
     </div>
 </div>

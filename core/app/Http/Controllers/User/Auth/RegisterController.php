@@ -6,6 +6,7 @@ use App\Constants\Status;
 use App\Http\Controllers\Controller;
 use App\Lib\Intended;
 use App\Models\AdminNotification;
+use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserLogin;
 use Illuminate\Auth\Events\Registered;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Schema;
 
 class RegisterController extends Controller
 {
@@ -110,6 +112,18 @@ class RegisterController extends Controller
         $user->sv = gs('sv') ? Status::NO : Status::YES;
         $user->ts = Status::DISABLE;
         $user->tv = Status::ENABLE;
+
+        if (Schema::hasTable('plans') && Schema::hasColumn('users', 'plan_id')) {
+            $starterPlan = Plan::where('slug', 'starter')->first();
+            if ($starterPlan) {
+                $user->plan_id = $starterPlan->id;
+                $user->plan_status = 'active';
+                $user->plan_started_at = now();
+                $user->monthly_tx_count = 0;
+                $user->monthly_tx_count_reset_at = now()->startOfMonth();
+            }
+        }
+
         $user->save();
 
         $adminNotification            = new AdminNotification();

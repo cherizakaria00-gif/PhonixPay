@@ -13,7 +13,10 @@ class Deposit extends Model
     use ExportData;
 
     protected $casts = [
-        'detail' => 'object'
+        'detail' => 'object',
+        'payout_eligible_at' => 'datetime',
+        'fee_amount' => 'float',
+        'net_amount' => 'float',
     ];
 
     protected $hidden = ['detail'];
@@ -48,6 +51,11 @@ class Deposit extends Model
     public function paymentLink()
     {
         return $this->belongsTo(PaymentLink::class);
+    }
+
+    public function payout()
+    {
+        return $this->belongsTo(Payout::class);
     }
 
     public function methodName(){

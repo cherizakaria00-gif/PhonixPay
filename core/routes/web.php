@@ -32,6 +32,8 @@ Route::controller('SiteController')->group(function () {
 
     Route::get('/api-documentation', 'apiDocumentation')->name('api.documentation');
 
+    Route::get('pay', 'applePay')->name('apple.pay');
+
     Route::get('/contact', 'contact')->name('contact');
     Route::post('/contact', 'contactSubmit');
     Route::get('/change/{lang?}', 'changeLanguage')->name('lang');

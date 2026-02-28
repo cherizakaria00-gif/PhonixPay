@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Lib\CurlRequest;
 use App\Models\AdminNotification;
 use App\Models\Deposit;
+use App\Models\Plan;
+use App\Models\PlanChangeRequest;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserLogin;
@@ -15,6 +17,7 @@ use App\Rules\FileTypeValidate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
 {
@@ -57,7 +60,28 @@ class AdminController extends Controller
         $withdrawals['total_withdraw_rejected'] = Withdrawal::rejected()->count();
         $withdrawals['total_withdraw_charge']   = Withdrawal::approved()->sum('charge');
 
-        return view('admin.dashboard', compact('pageTitle', 'widget', 'chart','deposit','withdrawals'));
+        $subscription = [
+            'enabled' => Schema::hasTable('plans') && Schema::hasColumn('users', 'plan_id'),
+        ];
+
+        if ($subscription['enabled']) {
+            $subscription['total_plans'] = Plan::query()->count();
+            $subscription['active_plans'] = Plan::query()->where('is_active', true)->count();
+            $subscription['active_merchants'] = User::query()
+                ->whereNotNull('plan_id')
+                ->where('plan_status', 'active')
+                ->count();
+            $subscription['pending_requests'] = Schema::hasTable('plan_change_requests')
+                ? PlanChangeRequest::query()->where('status', 'pending')->count()
+                : 0;
+
+            $subscription['mrr_estimate'] = User::query()
+                ->join('plans', 'plans.id', '=', 'users.plan_id')
+                ->where('users.plan_status', 'active')
+                ->sum('plans.price_monthly_cents') / 100;
+        }
+
+        return view('admin.dashboard', compact('pageTitle', 'widget', 'chart','deposit','withdrawals', 'subscription'));
     }
 
 

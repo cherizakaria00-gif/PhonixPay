@@ -8,10 +8,14 @@ use App\Lib\HolidayCalculator;
 use App\Models\AdminNotification;
 use App\Models\CronJob;
 use App\Models\CronJobLog;
+use App\Models\Deposit;
 use App\Models\Holiday;
+use App\Models\Payout;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Withdrawal;
 use App\Models\WithdrawSetting;
+use App\Services\PlanService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Schema;
 
@@ -62,6 +66,9 @@ class CronController extends Controller
             $cronLog->duration = $diffInSeconds;
             $cronLog->save();
         }
+
+        $this->processPlanPayouts();
+
         if (request()->target == 'all') {
             $notify[] = ['success', 'Cron executed successfully'];
             return back()->withNotify($notify);
@@ -70,6 +77,67 @@ class CronController extends Controller
             $notify[] = ['success', keyToTitle(request()->alias) . ' executed successfully'];
             return back()->withNotify($notify);
         }
+    }
+
+    private function processPlanPayouts(): void
+    {
+        if (!Schema::hasTable('plans') || !Schema::hasTable('payouts') || !Schema::hasTable('deposits')) {
+            return;
+        }
+
+        /** @var PlanService $planService */
+        $planService = app(PlanService::class);
+        $now = now()->utc();
+
+        User::query()
+            ->where('status', Status::USER_ACTIVE)
+            ->orderBy('id')
+            ->chunkById(100, function ($users) use ($planService, $now) {
+                foreach ($users as $user) {
+                    if (!$planService->isPayoutRunDue($user, $now)) {
+                        continue;
+                    }
+
+                    $eligibleDepositsQuery = Deposit::where('user_id', $user->id)
+                        ->successful()
+                        ->whereNull('payout_id');
+
+                    if (Schema::hasColumn('deposits', 'payout_eligible_at')) {
+                        $eligibleDepositsQuery->where(function ($query) use ($now) {
+                            $query->whereNull('payout_eligible_at')
+                                ->orWhere('payout_eligible_at', '<=', $now);
+                        });
+                    }
+
+                    $eligibleDeposits = $eligibleDepositsQuery->get();
+                    if ($eligibleDeposits->isEmpty()) {
+                        continue;
+                    }
+
+                    $hasNetAmountColumn = Schema::hasColumn('deposits', 'net_amount');
+                    $amountTotal = $eligibleDeposits->sum(function ($deposit) use ($hasNetAmountColumn) {
+                        if ($hasNetAmountColumn && $deposit->net_amount !== null) {
+                            return (float) $deposit->net_amount;
+                        }
+
+                        return max(0, (float) $deposit->amount - (float) $deposit->payment_charge);
+                    });
+
+                    if ($amountTotal <= 0) {
+                        continue;
+                    }
+
+                    $payout = new Payout();
+                    $payout->user_id = $user->id;
+                    $payout->amount_total = $amountTotal;
+                    $payout->status = 'pending';
+                    $payout->scheduled_for = $now;
+                    $payout->save();
+
+                    Deposit::whereIn('id', $eligibleDeposits->pluck('id')->all())
+                        ->update(['payout_id' => $payout->id]);
+                }
+            });
     }
 
     private function query($scope){

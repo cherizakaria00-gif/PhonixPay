@@ -11,8 +11,10 @@ use App\Models\GatewayCurrency;
 use App\Models\PaymentLink;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\PlanService;
 use App\Traits\ApiPaymentHelpers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class PaymentController extends Controller
 {
@@ -130,11 +132,25 @@ class PaymentController extends Controller
                 $apiPayment->cancel_url = $paymentLink->redirect_url;
             }
             $apiPayment->save();
+
+            if (Schema::hasTable('plans') && !app(PlanService::class)->isFeatureEnabled($apiPayment->user, 'payment_links')) {
+                $message = 'Payment Links are not enabled for this merchant plan. Please upgrade the plan.';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => $message,
+                    ], 422);
+                }
+                $notify[] = ['error', $message];
+                return back()->withNotify($notify);
+            }
         }
 
         $amount = $apiPayment->amount;
-       
+
         $user = $apiPayment->user;
+        /** @var PlanService $planService */
+        $planService = app(PlanService::class);
         $checkUserPayment = $this->checkUserPayment($user);
 			
         if(@$checkUserPayment['status'] == 'error'){
@@ -174,14 +190,16 @@ class PaymentController extends Controller
             return back()->withNotify($notify);
         }
 
-        $charge = ($gate->fixed_charge * $gate->rate) + ($amount * $gate->percent_charge / 100);
-        $paymentCharge = ($user->payment_fixed_charge * $gate->rate) + ($amount * $user->payment_percent_charge / 100);
+        $amountBase = $amount / $gate->rate;
+        $chargeInGateway = ($gate->fixed_charge * $gate->rate) + ($amount * $gate->percent_charge / 100);
+        $charge = $chargeInGateway / $gate->rate;
 
-        $totalCharge = ($charge + $paymentCharge);
-        $payable = ($amount - $totalCharge);
+        $feeData = $planService->calculateFees($user, (float) $amountBase);
+        $paymentCharge = (float) $feeData['fee_amount'];
+        $paymentChargeInGateway = $paymentCharge * $gate->rate;
 
-        $charge = $charge/$gate->rate;
-        $paymentCharge = $paymentCharge/$gate->rate;
+        $totalCharge = $chargeInGateway + $paymentChargeInGateway;
+        $payable = max(0, $amount - $totalCharge);
 
         $data = new Deposit();
         $data->user_id = $user->id;
@@ -191,6 +209,15 @@ class PaymentController extends Controller
         $data->gateway_amount = $amount;
         $data->charge = $charge;
         $data->payment_charge = $paymentCharge;
+        if (Schema::hasColumn('deposits', 'fee_amount')) {
+            $data->fee_amount = $feeData['fee_amount'];
+        }
+        if (Schema::hasColumn('deposits', 'net_amount')) {
+            $data->net_amount = $feeData['net_amount'];
+        }
+        if (Schema::hasColumn('deposits', 'payout_eligible_at')) {
+            $data->payout_eligible_at = $planService->computePayoutEligibleAt($user, now());
+        }
         $data->rate = $gate->rate;
         $data->final_amount = $payable;
         $data->btc_amount = 0;
@@ -323,16 +350,36 @@ class PaymentController extends Controller
     public static function userDataUpdate($deposit)
     {          
         if ($deposit->status == Status::PAYMENT_INITIATE || $deposit->status == Status::PAYMENT_PENDING) {
+            /** @var PlanService $planService */
+            $planService = app(PlanService::class);
+            $user = User::find($deposit->user_id);
+            if (!$user) {
+                return;
+            }
+
             $deposit->status = Status::PAYMENT_SUCCESS;
+
+            if (Schema::hasColumn('deposits', 'fee_amount') && (float) $deposit->fee_amount <= 0) {
+                $feeData = $planService->calculateFees($user, (float) $deposit->amount);
+                $deposit->fee_amount = $feeData['fee_amount'];
+                $deposit->net_amount = $feeData['net_amount'];
+                $deposit->payment_charge = $feeData['fee_amount'];
+            }
+
+            if (Schema::hasColumn('deposits', 'payout_eligible_at') && !$deposit->payout_eligible_at) {
+                $deposit->payout_eligible_at = $planService->computePayoutEligibleAt($user, $deposit->created_at);
+            }
+
             $deposit->save();
 
-            $user = User::find($deposit->user_id);
             $user->balance += $deposit->amount;
             $user->save();
 
             $apiPayment = $deposit->apiPayment;
-            $apiPayment->status = Status::PAYMENT_SUCCESS;
-            $apiPayment->save();
+            if ($apiPayment) {
+                $apiPayment->status = Status::PAYMENT_SUCCESS;
+                $apiPayment->save();
+            }
 
             if ($deposit->payment_link_id) {
                 $paymentLink = PaymentLink::find($deposit->payment_link_id);
@@ -387,13 +434,19 @@ class PaymentController extends Controller
                 $minusTransaction->save();
             }
 
+            if (Schema::hasColumn('users', 'monthly_tx_count') && Schema::hasColumn('users', 'monthly_tx_count_reset_at')) {
+                $planService->incrementMonthlyUsage($user);
+            }
+
             $adminNotification = new AdminNotification();
             $adminNotification->user_id = $user->id;
             $adminNotification->title = 'Deposit successful via '.$deposit->gatewayCurrency()->name;
             $adminNotification->click_url = urlPath('admin.deposit.successful');
             $adminNotification->save(); 
 
-            self::outerIpn($apiPayment);
+            if ($apiPayment) {
+                self::outerIpn($apiPayment);
+            }
 
             notify($user, 'DEPOSIT_COMPLETE', [
                 'method_name' => $deposit->gatewayCurrency()->name,
@@ -405,7 +458,7 @@ class PaymentController extends Controller
                 'rate' => showAmount($deposit->rate, currencyFormat:false),
                 'trx' => $deposit->trx,
                 'post_balance' => showAmount($user->balance, currencyFormat:false)
-            ]);
+            ], $planService->getNotificationChannels($user));
         }
     }
 

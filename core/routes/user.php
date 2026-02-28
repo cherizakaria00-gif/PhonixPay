@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\User\PlanController as UserPlanController;
 use Illuminate\Support\Facades\Route;
 
 Route::namespace('User\Auth')->name('user.')->middleware('guest')->group(function () {
@@ -98,6 +99,12 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('profile-setting', 'submitProfile');
                 Route::get('change-password', 'changePassword')->name('change.password');
                 Route::post('change-password', 'submitPassword');
+            });
+
+            Route::prefix('plan-billing')->name('plan.')->group(function () {
+                Route::get('/', [UserPlanController::class, 'billing'])->name('billing');
+                Route::post('change', [UserPlanController::class, 'change'])->name('change');
+                Route::post('request-change', [UserPlanController::class, 'requestChange'])->name('request.change');
             });
 
             // Withdraw

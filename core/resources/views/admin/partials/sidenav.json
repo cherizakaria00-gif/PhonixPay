@@ -92,6 +92,30 @@
             }
         ]
     },
+    "subscription_plans": {
+        "title": "Subscriptions",
+        "icon": "las la-layer-group",
+        "menu_active": "admin.plans*",
+        "submenu": [{
+                "keyword": ["plans", "subscriptions", "pricing plans"],
+                "title": "Plans",
+                "route_name": "admin.plans.index",
+                "menu_active": "admin.plans.index"
+            },
+            {
+                "keyword": ["merchant plans", "user plans", "assigned plans"],
+                "title": "Merchants",
+                "route_name": "admin.plans.merchants",
+                "menu_active": ["admin.plans.merchants", "admin.plans.merchants.detail"]
+            },
+            {
+                "keyword": ["plan requests", "upgrade requests"],
+                "title": "Change Requests",
+                "route_name": "admin.plans.requests",
+                "menu_active": "admin.plans.requests"
+            }
+        ]
+    },
     "payments": {
         "title": "Payments",
         "icon": "las la-file-invoice-dollar",

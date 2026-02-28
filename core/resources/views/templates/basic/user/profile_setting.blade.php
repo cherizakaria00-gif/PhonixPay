@@ -56,6 +56,19 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
+                                <label class="col-form-label">@lang('Username')</label>
+                                <input type="text" class="form--control" value="{{ $user->username }}" readonly disabled>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="col-form-label">@lang('Email')</label>
+                                <input type="email" class="form--control" name="email"
+                                value="{{ $user->email }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
                                 <label class="col-form-label">@lang('First Name')</label>
                                 <input type="text" class="form--control" name="firstname"
                                 value="{{ $user->firstname }}" required>
@@ -66,6 +79,13 @@
                                 <label class="col-form-label">@lang('Last Name')</label>
                                 <input type="text" class="form--control" name="lastname"
                                 value="{{ $user->lastname }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="col-form-label">@lang('Phone Number')</label>
+                                <input type="text" class="form--control" name="mobile"
+                                value="{{ $user->mobile }}" required>
                             </div>
                         </div>
                         <div class="col-md-6">

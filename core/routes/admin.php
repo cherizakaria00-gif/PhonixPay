@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\PlanController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -80,6 +81,25 @@ Route::middleware('admin')->group(function () {
         Route::get('list', 'list')->name('list');
         Route::get('count-by-segment/{methodName}', 'countBySegment')->name('segment.count');
         Route::get('notification-log/{id}', 'notificationLog')->name('notification.log');
+    });
+
+    Route::prefix('plans')->name('plans.')->group(function () {
+        Route::get('/', [PlanController::class, 'index'])->name('index');
+        Route::get('create', [PlanController::class, 'create'])->name('create');
+        Route::post('create', [PlanController::class, 'store'])->name('store');
+        Route::get('edit/{id}', [PlanController::class, 'edit'])->name('edit');
+        Route::post('edit/{id}', [PlanController::class, 'update'])->name('update');
+        Route::post('status/{id}', [PlanController::class, 'status'])->name('status');
+        Route::post('delete/{id}', [PlanController::class, 'delete'])->name('delete');
+
+        Route::get('merchants', [PlanController::class, 'merchants'])->name('merchants');
+        Route::get('merchants/{id}', [PlanController::class, 'merchantDetail'])->name('merchants.detail');
+        Route::post('merchants/{id}/assign', [PlanController::class, 'assignMerchantPlan'])->name('merchants.assign');
+        Route::post('merchants/{id}/overrides', [PlanController::class, 'updateMerchantOverrides'])->name('merchants.overrides');
+
+        Route::get('change-requests', [PlanController::class, 'requests'])->name('requests');
+        Route::post('change-requests/{id}/approve', [PlanController::class, 'approveRequest'])->name('requests.approve');
+        Route::post('change-requests/{id}/reject', [PlanController::class, 'rejectRequest'])->name('requests.reject');
     });
 
     // Subscriber

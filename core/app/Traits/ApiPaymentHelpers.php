@@ -5,7 +5,9 @@ namespace App\Traits;
 use App\Constants\Status;
 use App\Models\ApiPayment;
 use App\Models\GatewayCurrency;
+use App\Services\PlanService;
 use App\Lib\CurlRequest;
+use Illuminate\Support\Facades\Schema;
 
 trait ApiPaymentHelpers{
 
@@ -71,6 +73,24 @@ trait ApiPaymentHelpers{
                 'status'=> 'error',
                 'message' => [$message]
             ];
+        }
+
+        if (
+            class_exists(PlanService::class)
+            && Schema::hasTable('plans')
+            && Schema::hasColumn('users', 'monthly_tx_count')
+            && Schema::hasColumn('users', 'monthly_tx_count_reset_at')
+        ) {
+            /** @var PlanService $planService */
+            $planService = app(PlanService::class);
+            $planCheck = $planService->canProcessTransaction($user);
+
+            if (!$planCheck['allowed']) {
+                return [
+                    'status' => 'error',
+                    'message' => [$planCheck['message']],
+                ];
+            }
         }
     }
 

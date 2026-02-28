@@ -28,7 +28,77 @@
         </div>
     </div>
 
-    <div class="html"></div>
+    @if($planSummary)
+        <div class="dashboard-panel dashboard-panel--plan-billing">
+            <div class="dashboard-panel__header dashboard-panel__header--tight">
+                <div>
+                    <h6 class="mb-1">@lang('Plan & Billing')</h6>
+                    <p class="mb-0 text-muted">
+                        @lang('Current Plan'):
+                        <strong>{{ $planSummary['current']['name'] ?? 'Starter' }}</strong>
+                        ·
+                        ${{ number_format((($planSummary['current']['price_monthly_cents'] ?? 0) / 100), 2) }}/@lang('month')
+                    </p>
+                </div>
+                <a href="{{ route('user.plan.billing') }}" class="btn btn--base btn--sm">
+                    <i class="las la-crown"></i> @lang('Open Plan Page')
+                </a>
+            </div>
+
+            <div class="plan-usage-bar-wrap">
+                <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+                    <span>@lang('Transactions used this month')</span>
+                    <strong>
+                        {{ $planSummary['usage']['used'] }} /
+                        {{ $planSummary['usage']['unlimited'] ? __('Unlimited') : $planSummary['usage']['limit'] }}
+                    </strong>
+                </div>
+                <div class="progress plan-usage-progress">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $planSummary['usage']['unlimited'] ? 0 : $planSummary['usage']['percent'] }}%"></div>
+                </div>
+            </div>
+
+            @if($pendingPlanRequest)
+                <div class="alert alert-warning mt-3 mb-0">
+                    @lang('Upgrade request pending for'):
+                    <strong>{{ $pendingPlanRequest->toPlan->name ?? __('Selected plan') }}</strong>.
+                    @lang('Please wait for admin approval.')
+                </div>
+            @endif
+
+            <div class="plan-upgrade-grid">
+                @foreach($availablePlans->take(4) as $planItem)
+                    @php
+                        $isCurrentPlan = (int) ($planSummary['current']['id'] ?? 0) === (int) $planItem->id;
+                    @endphp
+                    <div class="plan-upgrade-card {{ $isCurrentPlan ? 'is-current' : '' }}">
+                        <div class="plan-upgrade-card__head">
+                            <h6>{{ $planItem->name }}</h6>
+                            @if($isCurrentPlan)
+                                <span class="badge badge--success">@lang('Active')</span>
+                            @endif
+                        </div>
+                        <p class="plan-upgrade-card__price">${{ number_format($planItem->price_monthly_cents / 100, 2) }}/@lang('mo')</p>
+                        <p class="plan-upgrade-card__meta">
+                            @lang('Limit'): {{ $planItem->tx_limit_monthly ?? __('Unlimited') }}
+                            ·
+                            @lang('Fees'): {{ number_format($planItem->fee_percent, 2) }}% + ${{ number_format($planItem->fee_fixed, 2) }}
+                        </p>
+
+                        @if(!$isCurrentPlan)
+                            <form action="{{ route('user.plan.change') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="plan_id" value="{{ $planItem->id }}">
+                                <button type="submit" class="btn btn-outline--primary btn-sm w-100" {{ $pendingPlanRequest ? 'disabled' : '' }}>
+                                    {{ $planItem->price_monthly_cents > 0 ? __('Pay & Upgrade') : __('Switch Plan') }}
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <div class="dashboard-activity-grid">
         <div class="dashboard-panel dashboard-panel--history">
@@ -326,6 +396,65 @@
 
     .dashboard-table-wrapper {
         overflow-x: auto;
+    }
+
+    .dashboard-panel--plan-billing {
+        margin-bottom: 18px;
+    }
+
+    .plan-usage-bar-wrap {
+        margin-top: 10px;
+    }
+
+    .plan-usage-progress {
+        height: 10px;
+    }
+
+    .plan-upgrade-grid {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+    }
+
+    .plan-upgrade-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .plan-upgrade-card.is-current {
+        border-color: #7c3aed;
+        box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+    }
+
+    .plan-upgrade-card__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .plan-upgrade-card__head h6 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .plan-upgrade-card__price {
+        margin: 0 0 6px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .plan-upgrade-card__meta {
+        margin: 0 0 10px;
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.5;
     }
 
     .dashboard-history-table {

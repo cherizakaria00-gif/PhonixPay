@@ -10,6 +10,7 @@ use App\Models\Frontend;
 use App\Models\GatewayCurrency;
 use App\Models\Language;
 use App\Models\Page;
+use App\Models\Plan;
 use App\Models\Subscriber;
 use App\Models\SupportMessage;
 use App\Models\SupportTicket;
@@ -32,7 +33,31 @@ class SiteController extends Controller
         $sections = Page::where('tempname',activeTemplate())->where('slug','/')->first();
         $seoContents = $sections->seo_content;
         $seoImage = @$seoContents->image ? getImage(getFilePath('seo') . '/' . @$seoContents->image, getFileSize('seo')) : null;
-        return view('Template::home', compact('pageTitle','sections','seoContents','seoImage'));
+        $plans = collect();
+        if (Schema::hasTable('plans')) {
+            $plans = Plan::where('is_active', 1)->orderBy('sort_order')->get();
+        }
+
+        return view('Template::home', compact('pageTitle','sections','seoContents','seoImage', 'plans'));
+    }
+
+    public function applePay()
+    {
+        $reference = @$_GET['reference'];
+        if ($reference) {
+            session()->put('reference', $reference);
+        }
+
+        $pageTitle = 'Pay';
+        $sections = Page::where('tempname',activeTemplate())->where('slug','/')->first();
+        $seoContents = $sections->seo_content;
+        $seoImage = @$seoContents->image ? getImage(getFilePath('seo') . '/' . @$seoContents->image, getFileSize('seo')) : null;
+        $plans = collect();
+        if (Schema::hasTable('plans')) {
+            $plans = Plan::where('is_active', 1)->orderBy('sort_order')->get();
+        }
+
+        return view('Template::pay', compact('pageTitle','sections','seoContents','seoImage', 'plans'));
     }
 
     public function pages($slug)

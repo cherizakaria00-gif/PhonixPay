@@ -64,6 +64,13 @@
                 </a>
             </li>
 
+            <li class="sidebar-menu__item {{ menuActive('user.plan.billing') }}">
+                <a href="{{ route('user.plan.billing') }}" class="sidebar-menu__link">
+                    <i class="las la-crown"></i>
+                    @lang('Plan & Billing')
+                </a>
+            </li>
+
             <li class="sidebar-menu__item {{ menuActive(['user.profile.setting', 'user.change.password', 'user.twofactor']) }}">
                 <a href="{{ route('user.profile.setting') }}" class="sidebar-menu__link">
                     <i class="las la-cogs"></i>
@@ -72,29 +79,6 @@
             </li>
 
         </ul><!-- sidebar-menu end -->
-        <div class="user-profile">
-            <div class="user-profile-info">
-                <div class="user-profile-info__icon">
-                    <i class="las la-user"></i>
-                </div>
-                <div class="user-profile-info__content">
-                    <h6 class="user-profile-info__name"><span>@</span>{{ strLimit(auth()->user()->username, 10) }}</h6>
-                    <p class="user-profile-info__desc">{{ strLimit(auth()->user()->email, 18) }}</p>
-                </div>
-            </div>
-            <button type="button" class="user-profile-dots dropdown-toggle" id="exportMenuButton" 
-            data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <i class="fas fa-ellipsis-h"></i>
-            </button>
-             <div class="dropdown-menu" aria-labelledby="exportMenuButton">
-                <a class="dropdown-item" href="{{ route('user.profile.setting') }}">
-                    <i class="las la-cogs"></i> @lang('Setting')
-                </a>
-                <a class="dropdown-item" href="{{ route('user.logout') }}">
-                    <i class="las la-sign-out-alt"></i> @lang('Logout')
-                </a>
-            </div>
-        </div>
     </div>
 </div>
 

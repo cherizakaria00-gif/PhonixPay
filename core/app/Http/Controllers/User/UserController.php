@@ -12,10 +12,14 @@ use App\Models\Form;
 use App\Models\Gateway;
 use App\Models\GatewayCurrency;
 use App\Models\NotificationLog;
+use App\Models\Plan;
+use App\Models\PlanChangeRequest;
 use App\Models\Transaction;
 use App\Models\Withdrawal;
+use App\Services\PlanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -25,6 +29,34 @@ class UserController extends Controller
     {
         $pageTitle = 'Dashboard'; 
         $user = auth()->user();
+
+        $planSummary = null;
+        $availablePlans = collect();
+        $pendingPlanRequest = null;
+
+        if (Schema::hasTable('plans') && Schema::hasColumn('users', 'plan_id')) {
+            /** @var PlanService $planService */
+            $planService = app(PlanService::class);
+            $planSummary = [
+                'current' => $planService->getEffectivePlan($user),
+                'usage' => $planService->usageSummary($user),
+            ];
+
+            $availablePlans = Plan::active()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get();
+
+            if (Schema::hasTable('plan_change_requests')) {
+                $pendingPlanRequest = PlanChangeRequest::query()
+                    ->where('user_id', $user->id)
+                    ->where('status', 'pending')
+                    ->with('toPlan')
+                    ->latest('id')
+                    ->first();
+            }
+        }
+
         $latestDeposits = Deposit::where('user_id', $user->id)
             ->with('apiPayment')
             ->orderBy('id', 'desc')
@@ -36,7 +68,15 @@ class UserController extends Controller
         }
         $latestDeposits = $latestDeposits->get();
         $latestTrx = $latestTrx->get();
-        return view('Template::user.dashboard', compact('pageTitle', 'user', 'latestTrx', 'latestDeposits'));
+        return view('Template::user.dashboard', compact(
+            'pageTitle',
+            'user',
+            'latestTrx',
+            'latestDeposits',
+            'planSummary',
+            'availablePlans',
+            'pendingPlanRequest'
+        ));
     }
 
     public function notifications()

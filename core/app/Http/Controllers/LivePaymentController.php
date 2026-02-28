@@ -18,7 +18,18 @@ class LivePaymentController extends Controller{
         $pageTitle = "Payment Checkout";
 		$trx = $request->payment_trx;
 
-		$apiPayment = $this->getApiPayment($trx); 
+		$apiPayment = $this->getApiPayment($trx);
+        if (@$apiPayment['status'] == 'error') {
+            $notify[] = ['error', $apiPayment['message'] ?? 'Invalid transaction request'];
+            return back()->withNotify($notify);
+        }
+
+        $checkUserPayment = $this->checkUserPayment($apiPayment->user);
+        if (@$checkUserPayment['status'] == 'error') {
+            $notify[] = ['error', implode(' ', $checkUserPayment['message'] ?? [])];
+            return back()->withNotify($notify);
+        }
+
 		$gatewayCurrency = $this->paymentMethods(@$apiPayment->currency, @$apiPayment->gateway_methods)->orderby('method_code')->get();
 
         return view('Template::payment.deposit',compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx'));

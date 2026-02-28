@@ -64,6 +64,9 @@
             padding: 12px 14px;
             border-radius: 12px;
             width: 100%;
+            box-shadow:
+                0 0 0 1px rgba(136, 198, 166, 0.15),
+                0 0 18px rgba(136, 198, 166, 0.12);
         }
         .new-auth .form--control::placeholder {
             color: var(--input-placeholder);
@@ -76,8 +79,10 @@
             box-shadow: 0 0 0 1000px var(--input-bg) inset;
         }
         .new-auth .form--control:focus {
-            border-color: #87c5a6;
-            box-shadow: 0 0 0 3px rgba(216, 48, 0, 0.25);
+            border-color: #88c6a6;
+            box-shadow:
+                0 0 0 2px rgba(136, 198, 166, 0.35),
+                0 0 24px rgba(136, 198, 166, 0.35);
             outline: none;
         }
         .new-auth .input--group { position: relative; }
@@ -142,10 +147,10 @@
                     <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-10">
                 </div>
                 <h1 class="text-4xl font-bold tracking-tight text-white mb-4">
-                    Devenez marchand en quelques minutes
+                    Become a merchant in minutes
                 </h1>
                 <p class="text-slate-300 text-lg">
-                    Creez votre compte, completez votre KYC et commencez a encaisser plus vite.
+                    Create your account, complete KYC, and start getting paid faster.
                 </p>
                 <div class="mt-10">
                     <div class="relative bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-2xl">
@@ -157,8 +162,8 @@
 
         <div class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
             <div class="w-full max-w-xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-                <h2 class="text-2xl font-bold text-white mb-2">@lang('Become Merchant')</h2>
-                <p class="text-slate-400 mb-6">Creez votre compte pour commencer.</p>
+                <h2 class="text-2xl font-bold text-white mb-2">@lang('Become a Merchant')</h2>
+                <p class="text-slate-400 mb-6">Create your account to get started.</p>
 
                 <form action="{{ route('user.register') }}" method="POST" class="verify-gcaptcha @if (!gs('registration')) form-disabled @endif space-y-5">
                     @csrf
@@ -181,7 +186,7 @@
                             <input type="text" class="form--control" name="lastname" value="{{ old('lastname') }}" required>
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-slate-300 mb-2">@lang('E-Mail Address')</label>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Email address')</label>
                             <input type="email" class="form--control checkUser" name="email" value="{{ old('email') }}" required>
                         </div>
                         <div>
@@ -203,7 +208,7 @@
                     <x-captcha />
 
                     @if(gs('agree'))
-                        <div class="text-sm text-slate-300">
+                        <div class="text-xs text-slate-300 leading-relaxed">
                             <label class="inline-flex items-start gap-2">
                                 <input type="checkbox" id="agree" @checked(old('agree')) name="agree" required>
                                 <span>

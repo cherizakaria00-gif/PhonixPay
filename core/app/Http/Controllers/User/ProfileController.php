@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Constants\Status;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -21,22 +22,39 @@ class ProfileController extends Controller
         $request->validate([
             'firstname' => 'required|string',
             'lastname' => 'required|string',
+            'email' => 'required|string|email|unique:users,email,' . auth()->id(),
+            'mobile' => 'required|string',
         ],[
             'firstname.required'=>'The first name field is required',
             'lastname.required'=>'The last name field is required'
         ]);
 
         $user = auth()->user();
+        $emailChanged = $request->email !== $user->email;
+        $mobileChanged = $request->mobile !== $user->mobile;
 
+        $user->email = $request->email;
         $user->firstname = $request->firstname;
         $user->lastname = $request->lastname;
 
+        $user->mobile = $request->mobile;
         $user->address = $request->address;
         $user->city = $request->city;
         $user->state = $request->state;
         $user->zip = $request->zip;
 
+        if ($emailChanged || $mobileChanged) {
+            $user->ev = Status::UNVERIFIED;
+            $user->ver_code = null;
+            $user->ver_code_send_at = null;
+        }
+
         $user->save();
+        if ($emailChanged || $mobileChanged) {
+            $notify[] = ['success', 'Profile updated. Please verify your email to continue.'];
+            return to_route('user.authorization')->withNotify($notify);
+        }
+
         $notify[] = ['success', 'Profile updated successfully'];
         return back()->withNotify($notify);
     }

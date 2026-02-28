@@ -29,7 +29,13 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'kyc_data' => 'object',
-        'ver_code_send_at' => 'datetime'
+        'ver_code_send_at' => 'datetime',
+        'plan_started_at' => 'datetime',
+        'plan_renews_at' => 'datetime',
+        'monthly_tx_count_reset_at' => 'datetime',
+        'plan_custom_overrides' => 'array',
+        'monthly_tx_count' => 'integer',
+        'plan_id' => 'integer',
     ];
 
 
@@ -141,5 +147,20 @@ class User extends Authenticatable
     public function withdrawSetting()
     {
         return $this->belongsTo(WithdrawSetting::class, 'id', 'user_id');
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
+    public function payouts()
+    {
+        return $this->hasMany(Payout::class);
+    }
+
+    public function planChangeRequests()
+    {
+        return $this->hasMany(PlanChangeRequest::class);
     }
 }

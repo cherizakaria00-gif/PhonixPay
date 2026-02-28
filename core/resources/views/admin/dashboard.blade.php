@@ -49,6 +49,43 @@
             </a>
         </div>
 
+        @if(!empty($subscription['enabled']))
+            <div class="pf-admin-panel pf-admin-panel--subscription">
+                <div class="pf-admin-panel-header">
+                    <h5 class="pf-admin-panel-title">@lang('Subscription Overview')</h5>
+                    <a href="{{ route('admin.plans.index') }}" class="btn btn-sm btn-outline--primary">
+                        <i class="las la-layer-group"></i> @lang('Manage Plans')
+                    </a>
+                </div>
+                <div class="pf-admin-subscription-grid">
+                    <div class="pf-admin-subscription-item">
+                        <p class="pf-admin-subscription-label">@lang('Plans')</p>
+                        <h4 class="pf-admin-subscription-value">{{ $subscription['total_plans'] }}</h4>
+                        <small class="text-muted">{{ $subscription['active_plans'] }} @lang('active')</small>
+                    </div>
+                    <div class="pf-admin-subscription-item">
+                        <p class="pf-admin-subscription-label">@lang('Active Subscriptions')</p>
+                        <h4 class="pf-admin-subscription-value">{{ $subscription['active_merchants'] }}</h4>
+                        <small class="text-muted">@lang('Merchants on active plan')</small>
+                    </div>
+                    <div class="pf-admin-subscription-item">
+                        <p class="pf-admin-subscription-label">@lang('Pending Requests')</p>
+                        <h4 class="pf-admin-subscription-value">{{ $subscription['pending_requests'] }}</h4>
+                        <small class="text-muted">@lang('Awaiting approval')</small>
+                    </div>
+                    <div class="pf-admin-subscription-item">
+                        <p class="pf-admin-subscription-label">@lang('MRR Estimate')</p>
+                        <h4 class="pf-admin-subscription-value">${{ number_format($subscription['mrr_estimate'], 2) }}</h4>
+                        <small class="text-muted">@lang('From active merchant plans')</small>
+                    </div>
+                </div>
+                <div class="pf-admin-subscription-actions">
+                    <a href="{{ route('admin.plans.merchants') }}" class="btn btn-sm btn-outline--dark">@lang('Merchant Plans')</a>
+                    <a href="{{ route('admin.plans.requests') }}" class="btn btn-sm btn-outline--warning">@lang('Change Requests')</a>
+                </div>
+            </div>
+        @endif
+
         <div class="pf-admin-chart-grid">
             <div class="pf-admin-panel">
                 <div class="pf-admin-panel-header">
@@ -352,6 +389,42 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 18px;
+        }
+
+        .pf-admin-subscription-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .pf-admin-subscription-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 16px;
+            background: #ffffff;
+        }
+
+        .pf-admin-subscription-label {
+            margin: 0 0 8px;
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+        }
+
+        .pf-admin-subscription-value {
+            margin: 0 0 4px;
+            font-size: 24px;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .pf-admin-subscription-actions {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .pf-admin-chart-grid--three {
