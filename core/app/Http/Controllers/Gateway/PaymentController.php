@@ -263,6 +263,17 @@ class PaymentController extends Controller
                     if ($paymentLink) {
                         $summaryLabel = 'Description';
                         $summaryValue = $paymentLink->description ?: ($apiPayment->details ?: 'Payment Link');
+                    } else {
+                        $productName = trim((string) ($apiPayment->details ?? ''));
+                        $storeName = trim((string) ($apiPayment->site_name ?? ''));
+
+                        if ($productName !== '') {
+                            $summaryLabel = 'Product';
+                            $summaryValue = $productName;
+                        } elseif ($storeName !== '') {
+                            $summaryLabel = 'Store';
+                            $summaryValue = $storeName;
+                        }
                     }
 
                     $html = view('Template::payment.partials.gateway_redirect_preview', [
