@@ -47,6 +47,16 @@
                     <span class="pf-admin-stat-change pf-admin-stat-change--negative">@lang('Needs attention')</span>
                 </div>
             </a>
+            <a href="{{ route('admin.rewards.index') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-gift"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Rewards Program')</p>
+                    <h3 class="pf-admin-stat-value">@lang('Referrals')</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Manage rewards')</span>
+                </div>
+            </a>
         </div>
 
         @if(!empty($subscription['enabled']))

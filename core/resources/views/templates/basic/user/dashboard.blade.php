@@ -25,6 +25,10 @@
                 <option value="successful">@lang('Succeed')</option> 
                 <option value="rejected">@lang('Canceled')</option> 
             </select>
+            <a href="{{ route('user.rewards.index') }}" class="dashboard-select text-decoration-none d-inline-flex align-items-center gap-1">
+                <i class="las la-gift"></i>
+                <span>@lang('Rewards')</span>
+            </a>
         </div>
     </div>
 
