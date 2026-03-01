@@ -265,14 +265,24 @@ class PaymentController extends Controller
                         $summaryValue = $paymentLink->description ?: ($apiPayment->details ?: 'Payment Link');
                     } else {
                         $productName = trim((string) ($apiPayment->details ?? ''));
-                        $storeName = trim((string) ($apiPayment->site_name ?? ''));
+                        $storeNameCandidates = [
+                            trim((string) ($apiPayment->site_name ?? '')),
+                            trim((string) data_get($apiPayment, 'user.company_name')),
+                            trim((string) data_get($apiPayment, 'user.business_name')),
+                            trim((string) data_get($apiPayment, 'user.username')),
+                            trim((string) data_get($apiPayment, 'user.fullname')),
+                        ];
+                        $storeName = collect($storeNameCandidates)->first(fn ($name) => $name !== '');
 
                         if ($productName !== '') {
                             $summaryLabel = 'Product';
                             $summaryValue = $productName;
-                        } elseif ($storeName !== '') {
+                        } elseif ($storeName) {
                             $summaryLabel = 'Store';
                             $summaryValue = $storeName;
+                        } else {
+                            $summaryLabel = 'Store';
+                            $summaryValue = 'Merchant Order';
                         }
                     }
 
