@@ -28,6 +28,10 @@ class SiteController extends Controller
         if ($reference) {
             session()->put('reference', $reference);
         }
+        $rewardReferral = @$_GET['ref'];
+        if ($rewardReferral) {
+            session()->put('reward_referral_code', strtoupper((string) $rewardReferral));
+        }
 
         $pageTitle = 'Home';
         $sections = Page::where('tempname',activeTemplate())->where('slug','/')->first();
@@ -46,6 +50,10 @@ class SiteController extends Controller
         $reference = @$_GET['reference'];
         if ($reference) {
             session()->put('reference', $reference);
+        }
+        $rewardReferral = @$_GET['ref'];
+        if ($rewardReferral) {
+            session()->put('reward_referral_code', strtoupper((string) $rewardReferral));
         }
 
         $pageTitle = 'Pay';

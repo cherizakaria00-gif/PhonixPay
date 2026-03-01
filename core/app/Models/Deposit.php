@@ -17,6 +17,8 @@ class Deposit extends Model
         'payout_eligible_at' => 'datetime',
         'fee_amount' => 'float',
         'net_amount' => 'float',
+        'refunded_at' => 'datetime',
+        'gross_amount_cents' => 'integer',
     ];
 
     protected $hidden = ['detail'];
@@ -56,6 +58,11 @@ class Deposit extends Model
     public function payout()
     {
         return $this->belongsTo(Payout::class);
+    }
+
+    public function referrer()
+    {
+        return $this->belongsTo(User::class, 'referrer_user_id');
     }
 
     public function methodName(){

@@ -93,6 +93,13 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('edit/{id}', 'update')->name('update');
             });
 
+            Route::controller('RewardController')->prefix('rewards')->name('rewards.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('overview-data', 'overview')->name('overview');
+                Route::get('ledger-data', 'ledger')->name('ledger');
+                Route::post('referral-code/regenerate', 'regenerateCode')->name('code.regenerate');
+            });
+
             //Profile setting
             Route::controller('ProfileController')->group(function(){
                 Route::get('profile-setting', 'profile')->name('profile.setting');

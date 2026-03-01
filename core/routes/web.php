@@ -9,6 +9,15 @@ Route::get('/clear', function(){
 
 Route::get('cron', 'CronController@cron')->name('cron');
 
+Route::get('signup', function () {
+    $ref = request()->query('ref');
+    if ($ref) {
+        return redirect()->route('user.register', ['ref' => $ref]);
+    }
+
+    return redirect()->route('user.register');
+})->name('signup');
+
 Route::controller('PaymentLinkController')->group(function () {
     Route::get('payment-link/{code}', 'show')->name('payment.link.show');
     Route::post('payment-link/ipn/{code}', 'ipn')->name('payment.link.ipn');

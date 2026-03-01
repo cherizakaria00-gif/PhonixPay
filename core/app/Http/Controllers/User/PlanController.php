@@ -98,11 +98,15 @@ class PlanController extends Controller
             return back()->withNotify($notify);
         }
 
-        $priceAmount = round($targetPlan->price_monthly_cents / 100, 2);
+        $chargedAmount = 0.0;
+        $appliedDiscountPercent = 0;
 
         try {
-            DB::transaction(function () use ($targetPlan, $priceAmount) {
+            DB::transaction(function () use ($targetPlan, &$chargedAmount, &$appliedDiscountPercent) {
                 $merchant = User::lockForUpdate()->findOrFail(auth()->id());
+                $charge = $this->planService->calculateSubscriptionCharge($merchant, (int) $targetPlan->price_monthly_cents);
+                $priceAmount = round((int) $charge['final_cents'] / 100, 2);
+                $appliedDiscountPercent = (int) ($charge['discount_percent'] ?? 0);
 
                 PlanChangeRequest::where('user_id', $merchant->id)
                     ->where('status', 'pending')
@@ -131,7 +135,9 @@ class PlanController extends Controller
                     $transaction->post_balance = $merchant->balance;
                     $transaction->charge = 0;
                     $transaction->trx_type = '-';
-                    $transaction->details = 'Subscription payment for ' . $targetPlan->name . ' plan';
+                    $transaction->details = $appliedDiscountPercent > 0
+                        ? 'Subscription payment for ' . $targetPlan->name . ' plan with ' . $appliedDiscountPercent . '% rewards discount'
+                        : 'Subscription payment for ' . $targetPlan->name . ' plan';
                     $transaction->trx = getTrx();
                     $transaction->remark = 'plan_upgrade';
                     $transaction->save();
@@ -140,6 +146,8 @@ class PlanController extends Controller
                 $this->planService->assignPlan($merchant, $targetPlan, false);
                 $merchant->plan_custom_overrides = null;
                 $merchant->save();
+
+                $chargedAmount = $priceAmount;
             });
         } catch (Throwable $e) {
             if ($e->getMessage() === 'INSUFFICIENT_BALANCE') {
@@ -165,7 +173,8 @@ class PlanController extends Controller
             );
         }
 
-        $notify[] = ['success', 'Plan updated successfully' . ($priceAmount > 0 ? ' after payment of $' . number_format($priceAmount, 2) : '') . '. Billing cycle is monthly.' . $renewText];
+        $discountText = $appliedDiscountPercent > 0 ? ' (' . $appliedDiscountPercent . '% rewards discount applied)' : '';
+        $notify[] = ['success', 'Plan updated successfully' . ($chargedAmount > 0 ? ' after payment of $' . number_format($chargedAmount, 2) . $discountText : '') . '. Billing cycle is monthly.' . $renewText];
         return back()->withNotify($notify);
     }
 }

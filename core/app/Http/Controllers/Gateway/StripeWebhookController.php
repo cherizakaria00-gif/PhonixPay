@@ -196,7 +196,6 @@ class StripeWebhookController extends \App\Http\Controllers\Controller
 
             // Update deposit status if not already successful
             if ($deposit->status != Status::PAYMENT_SUCCESS) {
-                $deposit->status = Status::PAYMENT_SUCCESS;
                 if (Schema::hasColumn('deposits', 'stripe_charge_id')) {
                     $deposit->stripe_charge_id = $charge->id;
                 }
@@ -204,7 +203,7 @@ class StripeWebhookController extends \App\Http\Controllers\Controller
                 $deposit->save();
 
                 // Update user balance and other data
-                PaymentController::userDataUpdate($deposit);
+                PaymentController::userDataUpdate($deposit->fresh());
 
                 Log::info('Deposit marked as successful via webhook', [
                     'deposit_id' => $deposit->id,
@@ -362,12 +361,11 @@ class StripeWebhookController extends \App\Http\Controllers\Controller
 
             // Only update if payment intent succeeded
             if ($session->payment_status === 'paid' && $deposit->status != Status::PAYMENT_SUCCESS) {
-                $deposit->status = Status::PAYMENT_SUCCESS;
                 $deposit->stripe_session_id = $session->id;
                 $deposit->stripe_account_id = $account->id ?? $deposit->stripe_account_id;
                 $deposit->save();
 
-                PaymentController::userDataUpdate($deposit);
+                PaymentController::userDataUpdate($deposit->fresh());
 
                 Log::info('Deposit marked as successful via checkout webhook', [
                     'deposit_id' => $deposit->id,

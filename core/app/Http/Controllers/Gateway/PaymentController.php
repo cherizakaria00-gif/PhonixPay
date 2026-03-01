@@ -12,6 +12,7 @@ use App\Models\PaymentLink;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\PlanService;
+use App\Services\RewardService;
 use App\Traits\ApiPaymentHelpers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -510,6 +511,8 @@ class PaymentController extends Controller
                 'trx' => $deposit->trx,
                 'post_balance' => showAmount($user->balance, currencyFormat:false)
             ], $planService->getNotificationChannels($user));
+
+            app(RewardService::class)->handleSuccessfulDeposit($deposit);
         }
     }
 
@@ -533,6 +536,9 @@ class PaymentController extends Controller
         $user->save();
 
         $deposit->status = Status::PAYMENT_REFUNDED;
+        if (Schema::hasColumn('deposits', 'refunded_at')) {
+            $deposit->refunded_at = now();
+        }
         if ($note) {
             $deposit->admin_feedback = $note;
         }
@@ -548,6 +554,8 @@ class PaymentController extends Controller
         $transaction->trx = $deposit->trx;
         $transaction->remark = 'refund';
         $transaction->save();
+
+        app(RewardService::class)->handleRefundedDeposit($deposit);
 
         return true;
     }

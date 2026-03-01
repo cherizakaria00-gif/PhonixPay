@@ -116,6 +116,24 @@
             }
         ]
     },
+    "rewards_program": {
+        "title": "Rewards",
+        "icon": "las la-gift",
+        "menu_active": "admin.rewards*",
+        "submenu": [{
+                "keyword": ["rewards", "referrals", "revenue share", "merchant rewards"],
+                "title": "Program",
+                "route_name": "admin.rewards.index",
+                "menu_active": ["admin.rewards.index", "admin.rewards.show"]
+            },
+            {
+                "keyword": ["reward levels", "benefits", "milestones"],
+                "title": "Levels",
+                "route_name": "admin.rewards.levels",
+                "menu_active": "admin.rewards.levels"
+            }
+        ]
+    },
     "payments": {
         "title": "Payments",
         "icon": "las la-file-invoice-dollar",

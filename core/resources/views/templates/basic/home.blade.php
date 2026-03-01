@@ -65,6 +65,37 @@
             </div>
         </section>
 
+        <section class="relative py-20 border-t border-white/10 bg-slate-950/60">
+            <div class="mx-auto max-w-6xl px-6">
+                <div class="text-center max-w-3xl mx-auto">
+                    <p class="text-xs uppercase tracking-[0.22em] text-[#87c5a6] font-semibold">Rewards</p>
+                    <h2 class="mt-3 text-3xl sm:text-4xl font-bold text-white">Grow with FlujiPay Rewards</h2>
+                    <p class="mt-4 text-slate-300">Invite merchants, unlock milestones, and keep earning as your referral network processes payments.</p>
+                </div>
+
+                <div class="mt-12 grid gap-4 md:grid-cols-3">
+                    <div class="rounded-2xl border border-emerald-300/20 bg-slate-900/70 p-6">
+                        <h3 class="text-xl font-semibold text-white">$5 per qualified merchant</h3>
+                        <p class="mt-2 text-sm text-slate-300">Paid once when each referred merchant completes their first successful sale.</p>
+                    </div>
+                    <div class="rounded-2xl border border-emerald-300/20 bg-slate-900/70 p-6">
+                        <h3 class="text-xl font-semibold text-white">Level 1 discount</h3>
+                        <p class="mt-2 text-sm text-slate-300">Get 50% off all plans for 3 months after 10 qualified referrals.</p>
+                    </div>
+                    <div class="rounded-2xl border border-emerald-300/20 bg-slate-900/70 p-6">
+                        <h3 class="text-xl font-semibold text-white">0.5% revenue share</h3>
+                        <p class="mt-2 text-sm text-slate-300">At 50+ qualified referrals, earn ongoing 0.5% share on direct referral transactions.</p>
+                    </div>
+                </div>
+
+                <div class="mt-10 text-center">
+                    <a href="{{ route('signup') }}" class="inline-flex items-center justify-center rounded-full bg-[#87c5a6] px-8 py-3 text-sm font-semibold text-slate-900 hover:bg-[#9ad8bf] transition-colors">
+                        Start earning
+                    </a>
+                </div>
+            </div>
+        </section>
+
     </main>
 </div>
 @endsection

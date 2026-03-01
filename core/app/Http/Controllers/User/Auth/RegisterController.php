@@ -9,6 +9,7 @@ use App\Models\AdminNotification;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserLogin;
+use App\Services\RewardService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
@@ -22,16 +23,23 @@ class RegisterController extends Controller
 
     use RegistersUsers;
 
-    public function __construct()
+    public function __construct(private readonly RewardService $rewardService)
     {
         parent::__construct();
     }
 
     public function showRegistrationForm()
     {
+        $referralCode = strtoupper((string) request()->query('ref', ''));
+        if ($referralCode !== '') {
+            session()->put('reward_referral_code', $referralCode);
+        } else {
+            $referralCode = strtoupper((string) session('reward_referral_code', ''));
+        }
+
         $pageTitle = "Register";
         Intended::identifyRoute();
-        return view('Template::user.auth.register', compact('pageTitle'));
+        return view('Template::user.auth.register', compact('pageTitle', 'referralCode'));
     }
 
 
@@ -54,6 +62,7 @@ class RegisterController extends Controller
             'lastname'  => 'required',
             'email'     => 'required|string|email|unique:users',
             'password'  => ['required', 'confirmed', $passwordValidation],
+            'referral_code' => 'nullable|string|max:32',
             'captcha'   => 'sometimes|required',
             'agree'     => $agree
         ],[
@@ -82,6 +91,9 @@ class RegisterController extends Controller
 
 
         event(new Registered($user = $this->create($request->all())));
+
+        $this->rewardService->registerReferralFromRequest($user, $request);
+        $request->session()->forget('reward_referral_code');
 
         $this->guard()->login($user);
 

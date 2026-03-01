@@ -102,6 +102,15 @@ Route::middleware('admin')->group(function () {
         Route::post('change-requests/{id}/reject', [PlanController::class, 'rejectRequest'])->name('requests.reject');
     });
 
+    Route::controller('RewardController')->prefix('rewards')->name('rewards.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('merchant/{id}', 'show')->name('show');
+        Route::post('merchant/{id}/adjust', 'adjust')->name('adjust');
+        Route::post('referral/{id}/revoke', 'revokeReferral')->name('referral.revoke');
+        Route::get('levels', 'levels')->name('levels');
+        Route::post('levels/{id}', 'updateLevel')->name('levels.update');
+    });
+
     // Subscriber
     Route::controller('SubscriberController')->prefix('subscriber')->name('subscriber.')->group(function(){
         Route::get('/', 'index')->name('index');

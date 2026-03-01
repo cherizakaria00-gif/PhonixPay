@@ -109,6 +109,37 @@ class PlanService
         ];
     }
 
+    public function calculateSubscriptionCharge(User $user, int $basePriceCents): array
+    {
+        $basePriceCents = max(0, $basePriceCents);
+
+        $discountPercent = 0;
+
+        if (Schema::hasTable('user_reward_status')) {
+            $discountPercent = app(RewardService::class)->currentDiscountPercent($user);
+        }
+
+        if (
+            Schema::hasColumn('users', 'discount_percent')
+            && Schema::hasColumn('users', 'discount_active_until')
+            && $user->discount_active_until
+            && Carbon::parse($user->discount_active_until)->isFuture()
+        ) {
+            $discountPercent = max($discountPercent, (int) $user->discount_percent);
+        }
+
+        $discountPercent = max(0, min(100, $discountPercent));
+        $discountAmountCents = (int) floor(($basePriceCents * $discountPercent) / 100);
+        $finalPriceCents = max(0, $basePriceCents - $discountAmountCents);
+
+        return [
+            'base_cents' => $basePriceCents,
+            'discount_percent' => $discountPercent,
+            'discount_amount_cents' => $discountAmountCents,
+            'final_cents' => $finalPriceCents,
+        ];
+    }
+
     public function computePayoutEligibleAt(User $user, $transactionDate = null): Carbon
     {
         $plan = $this->getEffectivePlan($user);
@@ -242,13 +273,18 @@ class PlanService
                             return;
                         }
 
-                        $priceAmount = round((int) $plan->price_monthly_cents / 100, 2);
+                        $charge = $this->calculateSubscriptionCharge($merchant, (int) $plan->price_monthly_cents);
+                        $priceAmount = round((int) $charge['final_cents'] / 100, 2);
 
                         if ($priceAmount <= 0) {
-                            $merchant->plan_status = 'active';
-                            $merchant->plan_started_at = $now;
-                            $merchant->plan_renews_at = null;
-                            $merchant->save();
+                            if ((int) $plan->price_monthly_cents <= 0) {
+                                $merchant->plan_status = 'active';
+                                $merchant->plan_started_at = $now;
+                                $merchant->plan_renews_at = null;
+                                $merchant->save();
+                            } else {
+                                $this->assignPlan($merchant, $plan, false);
+                            }
                             return;
                         }
 
@@ -277,7 +313,9 @@ class PlanService
                         $transaction->post_balance = $merchant->balance;
                         $transaction->charge = 0;
                         $transaction->trx_type = '-';
-                        $transaction->details = 'Monthly subscription renewal for ' . $plan->name . ' plan';
+                        $transaction->details = $charge['discount_percent'] > 0
+                            ? 'Monthly subscription renewal for ' . $plan->name . ' plan with ' . $charge['discount_percent'] . '% rewards discount'
+                            : 'Monthly subscription renewal for ' . $plan->name . ' plan';
                         $transaction->trx = getTrx();
                         $transaction->remark = 'plan_renewal';
                         $transaction->save();

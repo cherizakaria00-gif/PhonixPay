@@ -34,6 +34,13 @@
                 </a>
             </li>
 
+            <li class="sidebar-menu__item {{ menuActive('user.rewards*') }}">
+                <a href="{{ route('user.rewards.index') }}" class="sidebar-menu__link">
+                    <i class="las la-gift"></i>
+                    @lang('Rewards')
+                </a>
+            </li>
+
             <li class="sidebar-menu__item {{ menuActive(['user.withdraws', 'user.withdraw.method']) }}">
                 <a href="{{ route('user.withdraws') }}" class="sidebar-menu__link">
                     <i class="las la-money-bill-wave-alt"></i>

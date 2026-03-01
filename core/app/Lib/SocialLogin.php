@@ -6,6 +6,7 @@ use App\Constants\Status;
 use App\Models\AdminNotification;
 use App\Models\User;
 use App\Models\UserLogin;
+use App\Services\RewardService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
@@ -125,7 +126,7 @@ class SocialLogin
         $newUser->password = Hash::make($password);
         $newUser->firstname = $firstName;
         $newUser->lastname = $lastName;
-        $user->ref_by    = $referUser ? $referUser->id : 0;
+        $newUser->ref_by = $referUser ? $referUser->id : 0;
 
         $newUser->status = Status::VERIFIED;
         $newUser->kv = $general->kv ? Status::NO : Status::YES;
@@ -135,6 +136,15 @@ class SocialLogin
         $newUser->tv = Status::VERIFIED;
         $newUser->provider = $provider;
         $newUser->save();
+
+        $rewardReferralCode = session('reward_referral_code');
+        if ($rewardReferralCode) {
+            app(RewardService::class)->registerReferral($newUser, $rewardReferralCode, [
+                'ip' => getRealIP(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            session()->forget('reward_referral_code');
+        }
 
         $adminNotification = new AdminNotification();
         $adminNotification->user_id = $newUser->id;

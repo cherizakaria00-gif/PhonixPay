@@ -167,6 +167,13 @@
 
                 <form action="{{ route('user.register') }}" method="POST" class="verify-gcaptcha @if (!gs('registration')) form-disabled @endif space-y-5">
                     @csrf
+                    <input type="hidden" name="referral_code" value="{{ old('referral_code', $referralCode ?? session('reward_referral_code')) }}">
+
+                    @if(old('referral_code', $referralCode ?? session('reward_referral_code')))
+                        <div class="rounded-xl border border-emerald-300/40 bg-emerald-500/10 p-3 text-xs text-emerald-100">
+                            @lang('Referral code applied:') <strong>{{ old('referral_code', $referralCode ?? session('reward_referral_code')) }}</strong>
+                        </div>
+                    @endif
 
                     @include($activeTemplate.'partials.social_login')
 

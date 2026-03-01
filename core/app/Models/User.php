@@ -32,10 +32,13 @@ class User extends Authenticatable
         'ver_code_send_at' => 'datetime',
         'plan_started_at' => 'datetime',
         'plan_renews_at' => 'datetime',
+        'discount_active_until' => 'datetime',
         'monthly_tx_count_reset_at' => 'datetime',
         'plan_custom_overrides' => 'array',
         'monthly_tx_count' => 'integer',
         'plan_id' => 'integer',
+        'discount_percent' => 'integer',
+        'priority_support_enabled' => 'boolean',
     ];
 
 
@@ -162,5 +165,35 @@ class User extends Authenticatable
     public function planChangeRequests()
     {
         return $this->hasMany(PlanChangeRequest::class);
+    }
+
+    public function referralCode()
+    {
+        return $this->hasOne(ReferralCode::class);
+    }
+
+    public function referralsMade()
+    {
+        return $this->hasMany(Referral::class, 'referrer_user_id');
+    }
+
+    public function referralRecord()
+    {
+        return $this->hasOne(Referral::class, 'referred_user_id');
+    }
+
+    public function rewardStatus()
+    {
+        return $this->hasOne(UserRewardStatus::class);
+    }
+
+    public function rewardsWallet()
+    {
+        return $this->hasOne(RewardsWallet::class);
+    }
+
+    public function rewardsLedger()
+    {
+        return $this->hasMany(RewardLedger::class)->orderByDesc('id');
     }
 }
