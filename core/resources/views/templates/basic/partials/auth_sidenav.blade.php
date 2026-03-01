@@ -87,6 +87,12 @@
 
         </ul><!-- sidebar-menu end -->
     </div>
+    <div class="sidebar-footer-action">
+        <a href="{{ route('user.logout') }}" class="sidebar-menu__link sidebar-menu__link--logout">
+            <i class="las la-sign-out-alt"></i>
+            @lang('Logout')
+        </a>
+    </div>
 </div>
 
 @push('script')

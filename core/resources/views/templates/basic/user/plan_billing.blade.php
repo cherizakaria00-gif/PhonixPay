@@ -1,7 +1,18 @@
 @extends($activeTemplate.'layouts.master')
 
+@php
+    $showHeaderBalance = true;
+@endphp
+
 @section('content')
     <div class="row gy-4">
+        <div class="col-12">
+            <div class="page-heading">
+                <h3 class="mb-2">@lang('Plan & Billing')</h3>
+                <p class="mb-0">@lang('Manage your current plan and upgrade options from this section.')</p>
+            </div>
+        </div>
+
         <div class="col-12">
             <div class="card">
                 <div class="card-header">

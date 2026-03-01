@@ -3692,6 +3692,36 @@ label {
 .merchant-dashboard .sidebar-menu__item.sidebar-dropdown::after {
     color: #94a3b8;
 }
+.merchant-dashboard .sidebar-menu-wrapper {
+    padding-bottom: 82px;
+}
+.merchant-dashboard .sidebar-footer-action {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px 14px 16px;
+    border-top: 1px solid #1e293b;
+    background-color: #0f172a;
+}
+.merchant-dashboard .sidebar-menu__link--logout {
+    justify-content: center;
+    border: 1px solid rgba(239, 68, 68, 0.28);
+    background: rgba(239, 68, 68, 0.08);
+    color: #fca5a5;
+    border-radius: 10px;
+    font-weight: 600;
+}
+.merchant-dashboard .sidebar-menu__link--logout i {
+    color: #f87171;
+}
+.merchant-dashboard .sidebar-menu__link--logout:hover {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fecaca;
+}
+.merchant-dashboard .sidebar-menu__link--logout:hover i {
+    color: #fda4af;
+}
 .merchant-dashboard .user-profile {
     background-color: #0f172a;
     border-top: 1px solid #1e293b;
@@ -3764,6 +3794,47 @@ label {
     align-items: center;
     gap: 10px;
     margin-left: 4px;
+}
+.merchant-dashboard .header-account-links {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.merchant-dashboard .header-account-btn {
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+}
+.merchant-dashboard .header-account-btn,
+.merchant-dashboard .header-account-btn i,
+.merchant-dashboard .header-account-btn span {
+    color: #0f172a !important;
+    opacity: 1 !important;
+}
+.merchant-dashboard .header-account-btn span {
+    display: inline-block !important;
+    line-height: 1;
+}
+.merchant-dashboard .header-account-btn i {
+    font-size: 16px;
+}
+.merchant-dashboard .header-account-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
+    color: inherit;
 }
 .merchant-dashboard .header-action-btn,
 .merchant-dashboard .header-profile {
@@ -3991,6 +4062,10 @@ label {
         width: min(350px, calc(100vw - 16px));
         min-width: min(350px, calc(100vw - 16px));
         max-width: min(350px, calc(100vw - 16px));
+    }
+    .merchant-dashboard .header-account-btn {
+        padding: 0 10px;
+        font-size: 12px;
     }
 }
 @media (max-width: 575px) {

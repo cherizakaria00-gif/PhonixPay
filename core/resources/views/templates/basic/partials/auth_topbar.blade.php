@@ -28,18 +28,6 @@
             ->count();
     }
 
-    $profileSource = trim($user?->fullname ?? $user?->username ?? '');
-    $profileInitials = 'U';
-    if ($profileSource !== '') {
-        $parts = preg_split('/\s+/', $profileSource);
-        $profileInitials = strtoupper(substr($parts[0], 0, 1));
-        if (isset($parts[1])) {
-            $profileInitials .= strtoupper(substr($parts[1], 0, 1));
-        } else {
-            $profileInitials .= strtoupper(substr($parts[0], 1, 1) ?: '');
-        }
-        $profileInitials = substr($profileInitials, 0, 2);
-    }
 @endphp
 
 <div class="dashboard-top-nav">
@@ -120,9 +108,12 @@
                             </div>
                         </div>
                     </div>
-                    <a href="{{ route('user.profile.setting') }}" class="header-profile" aria-label="@lang('Profile')">
-                        {{ $profileInitials }}
-                    </a>
+                    <div class="header-account-links">
+                        <a href="{{ route('user.profile.setting') }}" class="header-account-btn header-account-btn--profile">
+                            <i class="las la-user"></i>
+                            <span>Profile</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
