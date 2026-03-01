@@ -60,12 +60,28 @@ function activeTemplateName() {
     return $template;
 }
 
+function resolveLogoAssetPath(string $filename): string
+{
+    $candidates = [
+        'assets/images/logo_icon/' . ltrim($filename, '/'),
+        'assets/images/logoIcon/' . ltrim($filename, '/'),
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (file_exists(public_path($candidate))) {
+            return $candidate;
+        }
+    }
+
+    return $candidates[0];
+}
+
 function siteLogo($type = null) {
-    $name = $type ? "/logo_$type.png" : '/logo.png';
-    return getImage(getFilePath('logoIcon') . $name);
+    $name = $type ? "logo_$type.png" : 'logo.png';
+    return getImage(resolveLogoAssetPath($name));
 }
 function siteFavicon() {
-    return getImage(getFilePath('logoIcon'). '/favicon.png');
+    return getImage(resolveLogoAssetPath('favicon.png'));
 }
 
 function loadReCaptcha()

@@ -86,6 +86,34 @@ class AuthorizationController extends Controller
         return back()->withNotify($notify);
     }
 
+    public function updateEmail(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+        ]);
+
+        $newEmail = strtolower(trim((string) $request->email));
+        if ($newEmail === strtolower((string) $user->email)) {
+            $notify[] = ['info', 'This email address is already in use'];
+            return back()->withNotify($notify);
+        }
+
+        $user->email = $newEmail;
+        $user->ev = Status::UNVERIFIED;
+        $user->ver_code = verificationCode(6);
+        $user->ver_code_send_at = Carbon::now();
+        $user->save();
+
+        notify($user, 'EVER_CODE', [
+            'code' => $user->ver_code
+        ], ['email']);
+
+        $notify[] = ['success', 'Email updated successfully. A new verification code has been sent.'];
+        return back()->withNotify($notify);
+    }
+
     public function emailVerification(Request $request)
     {
         $request->validate([

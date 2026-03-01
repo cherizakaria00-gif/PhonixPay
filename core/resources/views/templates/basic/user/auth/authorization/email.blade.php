@@ -100,7 +100,31 @@
                         <span class="countdown-wrapper">@lang('try again after') <span id="countdown" class="fw-bold">--</span> @lang('seconds')</span>
                         <a href="{{route('user.send.verify.code', 'email')}}" class="try-again-link d-none anchor-color"> @lang('Try again')</a>
                     </div>
+                    <div class="text-sm text-slate-400">
+                        @lang('Wrong email address?')
+                        <button type="button" id="toggleEmailUpdateForm" class="anchor-color bg-transparent border-0 p-0">@lang('Change email')</button>
+                    </div>
+                    <button type="button" onclick="window.history.back()" class="anchor-color text-sm bg-transparent border-0 p-0">@lang('Back')</button>
                     <a href="{{ route('user.logout') }}" class="anchor-color text-sm">@lang('Logout')</a>
+                </form>
+
+                <form id="emailUpdateForm" action="{{ route('user.authorization.email.update') }}" method="POST" class="space-y-3 mt-5 {{ $errors->has('email') ? '' : 'd-none' }}">
+                    @csrf
+                    <label class="text-sm text-slate-300 d-block" for="emailUpdateInput">@lang('Update email')</label>
+                    <input
+                        id="emailUpdateInput"
+                        type="email"
+                        name="email"
+                        value="{{ old('email', auth()->user()->email) }}"
+                        class="w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none"
+                        required
+                    >
+                    @error('email')
+                        <p class="text-danger text-sm mb-0">{{ $message }}</p>
+                    @enderror
+                    <button type="submit" class="w-full rounded-md bg-slate-700 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-600 transition-colors">
+                        @lang('Save new email')
+                    </button>
                 </form>
             </div>
         </div>
@@ -125,9 +149,16 @@
         document.addEventListener('DOMContentLoaded', () => {
             const navToggle = document.getElementById('nav-toggle');
             const navMenuMobile = document.getElementById('nav-menu-mobile');
+            const emailUpdateToggle = document.getElementById('toggleEmailUpdateForm');
+            const emailUpdateForm = document.getElementById('emailUpdateForm');
             if (navToggle && navMenuMobile) {
                 navToggle.addEventListener('click', () => {
                     navMenuMobile.classList.toggle('hidden');
+                });
+            }
+            if (emailUpdateToggle && emailUpdateForm) {
+                emailUpdateToggle.addEventListener('click', () => {
+                    emailUpdateForm.classList.toggle('d-none');
                 });
             }
         });
