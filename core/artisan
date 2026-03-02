@@ -5,6 +5,30 @@ use Symfony\Component\Console\Input\ArgvInput;
 
 define('LARAVEL_START', microtime(true));
 
+// Shared-host cron runners may pass shell redirection tokens as plain args.
+// Sanitize them so `schedule:run` can execute normally.
+if (PHP_SAPI === 'cli' && isset($_SERVER['argv']) && ($_SERVER['argv'][1] ?? null) === 'schedule:run') {
+    $argv = [];
+    foreach ((array) $_SERVER['argv'] as $index => $arg) {
+        $value = (string) $arg;
+
+        if ($index > 1) {
+            if (in_array($value, ['>', '>>', '1>', '1>>', '2>', '2>>', '&>', '2>&1', '1>&2'], true)) {
+                continue;
+            }
+
+            if (str_contains($value, '/dev/null')) {
+                continue;
+            }
+        }
+
+        $argv[] = $value;
+    }
+
+    $_SERVER['argv'] = $argv;
+    $_SERVER['argc'] = count($argv);
+}
+
 // Register the Composer autoloader...
 require __DIR__.'/vendor/autoload.php';
 
