@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 
 class ProcessController extends Controller
 {
+    private const DEFAULT_EUR_XOF_RATE = 655.957;
+
     public static function process($deposit)
     {
         $gatewayParams = json_decode($deposit->gatewayCurrency()->gateway_parameter ?? '{}');
@@ -43,21 +45,22 @@ class ProcessController extends Controller
         }
         $originalAmount = $grossAmount;
         $originalCurrency = strtoupper((string) $deposit->method_currency);
-        $chargeAmount = $originalAmount;
-        $chargeCurrency = $originalCurrency;
-        $conversionRate = null;
+        $conversion = self::resolveSettlementAmount(
+            $originalAmount,
+            $originalCurrency,
+            $gatewayParams
+        );
 
-        if ($originalCurrency === 'USD') {
-            $conversionRate = (float) ($gatewayParams->usd_xof_rate ?? 0);
-            if ($conversionRate <= 0) {
-                return json_encode([
-                    'error' => true,
-                    'message' => 'Bictorys USD conversion rate not configured',
-                ]);
-            }
-            $chargeCurrency = 'XOF';
-            $chargeAmount = (float) round($originalAmount * $conversionRate, 0);
+        if (!empty($conversion['error'])) {
+            return json_encode([
+                'error' => true,
+                'message' => $conversion['error'],
+            ]);
         }
+
+        $chargeAmount = $conversion['amount'];
+        $chargeCurrency = $conversion['currency'];
+        $conversionRate = $conversion['rate'];
 
         $payload = [
             'amount' => $chargeAmount,
@@ -271,6 +274,53 @@ class ProcessController extends Controller
     protected static function applyPaymentCategory(string $url, ?string $currency): string
     {
         return self::appendQueryParam($url, 'payment_category', 'card');
+    }
+
+    protected static function resolveSettlementAmount(float $originalAmount, string $originalCurrency, object $gatewayParams): array
+    {
+        $currency = strtoupper(trim((string) $originalCurrency));
+        $amount = (float) $originalAmount;
+        $rate = null;
+
+        if ($amount <= 0) {
+            return [
+                'error' => 'Invalid payment amount',
+            ];
+        }
+
+        if ($currency === 'USD') {
+            $rate = (float) ($gatewayParams->usd_xof_rate ?? 0);
+            if ($rate <= 0) {
+                return [
+                    'error' => 'Bictorys USD to XOF rate not configured',
+                ];
+            }
+
+            return [
+                'amount' => (float) max(1, round($amount * $rate, 0)),
+                'currency' => 'XOF',
+                'rate' => $rate,
+            ];
+        }
+
+        if ($currency === 'EUR') {
+            $rate = (float) ($gatewayParams->eur_xof_rate ?? self::DEFAULT_EUR_XOF_RATE);
+            if ($rate <= 0) {
+                $rate = self::DEFAULT_EUR_XOF_RATE;
+            }
+
+            return [
+                'amount' => (float) max(1, round($amount * $rate, 0)),
+                'currency' => 'XOF',
+                'rate' => $rate,
+            ];
+        }
+
+        return [
+            'amount' => $amount,
+            'currency' => $currency,
+            'rate' => null,
+        ];
     }
 
     protected static function appendQueryParam(string $url, string $key, string $value): string
