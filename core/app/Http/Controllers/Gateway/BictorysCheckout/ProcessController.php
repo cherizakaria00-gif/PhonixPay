@@ -31,6 +31,7 @@ class ProcessController extends Controller
         $baseUrl = rtrim($baseUrl, '/');
         $successUrl = route('payment.redirect.success', $deposit->id);
         $errorUrl = route('payment.redirect.cancel', $deposit->id);
+        $callbackUrl = route('ipn.BictorysCheckout');
 
         $apiPayment = $deposit->apiPayment;
         $customer = $apiPayment->customer ?? null;
@@ -69,6 +70,9 @@ class ProcessController extends Controller
             'merchantReference' => $merchantReference,
             'successRedirectUrl' => $successUrl,
             'errorRedirectUrl' => $errorUrl,
+            'cancelRedirectUrl' => $errorUrl,
+            'redirectUrl' => $successUrl,
+            'callbackUrl' => $callbackUrl,
             'allowUpdateCustomer' => false,
             'orderDetails' => [
                 [
