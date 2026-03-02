@@ -191,40 +191,244 @@ class ProcessController extends Controller
             $payload = json_decode($request->getContent(), true) ?? [];
         }
 
-        $reference = data_get($payload, 'paymentReference')
-            ?? data_get($payload, 'payment_reference')
-            ?? data_get($payload, 'reference');
+        $references = self::extractIpnReferences($payload);
+        $status = self::extractIpnStatus($payload);
 
-        if (!$reference) {
+        Log::info('Bictorys direct IPN received', [
+            'references' => $references,
+            'status' => $status,
+            'payload' => $payload,
+        ]);
+
+        if (empty($references)) {
             return response('OK', 200);
         }
 
-        $deposit = Deposit::where('trx', $reference)
-            ->where('status', Status::PAYMENT_INITIATE)
+        $deposit = self::findPendingDepositByReferences($references);
+
+        if (!$deposit) {
+            Log::warning('Bictorys direct IPN deposit not found', [
+                'references' => $references,
+                'status' => $status,
+            ]);
+            return response('OK', 200);
+        }
+
+        if (!$deposit->btc_wallet) {
+            $chargeReference = self::resolveChargeReference($references, (string) $deposit->trx);
+            if ($chargeReference) {
+                $deposit->btc_wallet = $chargeReference;
+                $deposit->save();
+            }
+        }
+
+        if (self::isIpnSuccessPayload($payload, $status)) {
+            PaymentController::userDataUpdate($deposit);
+            Log::info('Bictorys direct IPN marked deposit successful', [
+                'deposit_id' => $deposit->id,
+                'trx' => $deposit->trx,
+                'status' => $status,
+            ]);
+        } else {
+            Log::info('Bictorys direct IPN ignored (non-success status)', [
+                'deposit_id' => $deposit->id,
+                'trx' => $deposit->trx,
+                'status' => $status,
+            ]);
+        }
+
+        return response('OK', 200);
+    }
+
+    protected static function findPendingDepositByReferences(array $references): ?Deposit
+    {
+        $pendingStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING];
+
+        $deposit = Deposit::whereIn('status', $pendingStatuses)
+            ->whereIn('trx', $references)
             ->orderBy('id', 'desc')
             ->first();
 
-        if (!$deposit) {
-            return response('OK', 200);
+        if ($deposit) {
+            return $deposit;
         }
 
-        $status = strtolower((string) (data_get($payload, 'status')
-            ?? data_get($payload, 'paymentStatus')
-            ?? data_get($payload, 'payment_status')
-            ?? ''));
+        return Deposit::whereIn('status', $pendingStatuses)
+            ->whereIn('btc_wallet', $references)
+            ->orderBy('id', 'desc')
+            ->first();
+    }
+
+    protected static function extractIpnReferences(array $payload): array
+    {
+        $paths = [
+            'paymentReference',
+            'payment_reference',
+            'reference',
+            'id',
+            'chargeId',
+            'charge_id',
+            'data.paymentReference',
+            'data.payment_reference',
+            'data.reference',
+            'data.id',
+            'data.chargeId',
+            'data.charge_id',
+            'payment.reference',
+            'payment.id',
+            'payment.chargeId',
+            'payment.charge_id',
+            'data.data.paymentReference',
+            'data.data.payment_reference',
+            'data.data.reference',
+            'data.data.id',
+            'data.data.chargeId',
+            'data.data.charge_id',
+        ];
+
+        $references = [];
+        foreach ($paths as $path) {
+            $value = data_get($payload, $path);
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    $normalized = self::normalizeReferenceValue($item);
+                    if ($normalized !== null) {
+                        $references[] = $normalized;
+                    }
+                }
+                continue;
+            }
+
+            $normalized = self::normalizeReferenceValue($value);
+            if ($normalized !== null) {
+                $references[] = $normalized;
+            }
+        }
+
+        return array_values(array_unique($references));
+    }
+
+    protected static function normalizeReferenceValue($value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+        return $normalized === '' ? null : $normalized;
+    }
+
+    protected static function resolveChargeReference(array $references, string $trx): ?string
+    {
+        foreach ($references as $reference) {
+            if ($reference !== '' && strcasecmp($reference, $trx) !== 0) {
+                return $reference;
+            }
+        }
+
+        return null;
+    }
+
+    protected static function extractIpnStatus(array $payload): string
+    {
+        $paths = [
+            'status',
+            'paymentStatus',
+            'payment_status',
+            'data.status',
+            'data.paymentStatus',
+            'data.payment_status',
+            'payment.status',
+            'payment.paymentStatus',
+            'payment.payment_status',
+            'data.data.status',
+            'data.data.paymentStatus',
+            'data.data.payment_status',
+        ];
+
+        foreach ($paths as $path) {
+            $value = data_get($payload, $path);
+            if (!is_scalar($value)) {
+                continue;
+            }
+
+            $status = strtolower(trim((string) $value));
+            if ($status !== '') {
+                return $status;
+            }
+        }
+
+        return '';
+    }
+
+    protected static function isIpnSuccessPayload(array $payload, string $status): bool
+    {
+        $successValues = [
+            data_get($payload, 'success'),
+            data_get($payload, 'data.success'),
+            data_get($payload, 'payment.success'),
+            data_get($payload, 'data.data.success'),
+        ];
+
+        foreach ($successValues as $value) {
+            if (self::isTruthyFlag($value)) {
+                return true;
+            }
+        }
 
         $successFlags = [
             'success',
             'successful',
             'paid',
             'completed',
+            'succeeded',
+            'approved',
         ];
 
-        if (($payload['success'] ?? null) === true || in_array($status, $successFlags, true)) {
-            PaymentController::userDataUpdate($deposit);
+        if (in_array($status, $successFlags, true)) {
+            return true;
         }
 
-        return response('OK', 200);
+        $event = strtolower(trim((string) (
+            data_get($payload, 'event')
+            ?? data_get($payload, 'eventType')
+            ?? data_get($payload, 'event_type')
+            ?? data_get($payload, 'type')
+            ?? data_get($payload, 'data.event')
+            ?? data_get($payload, 'data.type')
+            ?? data_get($payload, 'data.data.event')
+            ?? data_get($payload, 'data.data.type')
+            ?? ''
+        )));
+
+        $successEvents = [
+            'charge.succeeded',
+            'charge.paid',
+            'charge.completed',
+            'payment.succeeded',
+            'payment.successful',
+            'payment.paid',
+            'payment.completed',
+        ];
+
+        return in_array($event, $successEvents, true);
+    }
+
+    protected static function isTruthyFlag($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value === 1;
+        }
+
+        if (!is_scalar($value)) {
+            return false;
+        }
+
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'ok'], true);
     }
 
     protected static function extractRedirectUrl(array $response): ?string
