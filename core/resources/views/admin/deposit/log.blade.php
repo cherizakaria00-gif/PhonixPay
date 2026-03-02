@@ -1,7 +1,9 @@
 @extends('admin.layouts.app')
 @section('panel')
 
-@php($emptyMessage = $emptyMessage ?? 'No data found')
+@php
+    $emptyMessage = $emptyMessage ?? 'No data found';
+@endphp
 
 <div class="row justify-content-center">
     @if(request()->routeIs('admin.deposit.list') || request()->routeIs('admin.deposit.method'))
