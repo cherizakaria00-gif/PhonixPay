@@ -191,13 +191,24 @@ class PaymentController extends Controller
             return back()->withNotify($notify);
         }
 
-        $amountBase = $amount / $gate->rate;
-        $chargeInGateway = ($gate->fixed_charge * $gate->rate) + ($amount * $gate->percent_charge / 100);
-        $charge = $chargeInGateway / $gate->rate;
+        $configuredRate = (float) $gate->rate;
+        $effectiveRate = $configuredRate > 0 ? $configuredRate : 1.0;
+
+        // API checkout amount is already expressed in requested currency.
+        // If gateway currency matches requested currency, force 1:1 rate to avoid scaling bugs.
+        $requestedCurrencyCode = strtoupper((string) $apiPayment->currency);
+        $gatewayCurrencyCode = strtoupper((string) $gate->currency);
+        if ($requestedCurrencyCode !== '' && $gatewayCurrencyCode !== '' && $requestedCurrencyCode === $gatewayCurrencyCode) {
+            $effectiveRate = 1.0;
+        }
+
+        $amountBase = $amount / $effectiveRate;
+        $chargeInGateway = ($gate->fixed_charge * $effectiveRate) + ($amount * $gate->percent_charge / 100);
+        $charge = $chargeInGateway / $effectiveRate;
 
         $feeData = $planService->calculateFees($user, (float) $amountBase);
         $paymentCharge = (float) $feeData['fee_amount'];
-        $paymentChargeInGateway = $paymentCharge * $gate->rate;
+        $paymentChargeInGateway = $paymentCharge * $effectiveRate;
 
         $totalCharge = $chargeInGateway + $paymentChargeInGateway;
         $payable = max(0, $amount - $totalCharge);
@@ -205,8 +216,8 @@ class PaymentController extends Controller
         $data = new Deposit();
         $data->user_id = $user->id;
         $data->method_code = $gate->method_code;
-        $data->method_currency = strtoupper($gate->currency);
-        $data->amount = $amount/$gate->rate;
+        $data->method_currency = $gatewayCurrencyCode ?: $requestedCurrencyCode;
+        $data->amount = $amount / $effectiveRate;
         $data->gateway_amount = $amount;
         $data->charge = $charge;
         $data->payment_charge = $paymentCharge;
@@ -219,7 +230,7 @@ class PaymentController extends Controller
         if (Schema::hasColumn('deposits', 'payout_eligible_at')) {
             $data->payout_eligible_at = $planService->computePayoutEligibleAt($user, now());
         }
-        $data->rate = $gate->rate;
+        $data->rate = $effectiveRate;
         $data->final_amount = $payable;
         $data->btc_amount = 0;
         $data->btc_wallet = "";

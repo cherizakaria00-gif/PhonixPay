@@ -37,9 +37,9 @@ class ProcessController extends Controller
         $customer = $apiPayment->customer ?? null;
 
         $grossAmount = (float) ($deposit->gateway_amount ?? 0);
-        $expectedGross = (float) ($deposit->final_amount + ($deposit->totalCharge ?? 0) * ($deposit->rate ?? 1));
-        if ($expectedGross > 0) {
-            $grossAmount = max($grossAmount, $expectedGross);
+        $reconstructedGross = (float) (($deposit->final_amount ?? 0) + ($deposit->totalCharge ?? 0));
+        if ($grossAmount <= 0 && $reconstructedGross > 0) {
+            $grossAmount = $reconstructedGross;
         }
         if ($grossAmount <= 0) {
             $grossAmount = (float) ($deposit->final_amount ?? 0);
@@ -164,7 +164,7 @@ class ProcessController extends Controller
             'reference' => $reference,
             'original_amount' => $originalAmount,
             'gateway_amount' => (float) ($deposit->gateway_amount ?? 0),
-            'expected_gross' => $expectedGross,
+            'reconstructed_gross' => $reconstructedGross,
             'original_currency' => $originalCurrency,
             'charge_amount' => $chargeAmount,
             'charge_currency' => $chargeCurrency,
