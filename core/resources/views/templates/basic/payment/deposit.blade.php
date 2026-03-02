@@ -102,7 +102,28 @@
                                 @endif
                                 <div id="gateway-error" class="alert alert-danger d-none"></div>
                                 <button type="submit" class="btn btn--base w-100 pay-now-btn" id="gateway-continue" disabled>
-                                    {{ __('Select a payment method to continue') }}
+                                    <span class="pay-now-btn__left" aria-hidden="true">
+                                        <span class="pay-now-card">
+                                            <span class="pay-now-card-line"></span>
+                                            <span class="pay-now-card-dots"></span>
+                                        </span>
+                                        <span class="pay-now-post">
+                                            <span class="pay-now-post-line"></span>
+                                            <span class="pay-now-post-screen">
+                                                <span class="pay-now-dollar">$</span>
+                                            </span>
+                                            <span class="pay-now-post-numbers"></span>
+                                            <span class="pay-now-post-numbers2"></span>
+                                        </span>
+                                    </span>
+                                    <span class="pay-now-btn__right">
+                                        <span class="pay-now-btn__label">{{ __('Select a payment method to continue') }}</span>
+                                        <span class="pay-now-btn__arrow" aria-hidden="true">
+                                            <svg viewBox="0 0 451.846 451.847" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M345.441 248.292L151.154 442.573c-12.359 12.365-32.397 12.365-44.75 0-12.354-12.354-12.354-32.391 0-44.744L278.318 225.92 106.409 54.017c-12.354-12.359-12.354-32.394 0-44.748 12.354-12.359 32.391-12.359 44.75 0l194.287 194.284c6.177 6.18 9.262 14.271 9.262 22.366 0 8.099-3.091 16.196-9.267 22.373z"></path>
+                                            </svg>
+                                        </span>
+                                    </span>
                                 </button>
                             </div>
                         </div>
@@ -122,6 +143,7 @@
         const $form = $('#checkout-form');
         const $methodInput = $('input[name=method_code]');
         const $continueBtn = $('#gateway-continue');
+        const $continueBtnLabel = $continueBtn.find('.pay-now-btn__label');
         const $details = $('#gateway-details');
         const $error = $('#gateway-error');
         const $autoHint = $('#gateway-auto-hint');
@@ -160,7 +182,8 @@
             $continueBtn.removeClass('d-none');
             $continueBtn.prop('disabled', !hasMethod);
             $continueBtn.toggleClass('is-disabled', !hasMethod);
-            $continueBtn.text(getSubmitLabel());
+            $continueBtn.removeClass('is-loading');
+            $continueBtnLabel.text(getSubmitLabel());
         };
 
         const hideAutoHint = () => {
@@ -279,7 +302,8 @@
         const setLoading = () => {
             $error.addClass('d-none').text('');
             $details.removeClass('d-none').html(`<div class="text-center py-4"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${tLoading}...</div>`);
-            $continueBtn.prop('disabled', true).text(`${tLoading}...`);
+            $continueBtn.prop('disabled', true).addClass('is-loading');
+            $continueBtnLabel.text(`${tLoading}...`);
         };
 
         const renderStripeJsForm = (payload) => {
@@ -769,34 +793,324 @@
 
         #gateway-continue.pay-now-btn {
             margin-top: 4px;
-            min-height: 58px;
-            border-radius: 14px;
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: 0.01em;
-            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
-            border: 1px solid #0f766e;
-            color: #ffffff;
-            box-shadow: 0 14px 24px rgba(15, 118, 110, 0.24);
-            transition: all 0.2s ease;
+            min-height: 96px;
+            border-radius: 12px;
+            border: 1px solid #1f2937;
+            background: #1b1b2a;
+            color: #e5e7eb;
+            box-shadow: 0 16px 28px rgba(2, 6, 23, 0.26);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            padding: 0;
+            display: flex;
+            align-items: stretch;
+            justify-content: flex-start;
+            overflow: hidden;
+            text-align: left;
+            position: relative;
         }
 
-        #gateway-continue.pay-now-btn:hover,
+        #gateway-continue.pay-now-btn .pay-now-btn__left {
+            width: 122px;
+            min-width: 122px;
+            position: relative;
+            background: #3b82f6;
+            border-right: 1px solid rgba(255, 255, 255, 0.18);
+            overflow: hidden;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-btn__right {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 18px;
+            background: #1e1e2f;
+            transition: background-color 0.25s ease;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-btn__label {
+            color: #d1d5db;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-btn__arrow {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-btn__arrow svg {
+            width: 100%;
+            height: 100%;
+            fill: #a1a1ff;
+            transition: transform 0.25s ease, fill 0.25s ease;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-card {
+            width: 64px;
+            height: 42px;
+            background: #93c5fd;
+            border-radius: 6px;
+            position: absolute;
+            left: 50%;
+            top: 28px;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 3;
+            box-shadow: 8px 8px 10px -2px rgba(30, 64, 175, 0.35);
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-card-line {
+            width: 56px;
+            height: 10px;
+            background: #60a5fa;
+            border-radius: 2px;
+            margin-top: 7px;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-card-dots {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin: 8px 0 0 -24px;
+            background: #1e40af;
+            box-shadow: 0 -10px 0 0 #1e3a8a, 0 10px 0 0 #3b82f6;
+            transform: rotate(90deg);
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-post {
+            width: 58px;
+            height: 70px;
+            background: #4b5563;
+            position: absolute;
+            left: 50%;
+            top: 98px;
+            transform: translateX(-50%);
+            border-radius: 6px;
+            overflow: hidden;
+            z-index: 4;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-post-line {
+            width: 42px;
+            height: 8px;
+            background: #1f2937;
+            position: absolute;
+            border-radius: 0 0 3px 3px;
+            right: 8px;
+            top: 8px;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-post-line::before {
+            content: "";
+            position: absolute;
+            width: 42px;
+            height: 8px;
+            background: #374151;
+            top: -8px;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-post-screen {
+            width: 42px;
+            height: 20px;
+            background: #e5e7eb;
+            position: absolute;
+            top: 20px;
+            right: 8px;
+            border-radius: 3px;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-dollar {
+            position: absolute;
+            width: 100%;
+            left: 0;
+            top: 0;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #3b82f6;
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-post-numbers,
+        #gateway-continue.pay-now-btn .pay-now-post-numbers2 {
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
+            position: absolute;
+            transform: rotate(90deg);
+            left: 23px;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-post-numbers {
+            background: #6b7280;
+            box-shadow: 0 -16px 0 0 #6b7280, 0 16px 0 0 #6b7280;
+            top: 47px;
+        }
+
+        #gateway-continue.pay-now-btn .pay-now-post-numbers2 {
+            background: #9ca3af;
+            box-shadow: 0 -16px 0 0 #9ca3af, 0 16px 0 0 #9ca3af;
+            top: 61px;
+        }
+
+        #gateway-continue.pay-now-btn:not(:disabled):not(.is-disabled):hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 20px 34px rgba(2, 6, 23, 0.3);
+        }
+
+        #gateway-continue.pay-now-btn:not(:disabled):not(.is-disabled):hover .pay-now-btn__right {
+            background: #24243a;
+        }
+
+        #gateway-continue.pay-now-btn:not(:disabled):not(.is-disabled):hover .pay-now-btn__arrow svg {
+            fill: #c7d2fe;
+            transform: translateX(2px);
+        }
+
+        #gateway-continue.pay-now-btn:not(:disabled):not(.is-disabled):hover .pay-now-card {
+            animation: pay-now-slide-top 1.2s cubic-bezier(0.645, 0.045, 0.355, 1) both;
+        }
+
+        #gateway-continue.pay-now-btn:not(:disabled):not(.is-disabled):hover .pay-now-post {
+            animation: pay-now-slide-post 1s cubic-bezier(0.165, 0.84, 0.44, 1) both;
+        }
+
+        #gateway-continue.pay-now-btn:not(:disabled):not(.is-disabled):hover .pay-now-dollar {
+            animation: pay-now-fade-in 0.3s 1s both;
+        }
+
         #gateway-continue.pay-now-btn:focus-visible {
-            transform: translateY(-1px);
-            box-shadow: 0 16px 30px rgba(15, 118, 110, 0.28);
-            color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35), 0 16px 28px rgba(2, 6, 23, 0.26);
+            transform: none;
         }
 
         #gateway-continue.pay-now-btn:disabled,
         #gateway-continue.pay-now-btn.is-disabled {
-            background: #c7d7d2;
-            border-color: #c7d7d2;
-            color: #f8fbfa;
+            border-color: #9aa8b3;
             box-shadow: none;
             transform: none;
             cursor: not-allowed;
             opacity: 1;
+        }
+
+        #gateway-continue.pay-now-btn:disabled .pay-now-btn__left,
+        #gateway-continue.pay-now-btn.is-disabled .pay-now-btn__left {
+            background: #94a3b8;
+            border-right-color: rgba(255, 255, 255, 0.25);
+        }
+
+        #gateway-continue.pay-now-btn:disabled .pay-now-btn__right,
+        #gateway-continue.pay-now-btn.is-disabled .pay-now-btn__right {
+            background: #c7d7d2;
+        }
+
+        #gateway-continue.pay-now-btn:disabled .pay-now-btn__label,
+        #gateway-continue.pay-now-btn.is-disabled .pay-now-btn__label {
+            color: #f8fbfa;
+        }
+
+        #gateway-continue.pay-now-btn:disabled .pay-now-btn__arrow svg,
+        #gateway-continue.pay-now-btn.is-disabled .pay-now-btn__arrow svg {
+            fill: #eff6ff;
+        }
+
+        #gateway-continue.pay-now-btn.is-loading .pay-now-btn__label {
+            opacity: 0.9;
+        }
+
+        #gateway-continue.pay-now-btn.is-loading .pay-now-btn__arrow svg {
+            animation: pay-now-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pay-now-slide-top {
+            0% {
+                transform: translateX(-50%) translateY(0);
+            }
+            50% {
+                transform: translateX(-50%) translateY(-52px) rotate(90deg);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-52px) rotate(90deg);
+            }
+            100% {
+                transform: translateX(-50%) translateY(-6px) rotate(90deg);
+            }
+        }
+
+        @keyframes pay-now-slide-post {
+            50% {
+                transform: translateX(-50%) translateY(0);
+            }
+            100% {
+                transform: translateX(-50%) translateY(-56px);
+            }
+        }
+
+        @keyframes pay-now-fade-in {
+            0% {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pay-now-pulse {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @media (max-width: 575px) {
+            #gateway-continue.pay-now-btn {
+                min-height: 84px;
+            }
+
+            #gateway-continue.pay-now-btn .pay-now-btn__left {
+                width: 98px;
+                min-width: 98px;
+            }
+
+            #gateway-continue.pay-now-btn .pay-now-card {
+                width: 52px;
+                height: 36px;
+                top: 24px;
+            }
+
+            #gateway-continue.pay-now-btn .pay-now-post {
+                width: 50px;
+                height: 62px;
+                top: 88px;
+            }
+
+            #gateway-continue.pay-now-btn .pay-now-btn__right {
+                padding: 0 14px;
+            }
+
+            #gateway-continue.pay-now-btn .pay-now-btn__label {
+                font-size: 16px;
+            }
         }
 
         .gateway-auto-hint {
