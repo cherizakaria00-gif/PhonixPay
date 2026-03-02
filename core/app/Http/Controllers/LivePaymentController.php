@@ -31,8 +31,11 @@ class LivePaymentController extends Controller{
         }
 
 		$gatewayCurrency = $this->paymentMethods(@$apiPayment->currency, @$apiPayment->gateway_methods)->orderby('method_code')->get();
+        $checkoutAutoSelection = $this->buildCheckoutAutoSelection($request, $gatewayCurrency);
+        $ipCountryCode = $checkoutAutoSelection['ip_country_code'];
+        $preferredMethodCode = $checkoutAutoSelection['preferred_method_code'];
 
-        return view('Template::payment.deposit',compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx'));
+        return view('Template::payment.deposit',compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'ipCountryCode', 'preferredMethodCode'));
     }
 
 }

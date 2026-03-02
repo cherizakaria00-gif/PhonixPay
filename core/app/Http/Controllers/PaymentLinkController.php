@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\ApiPayment;
 use App\Models\PaymentLink;
 use App\Traits\ApiPaymentHelpers;
+use Illuminate\Http\Request;
 
 class PaymentLinkController extends Controller
 {
     use ApiPaymentHelpers;
 
-    public function show($code)
+    public function show(Request $request, $code)
     {
         $paymentLink = PaymentLink::where('code', $code)->with('user')->firstOrFail();
         $paymentLink->markExpiredIfNeeded();
@@ -55,6 +56,9 @@ class PaymentLinkController extends Controller
 
         $trx = encrypt($apiPayment->trx);
         $gatewayCurrency = $this->paymentMethods($apiPayment->currency, $apiPayment->gateway_methods)->orderby('method_code')->get();
+        $checkoutAutoSelection = $this->buildCheckoutAutoSelection($request, $gatewayCurrency);
+        $ipCountryCode = $checkoutAutoSelection['ip_country_code'];
+        $preferredMethodCode = $checkoutAutoSelection['preferred_method_code'];
 
         if (!$gatewayCurrency->count()) {
             $pageTitle = 'Payment Link';
@@ -65,7 +69,7 @@ class PaymentLinkController extends Controller
         $pageTitle = 'Payment Link';
         $showCustomerForm = true;
 
-        return view('Template::payment.deposit', compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'paymentLink', 'showCustomerForm'));
+        return view('Template::payment.deposit', compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'paymentLink', 'showCustomerForm', 'ipCountryCode', 'preferredMethodCode'));
     }
 
     public function ipn($code)

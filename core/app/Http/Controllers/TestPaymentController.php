@@ -33,8 +33,11 @@ class TestPaymentController extends Controller{
 
 		$gatewayCurrency = $this->paymentMethods(@$apiPayment->currency, @$apiPayment->gateway_methods)->orderby('method_code')->get();
         $isTestMode = true;
+        $checkoutAutoSelection = $this->buildCheckoutAutoSelection($request, $gatewayCurrency);
+        $ipCountryCode = $checkoutAutoSelection['ip_country_code'];
+        $preferredMethodCode = $checkoutAutoSelection['preferred_method_code'];
 
-        return view('Template::payment.deposit', compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'isTestMode'));
+        return view('Template::payment.deposit', compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'isTestMode', 'ipCountryCode', 'preferredMethodCode'));
     }
 
     public function paymentSuccess(Request $request){

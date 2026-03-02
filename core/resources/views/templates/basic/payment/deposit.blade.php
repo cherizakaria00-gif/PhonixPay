@@ -69,12 +69,26 @@
                                 <div class="form-group">
                                     <div class="payment-options-grid">
                                         @foreach($gatewayCurrency as $data)
-                                            <button type="button" class="payment-option gateway" data-value="{{ $data->method_code }}">
+                                            @php
+                                                $isCryptoGateway = (int) ($data->method->crypto ?? 0);
+                                                $gatewayAlias = strtolower((string) ($data->gateway_alias ?? $data->method->alias ?? ''));
+                                                $gatewayCurrencyCode = strtoupper((string) ($data->currency ?? ''));
+                                            @endphp
+                                            <button
+                                                type="button"
+                                                class="payment-option gateway"
+                                                data-value="{{ $data->method_code }}"
+                                                data-name="{{ __($data->name) }}"
+                                                data-crypto="{{ $isCryptoGateway }}"
+                                                data-currency="{{ $gatewayCurrencyCode }}"
+                                                data-alias="{{ $gatewayAlias }}"
+                                            >
                                                 <img src="{{ getImage(getFilePath('gateway').'/'. @$data->method->image, getFileSize('gateway')) }}" alt="">
                                                 <span class="text">{{ __($data->name) }}</span>
                                             </button>
                                         @endforeach
                                     </div>
+                                    <p class="gateway-auto-hint d-none" id="gateway-auto-hint"></p>
                                 </div>
                                 @if(gs('agree'))
                                     <div class="form-group terms-condition">
@@ -82,8 +96,8 @@
                                     </div>
                                 @endif
                                 <div id="gateway-error" class="alert alert-danger d-none"></div>
-                                <button type="submit" class="btn btn--base w-100" id="gateway-continue">
-                                    {{ $isTestMode ? __('Complete Test Payment') : __('Pay Now') }}
+                                <button type="submit" class="btn btn--base w-100 pay-now-btn" id="gateway-continue" disabled>
+                                    {{ __('Select a payment method to continue') }}
                                 </button>
                             </div>
                         </div>
@@ -105,13 +119,129 @@
         const $continueBtn = $('#gateway-continue');
         const $details = $('#gateway-details');
         const $error = $('#gateway-error');
-        const continueText = $continueBtn.text();
+        const $autoHint = $('#gateway-auto-hint');
         const isTestMode = @json($isTestMode);
+        const ipCountryCode = @json($ipCountryCode ?? null);
+        const preferredMethodCode = @json($preferredMethodCode ?? null);
         const tLoading = @json(__('Loading'));
-        const tStripeCheckout = @json(__('Stripe Checkout'));
         const tPayNow = @json(__('Pay Now'));
+        const tPayWith = @json(__('Pay with'));
         const tSomethingWrong = @json(__('Something went wrong'));
         const tSelectMethod = @json(__('Please select a payment method'));
+        const tSelectMethodToContinue = @json(__('Select a payment method to continue'));
+        const tAutoMethodSelected = @json(__('Payment method auto-selected for your location'));
+        const tDetectedRegion = @json(__('Region'));
+        const tTestPayment = @json(__('Complete Test Payment'));
+        const euroAreaCountries = ['AT', 'BE', 'CY', 'DE', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PT', 'SI', 'SK'];
+
+        const getSelectedGateway = () => $('.payment-option.is-active').first();
+        const getSelectedMethodName = () => (getSelectedGateway().data('name') || '').toString().trim();
+
+        const getSubmitLabel = () => {
+            const selectedMethodName = getSelectedMethodName();
+            if (!selectedMethodName) {
+                return tSelectMethodToContinue;
+            }
+
+            if (isTestMode) {
+                return tTestPayment;
+            }
+
+            return `${tPayWith} ${selectedMethodName}`;
+        };
+
+        const syncContinueButtonState = () => {
+            const hasMethod = !!$methodInput.val();
+            $continueBtn.removeClass('d-none');
+            $continueBtn.prop('disabled', !hasMethod);
+            $continueBtn.toggleClass('is-disabled', !hasMethod);
+            $continueBtn.text(getSubmitLabel());
+        };
+
+        const hideAutoHint = () => {
+            $autoHint.addClass('d-none').text('');
+        };
+
+        const showAutoHint = () => {
+            const region = (ipCountryCode || '').toString().trim().toUpperCase();
+            const message = region ? `${tAutoMethodSelected} (${tDetectedRegion}: ${region})` : tAutoMethodSelected;
+            $autoHint.removeClass('d-none').text(message);
+        };
+
+        const activateGateway = ($gateway, autoSelected = false) => {
+            if (!$gateway || !$gateway.length) {
+                return;
+            }
+
+            $methodInput.val($gateway.data('value'));
+            $('.payment-option').removeClass('is-active');
+            $gateway.addClass('is-active');
+            resetDetails();
+
+            if (autoSelected) {
+                showAutoHint();
+            } else {
+                hideAutoHint();
+            }
+        };
+
+        const findGatewayByMethodCode = (methodCode) => {
+            if (!methodCode) {
+                return $();
+            }
+            const normalized = methodCode.toString();
+            return $('.gateway').filter(function () {
+                return ($(this).data('value') || '').toString() === normalized;
+            }).first();
+        };
+
+        const pickGatewayByLocation = () => {
+            const $gateways = $('.gateway');
+            if (!$gateways.length) {
+                return $();
+            }
+
+            const $fiatGateways = $gateways.filter(function () {
+                return Number($(this).data('crypto') || 0) === 0;
+            });
+
+            const $cryptoGateways = $gateways.filter(function () {
+                return Number($(this).data('crypto') || 0) === 1;
+            });
+
+            if (!$fiatGateways.length) {
+                return $gateways.first();
+            }
+
+            if (!$cryptoGateways.length) {
+                return $fiatGateways.first();
+            }
+
+            const region = (ipCountryCode || '').toString().trim().toUpperCase();
+            const isEuroRegion = region && euroAreaCountries.includes(region);
+
+            if (isEuroRegion) {
+                const $eurFiat = $fiatGateways.filter(function () {
+                    return ($(this).data('currency') || '').toString().toUpperCase() === 'EUR';
+                }).first();
+
+                if ($eurFiat.length) {
+                    return $eurFiat;
+                }
+
+                return $fiatGateways.first();
+            }
+
+            const allFiatAreEuro = $fiatGateways.toArray().every((gateway) => {
+                return (($(gateway).data('currency') || '').toString().toUpperCase() === 'EUR');
+            });
+
+            if (allFiatAreEuro) {
+                return $cryptoGateways.first();
+            }
+
+            return $fiatGateways.first();
+        };
 
         const openPaymentModal = () => {
             const $modal = $details.find('.payment-modal');
@@ -128,7 +258,7 @@
             }
             $('body').removeClass('payment-modal-open');
             $details.addClass('d-none').empty();
-            $continueBtn.removeClass('d-none').prop('disabled', false).text(continueText);
+            syncContinueButtonState();
         };
 
         const showError = (message) => {
@@ -138,7 +268,7 @@
         const resetDetails = () => {
             $details.addClass('d-none').empty();
             $error.addClass('d-none').text('');
-            $continueBtn.removeClass('d-none').prop('disabled', false).text(continueText);
+            syncContinueButtonState();
         };
 
         const setLoading = () => {
@@ -193,7 +323,7 @@
         const handleResponse = (response) => {
             if (!response || !response.status) {
                 showError(tSomethingWrong);
-                $continueBtn.prop('disabled', false).text(continueText);
+                syncContinueButtonState();
                 return;
             }
 
@@ -221,15 +351,24 @@
             }
 
             showError(response.message || tSomethingWrong);
-            $continueBtn.prop('disabled', false).text(continueText);
+            syncContinueButtonState();
         };
 
         $(".gateway").on("click", function () {
-            $methodInput.val($(this).data('value'));
-            $('.payment-option').removeClass('is-active');
-            $(this).addClass('is-active');
-            resetDetails();
+            activateGateway($(this));
         });
+
+        const preferredGateway = findGatewayByMethodCode(preferredMethodCode);
+        if (preferredGateway.length) {
+            activateGateway(preferredGateway, true);
+        } else {
+            const locationGateway = pickGatewayByLocation();
+            if (locationGateway.length) {
+                activateGateway(locationGateway, true);
+            } else {
+                syncContinueButtonState();
+            }
+        }
 
         $form.on('submit', function(e){
             const methodCode = $methodInput.val();
@@ -257,7 +396,7 @@
                 const resp = xhr.responseJSON || {};
                 const message = resp.message || (resp.messages && resp.messages[0]) || tSomethingWrong;
                 showError(message);
-                $continueBtn.prop('disabled', false).text(continueText);
+                syncContinueButtonState();
                 $details.addClass('d-none').empty();
             });
         });
@@ -555,6 +694,47 @@
         .payment-option.is-active {
             border-color: #1f1f1f;
             box-shadow: 0 0 0 2px rgba(31, 31, 31, 0.15);
+        }
+
+        #gateway-continue.pay-now-btn {
+            margin-top: 4px;
+            min-height: 58px;
+            border-radius: 14px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+            border: 1px solid #0f766e;
+            color: #ffffff;
+            box-shadow: 0 14px 24px rgba(15, 118, 110, 0.24);
+            transition: all 0.2s ease;
+        }
+
+        #gateway-continue.pay-now-btn:hover,
+        #gateway-continue.pay-now-btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 30px rgba(15, 118, 110, 0.28);
+            color: #ffffff;
+        }
+
+        #gateway-continue.pay-now-btn:disabled,
+        #gateway-continue.pay-now-btn.is-disabled {
+            background: #c7d7d2;
+            border-color: #c7d7d2;
+            color: #f8fbfa;
+            box-shadow: none;
+            transform: none;
+            cursor: not-allowed;
+            opacity: 1;
+        }
+
+        .gateway-auto-hint {
+            margin-top: 10px;
+            margin-bottom: 0;
+            color: #2563eb;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
         }
 
         .payment-gateway-preview .payment-gateway-preview__content {
