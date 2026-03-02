@@ -83,8 +83,13 @@
                                                 data-currency="{{ $gatewayCurrencyCode }}"
                                                 data-alias="{{ $gatewayAlias }}"
                                             >
-                                                <img src="{{ getImage(getFilePath('gateway').'/'. @$data->method->image, getFileSize('gateway')) }}" alt="">
-                                                <span class="text">{{ __($data->name) }}</span>
+                                                <span class="payment-option__content">
+                                                    <span class="payment-option__icon">
+                                                        <img src="{{ getImage(getFilePath('gateway').'/'. @$data->method->image, getFileSize('gateway')) }}" alt="">
+                                                    </span>
+                                                    <span class="text">{{ __($data->name) }}</span>
+                                                </span>
+                                                <span class="payment-option__status" aria-hidden="true"></span>
                                             </button>
                                         @endforeach
                                     </div>
@@ -654,46 +659,112 @@
 
         .payment-options-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 12px;
         }
 
         .payment-option {
-            border: 1px solid #e6e6e6;
-            background: #ffffff;
+            border: 1px solid transparent;
+            background: #f8fafc;
             border-radius: 12px;
-            padding: 12px;
+            padding: 12px 14px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
+            gap: 10px;
             cursor: pointer;
             transition: all 0.2s ease;
-            min-height: 90px;
+            min-height: 76px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-option__content {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .payment-option__icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
 
         .payment-option img {
-            height: 28px;
+            height: 22px;
             width: auto;
             object-fit: contain;
         }
 
         .payment-option .text {
             font-weight: 600;
-            font-size: 13px;
-            color: #1f1f1f;
-            text-align: center;
+            font-size: 14px;
+            color: #0f172a;
+            text-align: left;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .payment-option__status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            flex-shrink: 0;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .payment-option__status::after {
+            content: "";
+            position: absolute;
+            inset: 4px;
+            border-radius: 50%;
+            background: #4f46e5;
+            transform: scale(0);
+            transition: transform 0.2s ease;
         }
 
         .payment-option:hover {
-            border-color: #cfcfcf;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+            border-color: #c7d2fe;
+            background: #eef2ff;
         }
 
         .payment-option.is-active {
-            border-color: #1f1f1f;
-            box-shadow: 0 0 0 2px rgba(31, 31, 31, 0.15);
+            border-color: #4f46e5;
+            color: #312e81;
+            background: #eef2ff;
+            box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.1);
+        }
+
+        .payment-option.is-active .text {
+            color: #312e81;
+            font-weight: 700;
+        }
+
+        .payment-option.is-active .payment-option__icon {
+            border-color: #c7d2fe;
+            background: #ffffff;
+        }
+
+        .payment-option.is-active .payment-option__status {
+            border-color: #4f46e5;
+            background: #ffffff;
+        }
+
+        .payment-option.is-active .payment-option__status::after {
+            transform: scale(1);
         }
 
         #gateway-continue.pay-now-btn {
