@@ -4,6 +4,7 @@
     $request = request();
     $payoutAvailable = $user->balance * 0.7;
     $payoutAvailable = $payoutAvailable < 0 ? 0 : $payoutAvailable;
+    $hasWithdrawMethods = $withdrawMethod->count() > 0;
 @endphp 
 
 @section('content')
@@ -43,20 +44,42 @@
                                 @lang('Max') {{ showAmount(@$user->withdrawSetting->withdrawMethod->max_limit) }}
                             </small>
                         </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="btn btn--light btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#withdrawMethodModal"
+                                @disabled(!$hasWithdrawMethods)
+                            >
+                                @lang('Edit payout details')
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn--primary btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#withdrawRequestModal"
+                                @disabled($hasPendingWithdraw || !$canRequestPayout)
+                            >
+                                {{ $hasPendingWithdraw ? __('Payout Pending') : __('Withdraw') }}
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+                        <p class="text-muted mb-0">
+                            @lang('Please, setup the payout method for withdrawals.')
+                        </p>
                         <button
                             type="button"
                             class="btn btn--primary btn-sm"
                             data-bs-toggle="modal"
-                            data-bs-target="#withdrawRequestModal"
-                            @disabled($hasPendingWithdraw || !$canRequestPayout)
+                            data-bs-target="#withdrawMethodModal"
+                            @disabled(!$hasWithdrawMethods)
                         >
-                            {{ $hasPendingWithdraw ? __('Payout Pending') : __('Withdraw') }}
+                            @lang('Add payout details')
                         </button>
                     </div>
-                @else
-                    <p class="text-muted mt-3 mb-0">
-                        @lang('Please, setup the payout method for withdrawals.')
-                    </p>
                 @endif
             </div>
         </div>
