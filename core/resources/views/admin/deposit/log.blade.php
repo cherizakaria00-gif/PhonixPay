@@ -1,6 +1,7 @@
 @extends('admin.layouts.app')
 @section('panel')
 
+@php($emptyMessage = $emptyMessage ?? 'No data found')
 
 <div class="row justify-content-center">
     @if(request()->routeIs('admin.deposit.list') || request()->routeIs('admin.deposit.method'))
@@ -32,19 +33,35 @@
                         @forelse($deposits as $deposit)
                             @php
                                 $details = $deposit->detail ? json_encode($deposit->detail) : null;
+                                $gateway = $deposit->gateway;
+                                $gatewayAlias = $gateway->alias ?? null;
+                                $gatewayName = $gateway->name ?? null;
+                                $user = $deposit->user;
+                                $username = $user->username ?? null;
+                                $fullname = $user->fullname ?? __('N/A');
                             @endphp
                             <tr>
                                 <td>
                                     @php
-                                        $isStripeGateway = stripos($deposit->gateway->alias, 'stripe') !== false || stripos($deposit->gateway->name, 'stripe') !== false;
+                                        $isStripeGateway = $gateway && (stripos($gatewayAlias ?? '', 'stripe') !== false || stripos($gatewayName ?? '', 'stripe') !== false);
                                     @endphp
                                     @if($isStripeGateway)
                                         <span class="fw-bold">
-                                            <a href="{{ appendQuery('method',@$deposit->gateway->alias) }}">{{ __($deposit->stripeAccount->name ?? 'Stripe') }}</a>
+                                            @if($gatewayAlias)
+                                                <a href="{{ appendQuery('method', $gatewayAlias) }}">{{ __($deposit->stripeAccount->name ?? 'Stripe') }}</a>
+                                            @else
+                                                {{ __($deposit->stripeAccount->name ?? 'Stripe') }}
+                                            @endif
                                         </span>
                                         <br>
                                     @else
-                                        <span class="fw-bold"> <a href="{{ appendQuery('method',@$deposit->gateway->alias) }}">{{ __(@$deposit->gateway->name) }}</a> </span>
+                                        <span class="fw-bold">
+                                            @if($gatewayAlias)
+                                                <a href="{{ appendQuery('method', $gatewayAlias) }}">{{ __($gatewayName ?? 'N/A') }}</a>
+                                            @else
+                                                {{ __($gatewayName ?? 'N/A') }}
+                                            @endif
+                                        </span>
                                         <br>
                                     @endif
                                      <small> {{ $deposit->trx }} </small>
@@ -54,14 +71,18 @@
                                     {{ showDateTime($deposit->created_at) }}<br>{{ diffForHumans($deposit->created_at) }}
                                 </td>
                                 <td>
-                                    <span class="fw-bold">{{ $deposit->user->fullname }}</span>
+                                    <span class="fw-bold">{{ $fullname }}</span>
                                     <br>
                                     <span class="small">
-                                    <a href="{{ appendQuery('search',@$deposit->user->username) }}"><span>@</span>{{ $deposit->user->username }}</a>
+                                        @if($username)
+                                            <a href="{{ appendQuery('search', $username) }}"><span>@</span>{{ $username }}</a>
+                                        @else
+                                            {{ __('N/A') }}
+                                        @endif
                                     </span>
                                 </td>
                                 @php
-                                    $customer = $deposit->apiPayment->customer ?? null;
+                                    $customer = optional($deposit->apiPayment)->customer ?? null;
                                     $customerName = '';
                                     if ($customer) {
                                         $customerName = trim($customer->name ?? (($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')));
