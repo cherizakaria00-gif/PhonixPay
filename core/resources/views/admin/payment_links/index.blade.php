@@ -21,16 +21,23 @@
                         @forelse($paymentLinks as $link)
                             @php
                                 $linkUrl = route('payment.link.show', $link->code);
+                                $merchant = $link->user;
+                                $merchantName = $merchant->fullname ?? __('N/A');
+                                $merchantUsername = $merchant->username ?? null;
                             @endphp
                             <tr>
                                 <td>
                                     <a href="{{ $linkUrl }}" target="_blank">{{ strLimit($link->code, 18) }}</a>
                                 </td>
                                 <td>
-                                    <span class="fw-bold">{{ $link->user->fullname }}</span>
+                                    <span class="fw-bold">{{ $merchantName }}</span>
                                     <br>
                                     <span class="small">
-                                        <a href="{{ appendQuery('search', $link->user->username) }}"><span>@</span>{{ $link->user->username }}</a>
+                                        @if($merchantUsername)
+                                            <a href="{{ appendQuery('search', $merchantUsername) }}"><span>@</span>{{ $merchantUsername }}</a>
+                                        @else
+                                            {{ __('N/A') }}
+                                        @endif
                                     </span>
                                 </td>
                                 <td>{{ showAmount($link->amount, currencyFormat:false) }} {{ __($link->currency) }}</td>
