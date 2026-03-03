@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Gateway\PaymentController;
 use App\Lib\CurlRequest;
 use App\Models\Deposit;
+use App\Services\CurrencyConversionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -211,16 +212,18 @@ class ProcessController extends Controller
             'payload' => $payload,
         ]);
 
-        if (empty($references)) {
-            return response('OK', 200);
-        }
-
         $deposit = self::findPendingDepositByReferences($references);
+        $verificationToken = trim((string) ($request->input('vtoken') ?? $request->query('vtoken') ?? ''));
+
+        if (!$deposit && $verificationToken !== '') {
+            $deposit = self::findPendingDepositByVerificationToken($verificationToken);
+        }
 
         if (!$deposit) {
             Log::warning('Bictorys direct IPN deposit not found', [
                 'references' => $references,
                 'status' => $status,
+                'vtoken' => $verificationToken !== '',
             ]);
             return response('OK', 200);
         }
@@ -233,18 +236,45 @@ class ProcessController extends Controller
             }
         }
 
-        if (self::isIpnSuccessPayload($payload, $status)) {
+        $successFlag = self::extractSuccessFlag($payload);
+        $hasValidToken = self::hasValidVerificationToken($deposit, $verificationToken);
+        $isFailureStatus = self::isIpnFailureStatus($status);
+        $hasWebhookSignal = !empty($references)
+            || $status !== ''
+            || $successFlag !== null
+            || self::extractEventName($payload) !== '';
+
+        if ($successFlag === false || $isFailureStatus) {
+            if (in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+                $deposit->status = Status::PAYMENT_REJECT;
+                $deposit->save();
+            }
+            Log::info('Bictorys direct IPN marked deposit rejected', [
+                'deposit_id' => $deposit->id,
+                'trx' => $deposit->trx,
+                'status' => $status,
+                'success_flag' => $successFlag,
+            ]);
+            return response('OK', 200);
+        }
+
+        $isSuccess = self::isIpnSuccessPayload($payload, $status)
+            || ($hasValidToken && $hasWebhookSignal && $successFlag !== false && !$isFailureStatus);
+
+        if ($isSuccess) {
             PaymentController::userDataUpdate($deposit);
             Log::info('Bictorys direct IPN marked deposit successful', [
                 'deposit_id' => $deposit->id,
                 'trx' => $deposit->trx,
                 'status' => $status,
+                'matched_by_token' => $hasValidToken,
             ]);
         } else {
             Log::info('Bictorys direct IPN ignored (non-success status)', [
                 'deposit_id' => $deposit->id,
                 'trx' => $deposit->trx,
                 'status' => $status,
+                'matched_by_token' => $hasValidToken,
             ]);
         }
 
@@ -270,31 +300,84 @@ class ProcessController extends Controller
             ->first();
     }
 
+    protected static function findPendingDepositByVerificationToken(string $token): ?Deposit
+    {
+        if ($token === '') {
+            return null;
+        }
+
+        $pendingStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING];
+        $candidates = Deposit::query()
+            ->whereIn('status', $pendingStatuses)
+            ->whereHas('gateway', function ($query) {
+                $query->where('alias', 'BictorysDirect');
+            })
+            ->latest('id')
+            ->take(5000)
+            ->get();
+
+        foreach ($candidates as $deposit) {
+            $expected = hash_hmac(
+                'sha256',
+                $deposit->id . '|' . $deposit->trx,
+                (string) config('app.key')
+            );
+
+            if (hash_equals($expected, $token)) {
+                return $deposit;
+            }
+        }
+
+        return null;
+    }
+
     protected static function extractIpnReferences(array $payload): array
     {
         $paths = [
             'paymentReference',
             'payment_reference',
+            'merchantReference',
+            'merchant_reference',
             'reference',
             'id',
             'chargeId',
             'charge_id',
+            'paymentId',
+            'payment_id',
+            'transactionId',
+            'transaction_id',
             'data.paymentReference',
             'data.payment_reference',
+            'data.merchantReference',
+            'data.merchant_reference',
             'data.reference',
             'data.id',
             'data.chargeId',
             'data.charge_id',
+            'data.paymentId',
+            'data.payment_id',
+            'data.transactionId',
+            'data.transaction_id',
             'payment.reference',
             'payment.id',
             'payment.chargeId',
             'payment.charge_id',
+            'payment.paymentReference',
+            'payment.payment_reference',
+            'payment.merchantReference',
+            'payment.merchant_reference',
             'data.data.paymentReference',
             'data.data.payment_reference',
+            'data.data.merchantReference',
+            'data.data.merchant_reference',
             'data.data.reference',
             'data.data.id',
             'data.data.chargeId',
             'data.data.charge_id',
+            'data.data.paymentId',
+            'data.data.payment_id',
+            'data.data.transactionId',
+            'data.data.transaction_id',
         ];
 
         $references = [];
@@ -346,15 +429,31 @@ class ProcessController extends Controller
             'status',
             'paymentStatus',
             'payment_status',
+            'state',
+            'paymentState',
+            'payment_state',
+            'result',
             'data.status',
             'data.paymentStatus',
             'data.payment_status',
+            'data.state',
+            'data.paymentState',
+            'data.payment_state',
+            'data.result',
             'payment.status',
             'payment.paymentStatus',
             'payment.payment_status',
+            'payment.state',
+            'payment.paymentState',
+            'payment.payment_state',
+            'payment.result',
             'data.data.status',
             'data.data.paymentStatus',
             'data.data.payment_status',
+            'data.data.state',
+            'data.data.paymentState',
+            'data.data.payment_state',
+            'data.data.result',
         ];
 
         foreach ($paths as $path) {
@@ -372,7 +471,7 @@ class ProcessController extends Controller
         return '';
     }
 
-    protected static function isIpnSuccessPayload(array $payload, string $status): bool
+    protected static function extractSuccessFlag(array $payload): ?bool
     {
         $successValues = [
             data_get($payload, 'success'),
@@ -382,9 +481,35 @@ class ProcessController extends Controller
         ];
 
         foreach ($successValues as $value) {
-            if (self::isTruthyFlag($value)) {
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if (is_numeric($value)) {
+                return (int) $value === 1;
+            }
+
+            if (!is_scalar($value)) {
+                continue;
+            }
+
+            $normalized = strtolower(trim((string) $value));
+            if (in_array($normalized, ['1', 'true', 'yes', 'ok'], true)) {
                 return true;
             }
+            if (in_array($normalized, ['0', 'false', 'no', 'failed', 'failure', 'error'], true)) {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    protected static function isIpnSuccessPayload(array $payload, string $status): bool
+    {
+        $successFlag = self::extractSuccessFlag($payload);
+        if ($successFlag === true) {
+            return true;
         }
 
         $successFlags = [
@@ -400,17 +525,7 @@ class ProcessController extends Controller
             return true;
         }
 
-        $event = strtolower(trim((string) (
-            data_get($payload, 'event')
-            ?? data_get($payload, 'eventType')
-            ?? data_get($payload, 'event_type')
-            ?? data_get($payload, 'type')
-            ?? data_get($payload, 'data.event')
-            ?? data_get($payload, 'data.type')
-            ?? data_get($payload, 'data.data.event')
-            ?? data_get($payload, 'data.data.type')
-            ?? ''
-        )));
+        $event = self::extractEventName($payload);
 
         $successEvents = [
             'charge.succeeded',
@@ -425,21 +540,49 @@ class ProcessController extends Controller
         return in_array($event, $successEvents, true);
     }
 
-    protected static function isTruthyFlag($value): bool
+    protected static function extractEventName(array $payload): string
     {
-        if (is_bool($value)) {
-            return $value;
-        }
+        return strtolower(trim((string) (
+            data_get($payload, 'event')
+            ?? data_get($payload, 'eventType')
+            ?? data_get($payload, 'event_type')
+            ?? data_get($payload, 'type')
+            ?? data_get($payload, 'data.event')
+            ?? data_get($payload, 'data.type')
+            ?? data_get($payload, 'data.data.event')
+            ?? data_get($payload, 'data.data.type')
+            ?? ''
+        )));
+    }
 
-        if (is_numeric($value)) {
-            return (int) $value === 1;
-        }
+    protected static function isIpnFailureStatus(string $status): bool
+    {
+        return in_array($status, [
+            'failed',
+            'failure',
+            'error',
+            'canceled',
+            'cancelled',
+            'rejected',
+            'expired',
+            'refunded',
+            'chargeback',
+        ], true);
+    }
 
-        if (!is_scalar($value)) {
+    protected static function hasValidVerificationToken(Deposit $deposit, string $token): bool
+    {
+        if ($token === '') {
             return false;
         }
 
-        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'ok'], true);
+        $expected = hash_hmac(
+            'sha256',
+            $deposit->id . '|' . $deposit->trx,
+            (string) config('app.key')
+        );
+
+        return hash_equals($expected, $token);
     }
 
     protected static function extractRedirectUrl(array $response): ?string
@@ -540,6 +683,15 @@ class ProcessController extends Controller
         if ($amount <= 0) {
             return [
                 'error' => 'Invalid payment amount',
+            ];
+        }
+
+        $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
+        if ($centralRate !== null && $centralRate > 0) {
+            return [
+                'amount' => (float) max(1, round($amount * $centralRate, 0)),
+                'currency' => 'XOF',
+                'rate' => $centralRate,
             ];
         }
 

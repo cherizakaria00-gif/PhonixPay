@@ -30,6 +30,7 @@ Route::namespace('Auth')->group(function () {
 Route::middleware('admin')->group(function () {
     Route::controller('AdminController')->group(function(){
         Route::get('dashboard', 'dashboard')->name('dashboard');
+        Route::post('dashboard/currency-conversion', 'updateCurrencyConversion')->name('dashboard.currency.update');
         Route::get('chart/deposit-withdraw', 'depositAndWithdrawReport')->name('chart.deposit.withdraw');
         Route::get('chart/transaction', 'transactionReport')->name('chart.transaction');
         Route::get('profile', 'profile')->name('profile');

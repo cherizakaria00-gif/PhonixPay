@@ -59,6 +59,58 @@
             </a>
         </div>
 
+        <div class="pf-admin-panel pf-admin-panel--currency">
+            <div class="pf-admin-panel-header">
+                <div>
+                    <h5 class="pf-admin-panel-title mb-1">@lang('Currency Conversion')</h5>
+                    <small class="text-muted">@lang('Base Currency'): {{ $baseCurrency }}</small>
+                </div>
+            </div>
+            <form action="{{ route('admin.dashboard.currency.update') }}" method="POST">
+                @csrf
+                <div class="pf-admin-currency-grid">
+                    @foreach($conversionRates as $currency => $rateData)
+                        <div class="pf-admin-currency-card">
+                            <label class="pf-admin-currency-label">1 {{ $baseCurrency }} =</label>
+                            <div class="input-group mb-2">
+                                <input type="hidden" name="rates[{{ $loop->index }}][quote_currency]" value="{{ $currency }}">
+                                <input
+                                    type="number"
+                                    step="any"
+                                    min="0.00000001"
+                                    class="form-control"
+                                    name="rates[{{ $loop->index }}][rate]"
+                                    value="{{ $rateData['rate'] }}"
+                                    placeholder="0.00"
+                                >
+                                <span class="input-group-text">{{ $currency }}</span>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input type="hidden" name="rates[{{ $loop->index }}][is_active]" value="0">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    role="switch"
+                                    id="rate-active-{{ $loop->index }}"
+                                    name="rates[{{ $loop->index }}][is_active]"
+                                    value="1"
+                                    @checked($rateData['is_active'])
+                                >
+                                <label class="form-check-label" for="rate-active-{{ $loop->index }}">
+                                    @lang('Active')
+                                </label>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn--primary btn-sm">
+                        <i class="las la-save"></i> @lang('Save Conversion Rates')
+                    </button>
+                </div>
+            </form>
+        </div>
+
         @if(!empty($subscription['enabled']))
             <div class="pf-admin-panel pf-admin-panel--subscription">
                 <div class="pf-admin-panel-header">
@@ -447,6 +499,33 @@
             border-radius: 18px;
             padding: 20px;
             box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        }
+
+        .pf-admin-panel--currency {
+            margin-bottom: 18px;
+        }
+
+        .pf-admin-currency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .pf-admin-currency-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px;
+            background: #f8fafc;
+        }
+
+        .pf-admin-currency-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
 
         .pf-admin-panel--compact {

@@ -274,7 +274,8 @@ class SiteController extends Controller
         $deposit = Deposit::where('id', $depositId)->orderBy('id', 'desc')->firstOrFail();
 
         if ($deposit->status == Status::PAYMENT_SUCCESS) {
-            return redirect($deposit->success_url ?? route('home'));
+            $successUrl = $this->appendUrlQuery((string) ($deposit->success_url ?? route('home')), 'status', 'success');
+            return redirect($successUrl);
         }
 
         if ($deposit->gateway && $deposit->gateway->alias === 'StripePaymentLink') {
@@ -290,10 +291,18 @@ class SiteController extends Controller
         }
 
         if ($deposit->status == Status::PAYMENT_REJECT) {
-            return redirect($deposit->failed_url ?? route('home'));
+            $failedUrl = $this->appendUrlQuery((string) ($deposit->failed_url ?? route('home')), 'status', 'cancel');
+            return redirect($failedUrl);
         }
 
-        return redirect($deposit->success_url ?? route('home'));
+        if ($deposit->status == Status::PAYMENT_SUCCESS) {
+            $successUrl = $this->appendUrlQuery((string) ($deposit->success_url ?? route('home')), 'status', 'success');
+            return redirect($successUrl);
+        }
+
+        $pendingUrl = (string) ($deposit->success_url ?: ($deposit->failed_url ?: route('home')));
+        $pendingUrl = $this->appendUrlQuery($pendingUrl, 'status', 'pending');
+        return redirect($pendingUrl);
     }
 
     public function cancelPaymentRedirect($depositId)
@@ -306,6 +315,37 @@ class SiteController extends Controller
         }
 
         return redirect($deposit->failed_url ?? route('home'));
+    }
+
+    private function appendUrlQuery(string $url, string $key, string $value): string
+    {
+        if ($url === '') {
+            return $url;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false) {
+            return $url;
+        }
+
+        $query = [];
+        if (!empty($parts['query'])) {
+            parse_str($parts['query'], $query);
+        }
+        $query[$key] = $value;
+
+        $queryString = http_build_query($query);
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $path = $parts['path'] ?? '';
+        $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
+
+        if ($scheme && $host) {
+            return $scheme . '://' . $host . $port . $path . ($queryString ? '?' . $queryString : '') . $fragment;
+        }
+
+        return $path . ($queryString ? '?' . $queryString : '') . $fragment;
     }
 
     private function confirmStripePaymentLink(Deposit $deposit): void
@@ -369,12 +409,14 @@ class SiteController extends Controller
 
     private function confirmBictorysCheckout(Deposit $deposit, Request $request): void
     {
-        if ($deposit->status != Status::PAYMENT_INITIATE) {
+        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
             return;
         }
 
         $status = $this->extractBictorysStatus($request);
         $successFlag = $this->extractBooleanFlag($request->input('success'));
+        $reference = $this->extractBictorysReference($request);
+        $hasRedirectSignal = $reference !== null || $status !== '' || $successFlag !== null;
 
         if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
             $deposit->status = Status::PAYMENT_REJECT;
@@ -384,15 +426,11 @@ class SiteController extends Controller
 
         $isSuccess = $successFlag === true
             || $this->isBictorysSuccessStatus($status)
-            || $this->hasValidBictorysVerificationToken($deposit, $request);
+            || ($this->hasValidBictorysVerificationToken($deposit, $request) && $hasRedirectSignal);
 
         if (!$isSuccess) {
             return;
         }
-
-        $reference = $request->input('paymentReference')
-            ?? $request->input('payment_reference')
-            ?? $request->input('reference');
 
         if (!$deposit->btc_wallet && $reference) {
             $deposit->btc_wallet = $reference;
@@ -404,12 +442,14 @@ class SiteController extends Controller
 
     private function confirmBictorysDirect(Deposit $deposit, Request $request): void
     {
-        if ($deposit->status != Status::PAYMENT_INITIATE) {
+        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
             return;
         }
 
         $status = $this->extractBictorysStatus($request);
         $successFlag = $this->extractBooleanFlag($request->input('success'));
+        $reference = $this->extractBictorysReference($request);
+        $hasRedirectSignal = $reference !== null || $status !== '' || $successFlag !== null;
 
         if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
             $deposit->status = Status::PAYMENT_REJECT;
@@ -419,15 +459,11 @@ class SiteController extends Controller
 
         $isSuccess = $successFlag === true
             || $this->isBictorysSuccessStatus($status)
-            || $this->hasValidBictorysVerificationToken($deposit, $request);
+            || ($this->hasValidBictorysVerificationToken($deposit, $request) && $hasRedirectSignal);
 
         if (!$isSuccess) {
             return;
         }
-
-        $reference = $request->input('paymentReference')
-            ?? $request->input('payment_reference')
-            ?? $request->input('reference');
 
         if (!$deposit->btc_wallet && $reference) {
             $deposit->btc_wallet = $reference;
@@ -458,9 +494,34 @@ class SiteController extends Controller
         $status = $request->input('status')
             ?? $request->input('paymentStatus')
             ?? $request->input('payment_status')
+            ?? $request->input('state')
+            ?? $request->input('paymentState')
+            ?? $request->input('payment_state')
+            ?? $request->input('result')
             ?? '';
 
         return strtolower(trim((string) $status));
+    }
+
+    private function extractBictorysReference(Request $request): ?string
+    {
+        $reference = $request->input('paymentReference')
+            ?? $request->input('payment_reference')
+            ?? $request->input('reference')
+            ?? $request->input('id')
+            ?? $request->input('chargeId')
+            ?? $request->input('charge_id')
+            ?? $request->input('paymentId')
+            ?? $request->input('payment_id')
+            ?? $request->input('transactionId')
+            ?? $request->input('transaction_id');
+
+        if (!is_scalar($reference)) {
+            return null;
+        }
+
+        $reference = trim((string) $reference);
+        return $reference === '' ? null : $reference;
     }
 
     private function extractBooleanFlag($value): ?bool

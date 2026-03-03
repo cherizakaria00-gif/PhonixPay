@@ -11,6 +11,7 @@ use App\Models\GatewayCurrency;
 use App\Models\PaymentLink;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\CurrencyConversionService;
 use App\Services\PlanService;
 use App\Services\RewardService;
 use App\Traits\ApiPaymentHelpers;
@@ -180,7 +181,19 @@ class PaymentController extends Controller
             return back()->withNotify($notify);
         }
  
-        if (($gate->min_amount * $gate->rate) > $amount || ($gate->max_amount * $gate->rate) < $amount) {
+        $requestedCurrencyCode = strtoupper((string) $apiPayment->currency);
+        $gatewayCurrencyCode = strtoupper((string) $gate->currency);
+        $baseCurrencyCode = strtoupper((string) gs('cur_text'));
+
+        $configuredRate = (float) $gate->rate;
+        $effectiveRate = $this->resolveEffectiveGatewayRate(
+            $gate,
+            $configuredRate,
+            $baseCurrencyCode,
+            $gatewayCurrencyCode
+        );
+
+        if (($gate->min_amount * $effectiveRate) > $amount || ($gate->max_amount * $effectiveRate) < $amount) {
             $notify[] = ['error', 'Please follow payment limit'];
             if ($request->expectsJson()) {
                 return response()->json([
@@ -189,17 +202,6 @@ class PaymentController extends Controller
                 ], 422);
             }
             return back()->withNotify($notify);
-        }
-
-        $configuredRate = (float) $gate->rate;
-        $effectiveRate = $configuredRate > 0 ? $configuredRate : 1.0;
-
-        // API checkout amount is already expressed in requested currency.
-        // If gateway currency matches requested currency, force 1:1 rate to avoid scaling bugs.
-        $requestedCurrencyCode = strtoupper((string) $apiPayment->currency);
-        $gatewayCurrencyCode = strtoupper((string) $gate->currency);
-        if ($requestedCurrencyCode !== '' && $gatewayCurrencyCode !== '' && $requestedCurrencyCode === $gatewayCurrencyCode) {
-            $effectiveRate = 1.0;
         }
 
         $amountBase = $amount / $effectiveRate;
@@ -356,6 +358,142 @@ class PaymentController extends Controller
         }
 
         return to_route('deposit.confirm');
+    }
+
+    protected function resolveEffectiveGatewayRate(
+        GatewayCurrency $gate,
+        float $configuredRate,
+        string $baseCurrencyCode,
+        string $gatewayCurrencyCode
+    ): float {
+        $baseCurrencyCode = strtoupper(trim($baseCurrencyCode));
+        $gatewayCurrencyCode = strtoupper(trim($gatewayCurrencyCode));
+
+        if ($baseCurrencyCode !== '' && $gatewayCurrencyCode !== '' && $baseCurrencyCode === $gatewayCurrencyCode) {
+            return 1.0;
+        }
+
+        $manualRate = app(CurrencyConversionService::class)->getCrossRate($baseCurrencyCode, $gatewayCurrencyCode);
+        if ($manualRate !== null && $manualRate > 0) {
+            return $manualRate;
+        }
+
+        $resolvedRate = $configuredRate > 0 ? $configuredRate : 0.0;
+        $derivedRate = $this->resolveBictorysRateFallback($gate, $baseCurrencyCode, $gatewayCurrencyCode);
+
+        if ($derivedRate !== null) {
+            $isDefaultPlaceholderRate = $resolvedRate <= 0 || (abs($resolvedRate - 1.0) < 0.000001 && $baseCurrencyCode !== $gatewayCurrencyCode);
+            if ($isDefaultPlaceholderRate) {
+                return $derivedRate;
+            }
+        }
+
+        if ($resolvedRate > 0) {
+            return $resolvedRate;
+        }
+
+        if ($derivedRate !== null) {
+            return $derivedRate;
+        }
+
+        return 1.0;
+    }
+
+    protected function resolveBictorysRateFallback(
+        GatewayCurrency $gate,
+        string $baseCurrencyCode,
+        string $gatewayCurrencyCode
+    ): ?float {
+        $aliases = [
+            strtolower(trim((string) ($gate->gateway_alias ?? ''))),
+            strtolower(trim((string) data_get($gate, 'method.alias'))),
+        ];
+
+        if (!in_array('bictoryscheckout', $aliases, true) && !in_array('bictorysdirect', $aliases, true)) {
+            return null;
+        }
+
+        $gatewayParams = array_merge(
+            $this->flattenGatewayParameters((string) data_get($gate, 'method.gateway_parameters')),
+            $this->flattenGatewayParameters((string) ($gate->gateway_parameter ?? ''))
+        );
+
+        $baseToXofRate = $this->resolveCurrencyToXofRate($baseCurrencyCode, $gatewayParams);
+        $gatewayToXofRate = $this->resolveCurrencyToXofRate($gatewayCurrencyCode, $gatewayParams);
+
+        if ($baseToXofRate === null || $gatewayToXofRate === null || $gatewayToXofRate <= 0) {
+            return null;
+        }
+
+        $derivedRate = $baseToXofRate / $gatewayToXofRate;
+        return $derivedRate > 0 ? $derivedRate : null;
+    }
+
+    protected function flattenGatewayParameters(string $parameters): array
+    {
+        if ($parameters === '') {
+            return [];
+        }
+
+        $decoded = json_decode($parameters, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $flat = [];
+        foreach ($decoded as $key => $value) {
+            if (is_array($value) && array_key_exists('value', $value)) {
+                $flat[$key] = $value['value'];
+            } else {
+                $flat[$key] = $value;
+            }
+        }
+
+        return $flat;
+    }
+
+    protected function resolveCurrencyToXofRate(string $currencyCode, array $gatewayParams): ?float
+    {
+        $currencyCode = strtoupper(trim($currencyCode));
+        if ($currencyCode === '') {
+            return null;
+        }
+
+        if ($currencyCode === 'XOF') {
+            return 1.0;
+        }
+
+        $paramKey = strtolower($currencyCode) . '_xof_rate';
+        $rawRate = $gatewayParams[$paramKey] ?? null;
+
+        // EUR has a fixed peg to XOF, keep this fallback when the gateway setting is missing.
+        if ($currencyCode === 'EUR' && ($rawRate === null || $rawRate === '')) {
+            $rawRate = 655.957;
+        }
+
+        return $this->toPositiveFloat($rawRate);
+    }
+
+    protected function toPositiveFloat($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+            $value = str_replace(',', '.', $value);
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $normalized = (float) $value;
+        return $normalized > 0 ? $normalized : null;
     }
 
 

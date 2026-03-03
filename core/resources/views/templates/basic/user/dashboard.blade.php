@@ -76,6 +76,9 @@
                                 }
                                 $customerEmail = $customer->email ?? null;
                                 $customerPhone = $customer->mobile ?? ($customer->phone ?? null);
+                                $paidCurrency = strtoupper((string) ($deposit->method_currency ?? ''));
+                                $baseCurrency = strtoupper((string) gs('cur_text'));
+                                $showPaidAmount = $paidCurrency !== '' && $paidCurrency !== $baseCurrency;
                             @endphp
                             <tr>
                                 <td>{{ $customerName ?: __('N/A') }}</td>
@@ -83,6 +86,11 @@
                                 <td>{{ $customerPhone ?: __('N/A') }}</td>
                                 <td class="text-end {{ $deposit->status == Status::PAYMENT_REJECT ? 'amount-negative' : 'amount-positive' }}">
                                     {{ showAmount($deposit->amount) }}
+                                    @if ($showPaidAmount)
+                                        <small class="d-block text-muted amount-original">
+                                            @lang('Paid'): {{ showAmount((float) $deposit->gateway_amount, currencyFormat: false) }} {{ $paidCurrency }}
+                                        </small>
+                                    @endif
                                 </td>
                                 <td><span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                 <td>{{ showDateTime($deposit->created_at, 'M d, Y') }}</td>
@@ -452,6 +460,12 @@
     .amount-negative {
         color: #ef4444;
         font-weight: 600;
+    }
+
+    .amount-original {
+        font-size: 11px;
+        margin-top: 2px;
+        font-weight: 500;
     }
 
     .activity-list {
