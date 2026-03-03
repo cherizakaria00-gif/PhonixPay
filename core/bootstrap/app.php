@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\AutoRunCron;
 use App\Http\Middleware\CheckStatus;
 use App\Http\Middleware\Demo;
 use App\Http\Middleware\UserRestricted;
@@ -58,6 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\LanguageMiddleware::class,
             \App\Http\Middleware\ActiveTemplateMiddleware::class,
+            AutoRunCron::class,
         ]);
 
         $middleware->alias([
