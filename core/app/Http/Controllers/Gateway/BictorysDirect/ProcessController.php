@@ -31,9 +31,14 @@ class ProcessController extends Controller
         }
 
         $baseUrl = rtrim($baseUrl, '/');
-        $redirectUrl = route('payment.redirect.success', $deposit->id);
-        $cancelUrl = route('payment.redirect.cancel', $deposit->id);
-        $callbackUrl = route('ipn.BictorysDirect');
+        $verificationToken = hash_hmac(
+            'sha256',
+            $deposit->id . '|' . $deposit->trx,
+            (string) config('app.key')
+        );
+        $redirectUrl = self::appendQueryParam(route('payment.redirect.success', $deposit->id), 'vtoken', $verificationToken);
+        $cancelUrl = self::appendQueryParam(route('payment.redirect.cancel', $deposit->id), 'vtoken', $verificationToken);
+        $callbackUrl = self::appendQueryParam(route('ipn.BictorysDirect'), 'vtoken', $verificationToken);
 
         $apiPayment = $deposit->apiPayment;
         $customer = $apiPayment->customer ?? null;

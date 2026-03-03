@@ -33,6 +33,7 @@
                         <form method="post" action="{{ route('ticket.reply', $myTicket->id) }}" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="replayTicket" value="1">
+                            <input type="text" name="support_website" class="d-none" tabindex="-1" autocomplete="off">
                             <div class="row justify-content-between">
                                 <div class="col-md-12">
                                     <div class="form-group">

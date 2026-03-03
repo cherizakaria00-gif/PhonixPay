@@ -16,6 +16,7 @@
                 <form action="{{ route('ticket.store') }}" method="post" enctype="multipart/form-data"
                     onsubmit="return submitUserForm();">
                     @csrf
+                    <input type="text" name="support_website" class="d-none" tabindex="-1" autocomplete="off">
                     <div class="row">
                         <div class="form-group col-md-6">
                             <label for="name">@lang('Name')</label>
@@ -112,4 +113,3 @@
 
     </script>
 @endpush
-

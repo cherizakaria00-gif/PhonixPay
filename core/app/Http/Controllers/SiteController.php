@@ -14,6 +14,7 @@ use App\Models\Plan;
 use App\Models\Subscriber;
 use App\Models\SupportMessage;
 use App\Models\SupportTicket;
+use App\Services\SpamProtectionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
@@ -97,6 +98,7 @@ class SiteController extends Controller
             'email' => 'required',
             'subject' => 'required|string|max:255',
             'message' => 'required',
+            'contact_website' => 'nullable|string|max:255',
         ]);
 
         $request->session()->regenerateToken();
@@ -104,6 +106,28 @@ class SiteController extends Controller
         if(!verifyCaptcha()){
             $notify[] = ['error','Invalid captcha provided'];
             return back()->withNotify($notify);
+        }
+
+        if (SpamProtectionService::honeypotTriggered($request, 'contact_website')) {
+            $notify[] = ['error', 'Spam detected. Please refresh the page and try again.'];
+            return back()->withNotify($notify)->withInput();
+        }
+
+        $identity = $request->ip() . '|' . strtolower((string) $request->email);
+        $retryAfter = SpamProtectionService::hitRateLimit('contact_submit', $identity, 3, 1800);
+        if ($retryAfter !== null) {
+            $notify[] = ['error', 'Too many messages sent. Please try again in ' . $retryAfter . ' seconds.'];
+            return back()->withNotify($notify)->withInput();
+        }
+
+        if (SpamProtectionService::isDuplicate('contact_submit_' . sha1($identity), (string) $request->subject, (string) $request->message, 3600)) {
+            $notify[] = ['error', 'Duplicate message detected. Please wait before sending the same content.'];
+            return back()->withNotify($notify)->withInput();
+        }
+
+        if (SpamProtectionService::detectSpamReason((string) $request->subject, (string) $request->message)) {
+            $notify[] = ['error', 'Promotional or spam content is not allowed.'];
+            return back()->withNotify($notify)->withInput();
         }
 
         $random = getNumber();
@@ -349,12 +373,20 @@ class SiteController extends Controller
             return;
         }
 
-        $status = strtolower((string) ($request->input('status')
-            ?? $request->input('paymentStatus')
-            ?? $request->input('payment_status')
-            ?? ''));
+        $status = $this->extractBictorysStatus($request);
+        $successFlag = $this->extractBooleanFlag($request->input('success'));
 
-        if ($status && !in_array($status, ['success', 'successful', 'paid', 'completed'], true)) {
+        if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
+            $deposit->status = Status::PAYMENT_REJECT;
+            $deposit->save();
+            return;
+        }
+
+        $isSuccess = $successFlag === true
+            || $this->isBictorysSuccessStatus($status)
+            || $this->hasValidBictorysVerificationToken($deposit, $request);
+
+        if (!$isSuccess) {
             return;
         }
 
@@ -376,45 +408,94 @@ class SiteController extends Controller
             return;
         }
 
-        $status = strtolower((string) ($request->input('status')
-            ?? $request->input('paymentStatus')
-            ?? $request->input('payment_status')
-            ?? ''));
+        $status = $this->extractBictorysStatus($request);
+        $successFlag = $this->extractBooleanFlag($request->input('success'));
 
-        $failedFlags = [
-            'failed',
-            'failure',
-            'error',
-            'canceled',
-            'cancelled',
-            'rejected',
-            'expired',
-        ];
-
-        if (($request->input('success') === false) || in_array($status, $failedFlags, true)) {
+        if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
             $deposit->status = Status::PAYMENT_REJECT;
             $deposit->save();
             return;
         }
 
-        $successFlags = [
-            'success',
-            'successful',
-            'paid',
-            'completed',
-        ];
+        $isSuccess = $successFlag === true
+            || $this->isBictorysSuccessStatus($status)
+            || $this->hasValidBictorysVerificationToken($deposit, $request);
 
-        if (($request->input('success') ?? null) === true || in_array($status, $successFlags, true)) {
-            $reference = $request->input('paymentReference')
-                ?? $request->input('payment_reference')
-                ?? $request->input('reference');
-
-            if (!$deposit->btc_wallet && $reference) {
-                $deposit->btc_wallet = $reference;
-                $deposit->save();
-            }
-
-            PaymentController::userDataUpdate($deposit);
+        if (!$isSuccess) {
+            return;
         }
+
+        $reference = $request->input('paymentReference')
+            ?? $request->input('payment_reference')
+            ?? $request->input('reference');
+
+        if (!$deposit->btc_wallet && $reference) {
+            $deposit->btc_wallet = $reference;
+            $deposit->save();
+        }
+
+        PaymentController::userDataUpdate($deposit);
+    }
+
+    private function hasValidBictorysVerificationToken(Deposit $deposit, Request $request): bool
+    {
+        $token = trim((string) $request->input('vtoken', ''));
+        if ($token === '') {
+            return false;
+        }
+
+        $expected = hash_hmac(
+            'sha256',
+            $deposit->id . '|' . $deposit->trx,
+            (string) config('app.key')
+        );
+
+        return hash_equals($expected, $token);
+    }
+
+    private function extractBictorysStatus(Request $request): string
+    {
+        $status = $request->input('status')
+            ?? $request->input('paymentStatus')
+            ?? $request->input('payment_status')
+            ?? '';
+
+        return strtolower(trim((string) $status));
+    }
+
+    private function extractBooleanFlag($value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return ((int) $value) === 1;
+        }
+
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+        if (in_array($normalized, ['1', 'true', 'yes', 'ok'], true)) {
+            return true;
+        }
+
+        if (in_array($normalized, ['0', 'false', 'no', 'failed', 'failure', 'error'], true)) {
+            return false;
+        }
+
+        return null;
+    }
+
+    private function isBictorysSuccessStatus(string $status): bool
+    {
+        return in_array($status, ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved'], true);
+    }
+
+    private function isBictorysFailureStatus(string $status): bool
+    {
+        return in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired'], true);
     }
 }

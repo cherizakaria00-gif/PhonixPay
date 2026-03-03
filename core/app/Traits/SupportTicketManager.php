@@ -7,6 +7,7 @@ use App\Models\AdminNotification;
 use App\Models\SupportAttachment;
 use App\Models\SupportMessage;
 use App\Models\SupportTicket;
+use App\Services\SpamProtectionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -77,6 +78,10 @@ trait SupportTicketManager
             }
         }else{
             $request->validate($validationRule);
+        }
+
+        if ($spamResponse = $this->guardSupportSpam($request, (string) $request->subject, (string) $request->message, 'create')) {
+            return $spamResponse;
         }
 
         $column             = $this->column;
@@ -252,6 +257,10 @@ trait SupportTicketManager
             $request->validate($validationRule);
         }
 
+        if ($spamResponse = $this->guardSupportSpam($request, (string) $ticket->subject, (string) $request->message, 'reply')) {
+            return $spamResponse;
+        }
+
         $ticket->status = $this->userType != 'admin' ? Status::TICKET_REPLY : Status::TICKET_ANSWER;
         $ticket->last_reply = Carbon::now();
         $ticket->save();
@@ -312,6 +321,48 @@ trait SupportTicketManager
         $notify[] = ['success', 'Support ticket replied successfully!'];
 
         return back()->withNotify($notify);
+    }
+
+    protected function guardSupportSpam(Request $request, string $subject, string $message, string $action)
+    {
+        if ($this->userType === 'admin') {
+            return null;
+        }
+
+        if (SpamProtectionService::honeypotTriggered($request, 'support_website')) {
+            return $this->spamErrorResponse('Spam detected. Please refresh the page and try again.');
+        }
+
+        $identity = $request->ip() . '|' . ($this->user?->id ?? 0) . '|' . ($this->user?->email ?? '');
+        $attempts = $action === 'reply' ? 15 : 4;
+        $retryAfter = SpamProtectionService::hitRateLimit('support_ticket_' . $action, $identity, $attempts, 600);
+        if ($retryAfter !== null) {
+            return $this->spamErrorResponse('Too many messages sent. Please try again in ' . $retryAfter . ' seconds.');
+        }
+
+        if (SpamProtectionService::isDuplicate('support_ticket_' . $action . '_' . ($this->user?->id ?? 0), $subject, $message, 1800)) {
+            return $this->spamErrorResponse('Duplicate message detected. Please wait before sending the same content.');
+        }
+
+        if (SpamProtectionService::detectSpamReason($subject, $message)) {
+            return $this->spamErrorResponse('Promotional or spam content is not allowed.');
+        }
+
+        return null;
+    }
+
+    protected function spamErrorResponse(string $message)
+    {
+        if ($this->apiRequest) {
+            return response()->json([
+                'remark'  => 'spam_blocked',
+                'status'  => 'error',
+                'message' => ['error' => [$message]],
+            ]);
+        }
+
+        $notify[] = ['error', $message];
+        return back()->withNotify($notify)->withInput();
     }
 
     protected function storeSupportAttachments($messageId)
