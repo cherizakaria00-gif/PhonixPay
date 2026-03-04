@@ -292,7 +292,7 @@ class UserController extends Controller
 
     }
 
-    public function userData()
+    public function userData(Request $request)
     {
         $user = auth()->user();
 
@@ -300,12 +300,77 @@ class UserController extends Controller
             return to_route('user.home');
         }
 
-        $pageTitle  = 'Complete Your Profile';
-        $info       = json_decode(json_encode(getIpInfo()), true);
-        $mobileCode = @implode(',', $info['code']);
-        $countries  = json_decode(file_get_contents(resource_path('views/partials/country.json')));
+        $pageTitle = 'Complete Your Profile';
+        $countryData = (array) json_decode(file_get_contents(resource_path('views/partials/country.json')), true);
+        $countries = json_decode(file_get_contents(resource_path('views/partials/country.json')));
 
-        return view('Template::user.user_data', compact('pageTitle', 'user', 'countries', 'mobileCode'));
+        $defaultCountryCode = strtoupper((string) old('country_code', $user->country_code ?? ''));
+        if (!$defaultCountryCode) {
+            $defaultCountryCode = $this->resolveProfileCountryCode($request, $countryData);
+        }
+
+        if (!array_key_exists($defaultCountryCode, $countryData)) {
+            $defaultCountryCode = 'US';
+        }
+
+        $defaultMobileCode = (string) old(
+            'mobile_code',
+            data_get($countryData, $defaultCountryCode . '.dial_code')
+        );
+
+        $dialCodeOptions = collect($countryData)
+            ->pluck('dial_code')
+            ->filter()
+            ->map(fn ($code) => (string) $code)
+            ->unique()
+            ->sortBy(fn ($code) => (int) $code)
+            ->values();
+
+        return view('Template::user.user_data', compact(
+            'pageTitle',
+            'user',
+            'countries',
+            'defaultCountryCode',
+            'defaultMobileCode',
+            'dialCodeOptions'
+        ));
+    }
+
+    private function resolveProfileCountryCode(Request $request, array $countryData): ?string
+    {
+        $headerCandidates = [
+            $request->header('CF-IPCountry'),
+            $request->server('HTTP_CF_IPCOUNTRY'),
+            $request->header('X-AppEngine-Country'),
+            $request->header('X-Country-Code'),
+        ];
+
+        foreach ($headerCandidates as $candidate) {
+            $countryCode = strtoupper(trim((string) $candidate));
+            if (
+                preg_match('/^[A-Z]{2}$/', $countryCode)
+                && $countryCode !== 'XX'
+                && array_key_exists($countryCode, $countryData)
+            ) {
+                return $countryCode;
+            }
+        }
+
+        try {
+            $ipInfo = getIpInfo();
+            $countryCode = strtoupper(trim((string) data_get($ipInfo, 'code')));
+
+            if (
+                preg_match('/^[A-Z]{2}$/', $countryCode)
+                && array_key_exists($countryCode, $countryData)
+            ) {
+                return $countryCode;
+            }
+        } catch (\Throwable $exception) {
+            return null;
+        }
+
+        return null;
     }
 
     public function userDataSubmit(Request $request)

@@ -74,6 +74,15 @@
             border: 1px solid var(--input-border);
             color: var(--input-fg);
         }
+        .new-auth .mobile-code-select {
+            max-width: 120px;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .new-auth .mobile-number-input {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
         .new-auth .text--danger,
         .new-auth .text-danger {
             color: #fca5a5 !important;
@@ -131,17 +140,29 @@
                             <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Country')</label>
                             <select name="country" class="form--control select2" required>
                                 @foreach ($countries as $key => $country)
-                                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}">{{ __($country->country) }}</option>
+                                    <option
+                                        data-mobile_code="{{ $country->dial_code }}"
+                                        value="{{ $country->country }}"
+                                        data-code="{{ $key }}"
+                                        @selected((string) old('country_code', $defaultCountryCode ?? '') === (string) $key)
+                                    >
+                                        {{ __($country->country) }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Mobile')</label>
                             <div class="input-group">
-                                <span class="input-group-text mobile-code border-end-0"></span>
-                                <input type="hidden" name="mobile_code">
-                                <input type="hidden" name="country_code">
-                                <input type="number" name="mobile" value="{{ old('mobile') }}" class="form--control form-control checkUser" required>
+                                <select name="mobile_code" class="form--control mobile-code-select" required>
+                                    @foreach($dialCodeOptions as $dialCode)
+                                        <option value="{{ $dialCode }}" @selected((string) old('mobile_code', $defaultMobileCode ?? '') === (string) $dialCode)>
+                                            +{{ $dialCode }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <input type="hidden" name="country_code" value="{{ old('country_code', $defaultCountryCode ?? '') }}">
+                                <input type="number" name="mobile" value="{{ old('mobile') }}" class="form--control form-control checkUser mobile-number-input" required>
                             </div>
                             <small class="text-danger mobileExist"></small>
                         </div>
@@ -191,25 +212,36 @@
     <script>
         "use strict";
         (function($) {
-
-            @if($mobileCode)
-                $(`option[data-code={{ $mobileCode }}]`).attr('selected','');
-            @endif
+            const $country = $('select[name=country]');
+            const $mobileCode = $('select[name=mobile_code]');
+            const $countryCode = $('input[name=country_code]');
 
             $('.select2').select2();
 
-            $('select[name=country]').on('change',function() {
-                $('input[name=mobile_code]').val($('select[name=country] :selected').data('mobile_code'));
-                $('input[name=country_code]').val($('select[name=country] :selected').data('code'));
-                $('.mobile-code').text('+' + $('select[name=country] :selected').data('mobile_code'));
-                var value = $('[name=mobile]').val();
-                var name = 'mobile';
-                checkUser(value,name);
+            const syncCountryMeta = (syncDialCode = true) => {
+                const $selected = $country.find(':selected');
+                const selectedCountryCode = ($selected.data('code') || '').toString();
+                const selectedDialCode = ($selected.data('mobile_code') || '').toString();
+
+                $countryCode.val(selectedCountryCode);
+
+                if (syncDialCode && selectedDialCode) {
+                    $mobileCode.val(selectedDialCode);
+                }
+            };
+
+            syncCountryMeta(!$mobileCode.val());
+
+            $country.on('change', function() {
+                syncCountryMeta(true);
+                const value = $('[name=mobile]').val();
+                checkUser(value, 'mobile');
             });
 
-            $('input[name=mobile_code]').val($('select[name=country] :selected').data('mobile_code'));
-            $('input[name=country_code]').val($('select[name=country] :selected').data('code'));
-            $('.mobile-code').text('+' + $('select[name=country] :selected').data('mobile_code'));
+            $mobileCode.on('change', function() {
+                const value = $('[name=mobile]').val();
+                checkUser(value, 'mobile');
+            });
 
 
             $('.checkUser').on('focusout', function(e) {
@@ -226,7 +258,7 @@
                     var mobile = `${value}`;
                     var data = {
                         mobile: mobile,
-                        mobile_code:$('.mobile-code').text().substr(1),
+                        mobile_code: $mobileCode.val(),
                         _token: token
                     }
                 }
