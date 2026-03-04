@@ -23,6 +23,10 @@ class PaymentLinkController extends Controller
         $pageTitle = 'Payment Links';
         $query = PaymentLink::where('user_id', auth()->id())->orderBy('id', 'desc');
 
+        if (Schema::hasColumn('payment_links', 'link_type')) {
+            $query->where('link_type', PaymentLink::TYPE_STANDARD);
+        }
+
         if ($request->search) {
             $query->where('code', 'like', '%' . $request->search . '%');
         }
@@ -70,6 +74,9 @@ class PaymentLinkController extends Controller
         $paymentLink->redirect_url = $request->redirect_url;
         $paymentLink->expires_at = $request->expires_at;
         $paymentLink->status = PaymentLink::STATUS_ACTIVE;
+        if (Schema::hasColumn('payment_links', 'link_type')) {
+            $paymentLink->link_type = PaymentLink::TYPE_STANDARD;
+        }
         $paymentLink->save();
 
         $notify[] = ['success', 'Payment link created successfully'];
@@ -83,7 +90,11 @@ class PaymentLinkController extends Controller
         }
 
         $pageTitle = 'Edit Payment Link';
-        $paymentLink = PaymentLink::where('user_id', auth()->id())->findOrFail($id);
+        $paymentLinkQuery = PaymentLink::where('user_id', auth()->id());
+        if (Schema::hasColumn('payment_links', 'link_type')) {
+            $paymentLinkQuery->where('link_type', PaymentLink::TYPE_STANDARD);
+        }
+        $paymentLink = $paymentLinkQuery->findOrFail($id);
         $paymentLink->markExpiredIfNeeded();
 
         if ($paymentLink->status != PaymentLink::STATUS_ACTIVE) {
@@ -102,7 +113,11 @@ class PaymentLinkController extends Controller
             return $redirect;
         }
 
-        $paymentLink = PaymentLink::where('user_id', auth()->id())->findOrFail($id);
+        $paymentLinkQuery = PaymentLink::where('user_id', auth()->id());
+        if (Schema::hasColumn('payment_links', 'link_type')) {
+            $paymentLinkQuery->where('link_type', PaymentLink::TYPE_STANDARD);
+        }
+        $paymentLink = $paymentLinkQuery->findOrFail($id);
         $paymentLink->markExpiredIfNeeded();
 
         if ($paymentLink->status != PaymentLink::STATUS_ACTIVE) {

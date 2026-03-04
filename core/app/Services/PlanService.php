@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Deposit;
 use App\Models\NotificationLog;
+use App\Models\PaymentLink;
 use App\Models\Plan;
 use App\Models\Payout;
 use App\Models\Transaction;
@@ -196,10 +197,27 @@ class PlanService
 
         $monthStart = Carbon::now()->utc()->startOfMonth();
         $monthEnd = Carbon::now()->utc()->endOfMonth();
-        $count = Deposit::where('user_id', $user->id)
+        $monthlyDeposits = Deposit::where('user_id', $user->id)
             ->successful()
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->count();
+            ->whereBetween('created_at', [$monthStart, $monthEnd]);
+
+        if (
+            Schema::hasTable('payment_links')
+            && Schema::hasColumn('deposits', 'payment_link_id')
+            && Schema::hasColumn('payment_links', 'link_type')
+        ) {
+            $monthlyDeposits->where(function ($query) {
+                $query->whereNull('payment_link_id')
+                    ->orWhereNotExists(function ($subQuery) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('payment_links')
+                            ->whereColumn('payment_links.id', 'deposits.payment_link_id')
+                            ->where('payment_links.link_type', PaymentLink::TYPE_PLAN_SUBSCRIPTION);
+                    });
+            });
+        }
+
+        $count = $monthlyDeposits->count();
 
         $user->monthly_tx_count = $count;
         $user->save();

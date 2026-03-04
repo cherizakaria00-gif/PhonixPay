@@ -70,14 +70,32 @@
             border: 1px solid var(--input-border);
             color: var(--input-fg);
         }
+        .new-auth .mobile-input-group {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: stretch;
+        }
         .new-auth .mobile-code-select {
-            max-width: 120px;
+            flex: 0 0 130px;
+            width: 130px;
+            max-width: 130px;
+            min-width: 110px;
             border-top-right-radius: 0;
             border-bottom-right-radius: 0;
         }
         .new-auth .mobile-number-input {
+            flex: 1 1 auto;
+            width: 1%;
+            min-width: 0;
             border-top-left-radius: 0;
             border-bottom-left-radius: 0;
+        }
+        @media (max-width: 575px) {
+            .new-auth .mobile-code-select {
+                flex-basis: 104px;
+                width: 104px;
+                min-width: 104px;
+            }
         }
         .new-auth .text--danger,
         .new-auth .text-danger {
@@ -97,7 +115,7 @@
     </a>
 
     <div class="relative z-10 min-h-screen flex items-center justify-center px-6 py-12">
-        <div class="w-full max-w-xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+        <div class="w-full max-w-2xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
                 <h2 class="text-2xl font-bold text-white mb-2">{{ __($pageTitle) }}</h2>
                 <p class="text-slate-400 mb-6">@lang('Fill in the required details to complete your profile.')</p>
 
@@ -129,7 +147,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Mobile')</label>
-                            <div class="input-group">
+                            <div class="input-group mobile-input-group">
                                 <select name="mobile_code" class="form--control mobile-code-select" required>
                                     @foreach($dialCodeOptions as $dialCode)
                                         <option value="{{ $dialCode }}" @selected((string) old('mobile_code', $defaultMobileCode ?? '') === (string) $dialCode)>

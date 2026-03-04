@@ -29,7 +29,7 @@ class PaymentLinkController extends Controller
         }
 
         $user = $paymentLink->user;
-        $checkUserPayment = $this->checkUserPayment($user);
+        $checkUserPayment = $this->checkUserPayment($user, $paymentLink->isPlanSubscription());
         if (@$checkUserPayment['status'] == 'error') {
             $pageTitle = 'Payment Link';
             $message = $checkUserPayment['message'][0] ?? 'This payment link is not available.';

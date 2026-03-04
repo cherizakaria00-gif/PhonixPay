@@ -10,6 +10,7 @@ use App\Models\CronJob;
 use App\Models\CronJobLog;
 use App\Models\Deposit;
 use App\Models\Holiday;
+use App\Models\PaymentLink;
 use App\Models\Payout;
 use App\Models\Transaction;
 use App\Models\User;
@@ -17,6 +18,7 @@ use App\Models\Withdrawal;
 use App\Models\WithdrawSetting;
 use App\Services\PlanService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class CronController extends Controller
@@ -103,6 +105,22 @@ class CronController extends Controller
                     $eligibleDepositsQuery = Deposit::where('user_id', $user->id)
                         ->successful()
                         ->whereNull('payout_id');
+
+                    if (
+                        Schema::hasTable('payment_links')
+                        && Schema::hasColumn('deposits', 'payment_link_id')
+                        && Schema::hasColumn('payment_links', 'link_type')
+                    ) {
+                        $eligibleDepositsQuery->where(function ($query) {
+                            $query->whereNull('payment_link_id')
+                                ->orWhereNotExists(function ($subQuery) {
+                                    $subQuery->select(DB::raw(1))
+                                        ->from('payment_links')
+                                        ->whereColumn('payment_links.id', 'deposits.payment_link_id')
+                                        ->where('payment_links.link_type', PaymentLink::TYPE_PLAN_SUBSCRIPTION);
+                                });
+                        });
+                    }
 
                     if (Schema::hasColumn('deposits', 'payout_eligible_at')) {
                         $eligibleDepositsQuery->where(function ($query) use ($now) {

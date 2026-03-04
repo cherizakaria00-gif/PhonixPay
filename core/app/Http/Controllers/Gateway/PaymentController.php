@@ -9,6 +9,7 @@ use App\Models\AdminNotification;
 use App\Models\Deposit;
 use App\Models\GatewayCurrency;
 use App\Models\PaymentLink;
+use App\Models\PlanChangeRequest;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\CurrencyConversionService;
@@ -64,6 +65,7 @@ class PaymentController extends Controller
         }
 
         $paymentLink = null;
+        $isPlanSubscriptionLink = false;
 
         $fullName = trim((string) $request->input('customer_full_name'));
         $firstName = $request->input('customer_first_name');
@@ -135,7 +137,9 @@ class PaymentController extends Controller
             }
             $apiPayment->save();
 
-            if (Schema::hasTable('plans') && !app(PlanService::class)->isFeatureEnabled($apiPayment->user, 'payment_links')) {
+            $isPlanSubscriptionLink = $paymentLink->isPlanSubscription();
+
+            if (!$isPlanSubscriptionLink && Schema::hasTable('plans') && !app(PlanService::class)->isFeatureEnabled($apiPayment->user, 'payment_links')) {
                 $message = 'Payment Links are not enabled for this merchant plan. Please upgrade the plan.';
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -153,7 +157,7 @@ class PaymentController extends Controller
         $user = $apiPayment->user;
         /** @var PlanService $planService */
         $planService = app(PlanService::class);
-        $checkUserPayment = $this->checkUserPayment($user);
+        $checkUserPayment = $this->checkUserPayment($user, $isPlanSubscriptionLink);
 			
         if(@$checkUserPayment['status'] == 'error'){
             foreach(@$checkUserPayment['message'] as $message){
@@ -573,24 +577,88 @@ class PaymentController extends Controller
 
             $deposit->save();
 
-            $user->balance += $deposit->amount;
-            $user->save();
-
             $apiPayment = $deposit->apiPayment;
             if ($apiPayment) {
                 $apiPayment->status = Status::PAYMENT_SUCCESS;
                 $apiPayment->save();
             }
 
+            $paymentLink = null;
+            $isPlanSubscriptionPayment = false;
+            $targetPlan = null;
+
             if ($deposit->payment_link_id) {
-                $paymentLink = PaymentLink::find($deposit->payment_link_id);
+                $paymentLink = PaymentLink::with('plan')->find($deposit->payment_link_id);
                 if ($paymentLink && $paymentLink->status != PaymentLink::STATUS_PAID) {
                     $paymentLink->status = PaymentLink::STATUS_PAID;
                     $paymentLink->deposit_id = $deposit->id;
                     $paymentLink->paid_at = now();
                     $paymentLink->save();
                 }
+
+                if ($paymentLink && $paymentLink->isPlanSubscription() && $paymentLink->plan && $paymentLink->plan->is_active) {
+                    $targetPlan = $paymentLink->plan;
+                    $isPlanSubscriptionPayment = true;
+                }
             }
+
+            if ($isPlanSubscriptionPayment && $targetPlan) {
+                $fromPlanName = optional($user->plan)->name;
+
+                if (Schema::hasTable('plan_change_requests')) {
+                    PlanChangeRequest::query()
+                        ->where('user_id', $user->id)
+                        ->where('status', 'pending')
+                        ->where('to_plan_id', $targetPlan->id)
+                        ->update([
+                            'status' => 'approved',
+                            'note' => 'Approved automatically after successful subscription checkout payment',
+                            'updated_at' => now(),
+                        ]);
+
+                    PlanChangeRequest::query()
+                        ->where('user_id', $user->id)
+                        ->where('status', 'pending')
+                        ->where('to_plan_id', '!=', $targetPlan->id)
+                        ->update([
+                            'status' => 'rejected',
+                            'note' => 'Rejected automatically because another plan payment was completed',
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                $planService->assignPlan($user, $targetPlan, false);
+                $user->plan_custom_overrides = null;
+                $user->plan_status = 'active';
+                $user->save();
+
+                $adminNotification = new AdminNotification();
+                $adminNotification->user_id = $user->id;
+                $adminNotification->title = 'Plan payment successful: ' . $targetPlan->name;
+                $adminNotification->click_url = urlPath('admin.users.detail', $user->id);
+                $adminNotification->save();
+
+                if ($apiPayment) {
+                    self::outerIpn($apiPayment);
+                }
+
+                notify($user, 'DEFAULT', [
+                    'subject' => 'Plan activated successfully',
+                    'message' => 'Your payment was successful. The ' . $targetPlan->name . ' plan is now active for 1 month.',
+                ], ['email', 'push']);
+
+                $planService->sendPlanUpgradeNotification(
+                    $user->fresh(),
+                    $targetPlan->name,
+                    $fromPlanName,
+                    $user->plan_renews_at
+                );
+
+                return;
+            }
+
+            $user->balance += $deposit->amount;
+            $user->save();
 
             $transaction = new Transaction();
             $transaction->user_id = $deposit->user_id;

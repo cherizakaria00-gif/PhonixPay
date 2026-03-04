@@ -93,7 +93,7 @@
                                     @endif
                                 </td>
                                 <td><span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
-                                <td>{{ showDateTime($deposit->created_at, 'M d, Y') }}</td>
+                                <td>{{ showDateTime($deposit->created_at, 'M d, Y h:i A') }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -329,7 +329,7 @@
 
     .dashboard-activity-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+        grid-template-columns: 1fr;
         gap: 18px;
         margin-bottom: 22px;
     }
@@ -520,12 +520,6 @@
     .activity-time {
         font-size: 11px;
         color: #9ca3af;
-    }
-
-    @media (max-width: 1199px) {
-        .dashboard-activity-grid {
-            grid-template-columns: 1fr;
-        }
     }
 
     .dashboard-panel--chart {
