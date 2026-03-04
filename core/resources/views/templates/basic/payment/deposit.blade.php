@@ -1221,8 +1221,8 @@
 
         @media (max-width: 767px) {
             :root {
-                --mobile-checkout-offset: 340px;
-                --mobile-checkout-mask-height: 46px;
+                --mobile-checkout-offset: 300px;
+                --mobile-checkout-mask-height: 40px;
             }
 
             .payment-modal {
@@ -1262,8 +1262,9 @@
             }
 
             .payment-gateway-preview .payment-gateway-preview__frame-wrap {
-                height: 60vh;
-                min-height: 360px;
+                height: 50vh;
+                min-height: 300px;
+                max-height: 430px;
                 margin-top: 0;
             }
 
@@ -1301,8 +1302,14 @@
 
         @media (max-width: 430px) {
             :root {
-                --mobile-checkout-offset: 380px;
-                --mobile-checkout-mask-height: 52px;
+                --mobile-checkout-offset: 325px;
+                --mobile-checkout-mask-height: 44px;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__frame-wrap {
+                height: 48vh;
+                min-height: 285px;
+                max-height: 400px;
             }
         }
 
