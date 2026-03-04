@@ -1261,6 +1261,30 @@
                 min-height: 420px;
             }
 
+            /* Hide provider summary header block on mobile (inside iframe) */
+            .payment-gateway-preview .payment-gateway-preview__frame-wrap::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 188px;
+                background: #ffffff;
+                z-index: 3;
+                pointer-events: none;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__frame {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: calc(100% + 188px);
+                max-width: 100%;
+                transform: translateY(-188px);
+                transform-origin: top left;
+            }
+
             .payment-modal__close {
                 top: 8px;
                 right: 8px;
