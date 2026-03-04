@@ -1,9 +1,5 @@
 @extends($activeTemplate.'layouts.app')
 
-@php
-    $login = @getContent('login_register.content', true)->data_values;
-@endphp
-
 @push('style-lib')
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 @endpush
@@ -100,28 +96,8 @@
         <i class="fas fa-times"></i>
     </a>
 
-    <div class="relative z-10 min-h-screen flex flex-col lg:flex-row">
-        <div class="hidden lg:flex lg:w-1/2 items-center justify-center px-12 py-12">
-            <div class="max-w-md">
-                <div class="flex items-center gap-3 mb-6">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-10">
-                </div>
-                <h1 class="text-4xl font-bold tracking-tight text-white mb-4">
-                    @lang('Complete Your Profile')
-                </h1>
-                <p class="text-slate-300 text-lg">
-                    @lang('Finalize your details to unlock your merchant dashboard and start accepting payments.')
-                </p>
-                <div class="mt-10">
-                    <div class="relative bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-2xl">
-                        <img src="{{ getImage('assets/images/frontend/login_register/' .@$login->image, '615x620') }}" alt="" class="rounded-xl w-full h-auto">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
-            <div class="w-full max-w-xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+    <div class="relative z-10 min-h-screen flex items-center justify-center px-6 py-12">
+        <div class="w-full max-w-xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
                 <h2 class="text-2xl font-bold text-white mb-2">{{ __($pageTitle) }}</h2>
                 <p class="text-slate-400 mb-6">@lang('Fill in the required details to complete your profile.')</p>
 
@@ -194,7 +170,6 @@
                         @lang('Submit')
                     </button>
                 </form>
-            </div>
         </div>
     </div>
 </div>
