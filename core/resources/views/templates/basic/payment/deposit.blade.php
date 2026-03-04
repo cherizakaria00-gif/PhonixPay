@@ -1185,43 +1185,18 @@
             margin-bottom: 14px;
             position: relative;
             height: min(76vh, 760px);
-        }
-
-        .payment-gateway-preview .payment-gateway-preview__frame-wrap::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 58px;
-            background: #ffffff;
-            z-index: 3;
-            pointer-events: none;
-        }
-
-        .payment-gateway-preview .payment-gateway-preview__frame-wrap::after {
-            content: "";
-            position: absolute;
-            top: 18px;
-            right: 0;
-            width: 42%;
-            height: 72px;
-            background: #ffffff;
-            z-index: 2;
+            min-height: 460px;
         }
 
         .payment-gateway-preview .payment-gateway-preview__frame {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 200%;
-            height: calc(100% + 96px);
+            position: relative;
+            width: 100%;
+            height: 100%;
             border: 0;
             display: block;
             background: #ffffff;
-            max-width: none;
-            transform: translate(-50%, -96px);
-            transform-origin: top left;
+            max-width: 100%;
+            transform: none;
         }
 
         .payment-gateway-preview .payment-gateway-preview__button {
@@ -1245,29 +1220,88 @@
         }
 
         @media (max-width: 767px) {
-            .payment-gateway-preview .payment-gateway-preview__frame-wrap {
-                height: 74vh;
+            .payment-modal {
+                align-items: flex-start;
+                padding: 8px;
+                overflow-y: auto;
             }
 
-            .payment-gateway-preview .payment-gateway-preview__frame-wrap::before {
-                height: 52px;
+            .payment-modal .modal {
+                margin: 8px auto;
             }
 
-            .payment-gateway-preview .payment-gateway-preview__frame-wrap::after {
-                width: 46%;
-                top: 14px;
-                height: 64px;
+            .payment-gateway-preview.modal {
+                max-width: 100%;
+                border-radius: 14px;
             }
 
-            .payment-gateway-preview .payment-gateway-preview__frame {
-                width: 200%;
-                height: calc(100% + 84px);
-                transform: translate(-50%, -84px);
+            .payment-gateway-preview .payment-gateway-preview__content {
+                padding: 20px 14px 14px;
             }
 
             .payment-gateway-preview .payment-gateway-preview__title {
-                font-size: 22px;
-                line-height: 1.1;
+                font-size: 18px;
+                line-height: 1.2;
+                margin-bottom: 14px;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__value {
+                max-width: 100%;
+                text-align: left;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__frame-wrap {
+                height: 64vh;
+                min-height: 420px;
+            }
+
+            .payment-modal__close {
+                top: 8px;
+                right: 8px;
+                width: 30px;
+                height: 30px;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .payment-gateway-preview .payment-gateway-preview__frame-wrap::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 58px;
+                background: #ffffff;
+                z-index: 3;
+                pointer-events: none;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__frame-wrap::after {
+                content: "";
+                position: absolute;
+                top: 18px;
+                right: 0;
+                width: 42%;
+                height: 72px;
+                background: #ffffff;
+                z-index: 2;
+            }
+
+            .payment-gateway-preview .payment-gateway-preview__frame {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 200%;
+                height: calc(100% + 96px);
+                max-width: none;
+                transform: translate(-50%, -96px);
+                transform-origin: top left;
             }
         }
     </style>
