@@ -2,7 +2,6 @@
 
 @php
     $policyPages = getContent('policy_pages.element', orderById:true);
-    $register = @getContent('login_register.content', true)->data_values; 
 @endphp
 
 @push('style-lib')
@@ -140,27 +139,8 @@
         <i class="fas fa-times"></i>
     </a>
 
-    <div class="relative z-10 min-h-screen flex flex-col lg:flex-row">
-        <div class="hidden lg:flex lg:w-1/2 items-center justify-center px-12 py-12">
-            <div class="max-w-md">
-                <div class="flex items-center gap-3 mb-6">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-10">
-                </div>
-                <h1 class="text-4xl font-bold tracking-tight text-white mb-4">
-                    Become a merchant in minutes
-                </h1>
-                <p class="text-slate-300 text-lg">
-                    Create your account, complete KYC, and start getting paid faster.
-                </p>
-                <div class="mt-10">
-                    <div class="relative bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-2xl">
-                        <img src="{{ getImage('assets/images/frontend/login_register/' .@$register->image, '615x620') }}" alt="" class="rounded-xl w-full h-auto">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
+    <div class="relative z-10 min-h-screen flex items-center justify-center px-6 py-12">
+        <div class="w-full flex items-center justify-center">
             <div class="w-full max-w-xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
                 <h2 class="text-2xl font-bold text-white mb-2">@lang('Become a Merchant')</h2>
                 <p class="text-slate-400 mb-6">Create your account to get started.</p>
