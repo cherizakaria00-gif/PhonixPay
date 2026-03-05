@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Withdrawal;
 use App\Models\WithdrawSetting;
+use App\Services\BictorysDepositSyncService;
 use App\Services\PlanService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +72,7 @@ class CronController extends Controller
 
         app(PlanService::class)->sendUpcomingRenewalNotifications(now()->utc());
         app(PlanService::class)->processMonthlyRenewals(now()->utc());
+        app(BictorysDepositSyncService::class)->syncPendingDeposits();
         $this->processPlanPayouts();
 
         if (request()->target == 'all') {
@@ -282,5 +284,10 @@ class CronController extends Controller
         $this->daily();
         $this->weekly(); 
         $this->monthly();
+    }
+
+    public function bictorysStatusSync()
+    {
+        app(BictorysDepositSyncService::class)->syncPendingDeposits();
     }
 }

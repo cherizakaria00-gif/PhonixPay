@@ -417,6 +417,7 @@ class SiteController extends Controller
         $successFlag = $this->extractBooleanFlag($request->input('success'));
         $reference = $this->extractBictorysReference($request);
         $hasRedirectSignal = $reference !== null || $status !== '' || $successFlag !== null;
+        $hasValidToken = $this->hasValidBictorysVerificationToken($deposit, $request);
 
         if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
             $deposit->status = Status::PAYMENT_REJECT;
@@ -426,7 +427,7 @@ class SiteController extends Controller
 
         $isSuccess = $successFlag === true
             || $this->isBictorysSuccessStatus($status)
-            || ($this->hasValidBictorysVerificationToken($deposit, $request) && $hasRedirectSignal);
+            || ($hasValidToken && ($hasRedirectSignal || $request->routeIs('payment.redirect.success')));
 
         if (!$isSuccess) {
             return;
@@ -450,6 +451,7 @@ class SiteController extends Controller
         $successFlag = $this->extractBooleanFlag($request->input('success'));
         $reference = $this->extractBictorysReference($request);
         $hasRedirectSignal = $reference !== null || $status !== '' || $successFlag !== null;
+        $hasValidToken = $this->hasValidBictorysVerificationToken($deposit, $request);
 
         if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
             $deposit->status = Status::PAYMENT_REJECT;
@@ -459,7 +461,7 @@ class SiteController extends Controller
 
         $isSuccess = $successFlag === true
             || $this->isBictorysSuccessStatus($status)
-            || ($this->hasValidBictorysVerificationToken($deposit, $request) && $hasRedirectSignal);
+            || ($hasValidToken && ($hasRedirectSignal || $request->routeIs('payment.redirect.success')));
 
         if (!$isSuccess) {
             return;
@@ -497,10 +499,12 @@ class SiteController extends Controller
             ?? $request->input('state')
             ?? $request->input('paymentState')
             ?? $request->input('payment_state')
+            ?? $request->input('transactionStatus')
+            ?? $request->input('transaction_status')
             ?? $request->input('result')
             ?? '';
 
-        return strtolower(trim((string) $status));
+        return $this->normalizeBictorysStatus((string) $status);
     }
 
     private function extractBictorysReference(Request $request): ?string
@@ -552,11 +556,69 @@ class SiteController extends Controller
 
     private function isBictorysSuccessStatus(string $status): bool
     {
-        return in_array($status, ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved'], true);
+        if ($status === '' || $this->isBictorysFailureStatus($status)) {
+            return false;
+        }
+
+        $exact = ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved', 'received', 'captured', 'settled', 'done'];
+        if (in_array($status, $exact, true)) {
+            return true;
+        }
+
+        return $this->bictorysStatusContainsAny($status, [
+            'success',
+            'succeed',
+            'paid',
+            'complete',
+            'approved',
+            'receiv',
+            'captur',
+            'settl',
+        ]);
     }
 
     private function isBictorysFailureStatus(string $status): bool
     {
-        return in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired'], true);
+        if (in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired', 'refunded', 'chargeback', 'declined', 'unpaid', 'void'], true)) {
+            return true;
+        }
+
+        return $this->bictorysStatusContainsAny($status, [
+            'fail',
+            'error',
+            'cancel',
+            'reject',
+            'expire',
+            'refund',
+            'chargeback',
+            'declin',
+            'unpaid',
+            'not_paid',
+        ]);
+    }
+
+    private function normalizeBictorysStatus(string $status): string
+    {
+        $status = strtolower(trim($status));
+        if ($status === '') {
+            return '';
+        }
+
+        $status = str_replace(['-', ' '], '_', $status);
+        $status = preg_replace('/[^a-z0-9_]+/', '', $status) ?? '';
+        $status = preg_replace('/_+/', '_', $status) ?? '';
+
+        return trim($status, '_');
+    }
+
+    private function bictorysStatusContainsAny(string $status, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if ($needle !== '' && str_contains($status, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

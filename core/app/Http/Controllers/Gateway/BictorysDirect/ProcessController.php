@@ -165,15 +165,25 @@ class ProcessController extends Controller
         $redirectUrl = self::appendQueryParam($redirectUrl, 'payment_category', 'card');
 
         $reference = self::extractReference($response);
+        $opToken = self::extractOpToken($response);
+        $detail = self::normalizeDetailPayload($deposit->detail);
+        $detail['bictorys'] = array_filter([
+            'charge_id' => $reference,
+            'op_token' => $opToken,
+            'gateway_alias' => 'BictorysDirect',
+        ], static fn($value) => $value !== null && $value !== '');
+
         if ($reference) {
             $deposit->btc_wallet = $reference;
-            $deposit->save();
         }
+        $deposit->detail = $detail;
+        $deposit->save();
 
         Log::info('Bictorys direct redirect resolved', [
             'deposit_id' => $deposit->id,
             'redirect_url' => $redirectUrl,
             'reference' => $reference,
+            'op_token' => $opToken,
             'original_amount' => $originalAmount,
             'gateway_amount' => (float) ($deposit->gateway_amount ?? 0),
             'reconstructed_gross' => $reconstructedGross,
@@ -462,7 +472,7 @@ class ProcessController extends Controller
                 continue;
             }
 
-            $status = strtolower(trim((string) $value));
+            $status = self::normalizeStatus((string) $value);
             if ($status !== '') {
                 return $status;
             }
@@ -512,6 +522,10 @@ class ProcessController extends Controller
             return true;
         }
 
+        if (self::isIpnFailureStatus($status)) {
+            return false;
+        }
+
         $successFlags = [
             'success',
             'successful',
@@ -519,9 +533,26 @@ class ProcessController extends Controller
             'completed',
             'succeeded',
             'approved',
+            'received',
+            'captured',
+            'settled',
+            'done',
         ];
 
         if (in_array($status, $successFlags, true)) {
+            return true;
+        }
+
+        if (self::statusContainsAny($status, [
+            'success',
+            'succeed',
+            'paid',
+            'complete',
+            'approved',
+            'receiv',
+            'captur',
+            'settl',
+        ])) {
             return true;
         }
 
@@ -531,10 +562,12 @@ class ProcessController extends Controller
             'charge.succeeded',
             'charge.paid',
             'charge.completed',
+            'charge.received',
             'payment.succeeded',
             'payment.successful',
             'payment.paid',
             'payment.completed',
+            'payment.received',
         ];
 
         return in_array($event, $successEvents, true);
@@ -557,7 +590,7 @@ class ProcessController extends Controller
 
     protected static function isIpnFailureStatus(string $status): bool
     {
-        return in_array($status, [
+        if (in_array($status, [
             'failed',
             'failure',
             'error',
@@ -567,7 +600,25 @@ class ProcessController extends Controller
             'expired',
             'refunded',
             'chargeback',
-        ], true);
+            'declined',
+            'unpaid',
+            'void',
+        ], true)) {
+            return true;
+        }
+
+        return self::statusContainsAny($status, [
+            'fail',
+            'error',
+            'cancel',
+            'reject',
+            'expire',
+            'refund',
+            'chargeback',
+            'declin',
+            'unpaid',
+            'not_paid',
+        ]);
     }
 
     protected static function hasValidVerificationToken(Deposit $deposit, string $token): bool
@@ -637,6 +688,69 @@ class ProcessController extends Controller
         }
 
         return null;
+    }
+
+    protected static function extractOpToken(array $response): ?string
+    {
+        $candidates = [
+            data_get($response, 'opToken'),
+            data_get($response, 'op_token'),
+            data_get($response, 'token'),
+            data_get($response, 'data.opToken'),
+            data_get($response, 'data.op_token'),
+            data_get($response, 'data.token'),
+        ];
+
+        foreach ($candidates as $value) {
+            if (!is_scalar($value)) {
+                continue;
+            }
+
+            $token = trim((string) $value);
+            if ($token !== '') {
+                return $token;
+            }
+        }
+
+        return null;
+    }
+
+    protected static function normalizeDetailPayload($detail): array
+    {
+        if (is_array($detail)) {
+            return $detail;
+        }
+
+        if (is_object($detail)) {
+            return (array) $detail;
+        }
+
+        return [];
+    }
+
+    protected static function normalizeStatus(string $status): string
+    {
+        $status = strtolower(trim($status));
+        if ($status === '') {
+            return '';
+        }
+
+        $status = str_replace(['-', ' '], '_', $status);
+        $status = preg_replace('/[^a-z0-9_]+/', '', $status) ?? '';
+        $status = preg_replace('/_+/', '_', $status) ?? '';
+
+        return trim($status, '_');
+    }
+
+    protected static function statusContainsAny(string $status, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if ($needle !== '' && str_contains($status, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected static function normalizeCountryCode($value): ?string
