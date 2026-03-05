@@ -169,7 +169,31 @@ class BictorysDepositSyncService
 
     private function decodeGatewayParams(Gateway $gateway): array
     {
-        $raw = $gateway->gateway_parameters;
+        $params = [];
+
+        $sources = [
+            $this->decodeJsonPayload($gateway->gateway_parameters),
+        ];
+
+        $gatewayCurrency = $gateway->singleCurrency()->orderByDesc('id')->first();
+        if ($gatewayCurrency && !empty($gatewayCurrency->gateway_parameter)) {
+            $sources[] = $this->decodeJsonPayload($gatewayCurrency->gateway_parameter);
+        }
+
+        foreach ($sources as $source) {
+            foreach ($source as $key => $value) {
+                $resolved = $this->extractScalarConfigValue($value);
+                if ($resolved !== null && $resolved !== '') {
+                    $params[$key] = $resolved;
+                }
+            }
+        }
+
+        return $params;
+    }
+
+    private function decodeJsonPayload($raw): array
+    {
         if (is_array($raw)) {
             return $raw;
         }
@@ -180,6 +204,31 @@ class BictorysDepositSyncService
 
         $decoded = json_decode((string) $raw, true);
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function extractScalarConfigValue($value): ?string
+    {
+        if (is_array($value)) {
+            if (array_key_exists('value', $value)) {
+                return $this->extractScalarConfigValue($value['value']);
+            }
+
+            return null;
+        }
+
+        if (is_object($value)) {
+            if (isset($value->value)) {
+                return $this->extractScalarConfigValue($value->value);
+            }
+
+            return null;
+        }
+
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        return trim((string) $value);
     }
 
     private function buildPendingDepositIndex(Collection $pendingDeposits): array
