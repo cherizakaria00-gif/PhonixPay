@@ -712,6 +712,40 @@ class ProcessController extends Controller
             }
         }
 
+        $urlCandidates = [
+            data_get($response, 'link'),
+            data_get($response, 'paymentUrl'),
+            data_get($response, 'payment_url'),
+            data_get($response, 'checkoutUrl'),
+            data_get($response, 'checkout_url'),
+            data_get($response, 'redirectUrl'),
+            data_get($response, 'redirect_url'),
+            data_get($response, 'data.link'),
+            data_get($response, 'data.paymentUrl'),
+            data_get($response, 'data.payment_url'),
+            data_get($response, 'data.checkoutUrl'),
+            data_get($response, 'data.checkout_url'),
+            data_get($response, 'data.redirectUrl'),
+            data_get($response, 'data.redirect_url'),
+        ];
+
+        foreach ($urlCandidates as $url) {
+            if (!is_string($url) || trim($url) === '') {
+                continue;
+            }
+
+            $query = parse_url($url, PHP_URL_QUERY);
+            if (!is_string($query) || $query === '') {
+                continue;
+            }
+
+            parse_str($query, $params);
+            $token = trim((string) ($params['op_token'] ?? $params['opToken'] ?? ''));
+            if ($token !== '') {
+                return $token;
+            }
+        }
+
         return null;
     }
 
