@@ -47,14 +47,14 @@
                     <span class="pf-admin-stat-change pf-admin-stat-change--negative">@lang('Needs attention')</span>
                 </div>
             </a>
-            <a href="{{ route('admin.rewards.index') }}" class="pf-admin-stat-card">
+            <a href="{{ route('admin.deposit.successful') }}" class="pf-admin-stat-card">
                 <div class="pf-admin-stat-icon">
-                    <i class="las la-gift"></i>
+                    <i class="las la-percentage"></i>
                 </div>
                 <div class="pf-admin-stat-body">
-                    <p class="pf-admin-stat-label">@lang('Rewards Program')</p>
-                    <h3 class="pf-admin-stat-value">@lang('Referrals')</h3>
-                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Manage rewards')</span>
+                    <p class="pf-admin-stat-label">@lang('Total Charge')</p>
+                    <h3 class="pf-admin-stat-value">{{ showAmount($deposit['total_deposit_charge']) }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('From successful payments')</span>
                 </div>
             </a>
         </div>
