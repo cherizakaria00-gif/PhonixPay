@@ -55,7 +55,17 @@ class AdminController extends Controller
         $deposit['total_deposit_pending']       = Deposit::pending()->count();
         $deposit['total_deposit_rejected']      = Deposit::rejected()->count();
         $deposit['total_deposit_refunded']      = Deposit::refunded()->count();
-        $deposit['total_deposit_charge']        = Deposit::successful()->sum('charge');
+        $depositChargeFromDeposits = (float) Deposit::successful()
+            ->selectRaw('COALESCE(SUM(charge),0) + COALESCE(SUM(payment_charge),0) as total_charge')
+            ->value('total_charge');
+
+        $depositChargeFromTransactions = (float) Transaction::query()
+            ->whereIn('remark', ['gateway_charge', 'payment_charge'])
+            ->sum('amount');
+
+        $deposit['total_deposit_charge'] = $depositChargeFromDeposits > 0
+            ? $depositChargeFromDeposits
+            : $depositChargeFromTransactions;
 
         $withdrawals['total_withdraw_amount']   = Withdrawal::approved()->sum('amount');
         $withdrawals['total_withdraw_pending']  = Withdrawal::pending()->count();
