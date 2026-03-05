@@ -14,9 +14,31 @@
                 <div class="pf-admin-stat-body">
                     <p class="pf-admin-stat-label">@lang('Total Revenue')</p>
                     <h3 class="pf-admin-stat-value">{{ showAmount($deposit['total_deposit_amount']) }}</h3>
+                    @if(!is_null($totalRevenueXof['amount']))
+                        <p class="pf-admin-stat-subvalue">
+                            ~= {{ number_format((float) $totalRevenueXof['amount'], 2) }} CFA (XOF)
+                        </p>
+                    @endif
                     <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Updated this month')</span>
                 </div>
             </a>
+            <div class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-landmark"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Bictorys Balance')</p>
+                    @if($bictorysBalance['is_available'])
+                        <h3 class="pf-admin-stat-value">
+                            {{ number_format((float) $bictorysBalance['amount'], 2) }} {{ $bictorysBalance['currency'] }}
+                        </h3>
+                        <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Live API (cached 3 min)')</span>
+                    @else
+                        <h3 class="pf-admin-stat-value">N/A</h3>
+                        <span class="pf-admin-stat-change">@lang('Unavailable right now')</span>
+                    @endif
+                </div>
+            </div>
             <a href="{{ route('admin.users.active') }}" class="pf-admin-stat-card">
                 <div class="pf-admin-stat-icon">
                     <i class="las la-users"></i>
@@ -64,6 +86,11 @@
                 <div>
                     <h5 class="pf-admin-panel-title mb-1">@lang('Currency Conversion')</h5>
                     <small class="text-muted">@lang('Base Currency'): {{ $baseCurrency }}</small>
+                    @if(empty($hasConversionTable))
+                        <div class="pf-admin-conversion-hint">
+                            @lang('Central conversion table is not migrated yet. Saving rates updates gateway conversion fallback.')
+                        </div>
+                    @endif
                 </div>
             </div>
             <form action="{{ route('admin.dashboard.currency.update') }}" method="POST">
@@ -439,6 +466,14 @@
             font-weight: 500;
         }
 
+        .pf-admin-stat-subvalue {
+            margin: -2px 0 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            line-height: 1.25;
+        }
+
         .pf-admin-stat-change--positive {
             color: #16a34a;
         }
@@ -457,6 +492,13 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 14px;
+        }
+
+        .pf-admin-conversion-hint {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #b45309;
+            font-weight: 500;
         }
 
         .pf-admin-subscription-item {

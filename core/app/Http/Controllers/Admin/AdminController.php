@@ -18,7 +18,9 @@ use App\Models\Withdrawal;
 use App\Rules\FileTypeValidate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
@@ -66,6 +68,7 @@ class AdminController extends Controller
         $deposit['total_deposit_charge'] = $depositChargeFromDeposits > 0
             ? $depositChargeFromDeposits
             : $depositChargeFromTransactions;
+        $bictorysBalance = $this->resolveBictorysBalance();
 
         $withdrawals['total_withdraw_amount']   = Withdrawal::approved()->sum('amount');
         $withdrawals['total_withdraw_pending']  = Withdrawal::pending()->count();
@@ -95,6 +98,7 @@ class AdminController extends Controller
 
         $baseCurrency = strtoupper((string) gs('cur_text'));
         $conversionCurrencies = $this->conversionCurrencyOptions($baseCurrency);
+        $hasConversionTable = Schema::hasTable('currency_conversion_rates');
         $gatewayRates = GatewayCurrency::query()
             ->get(['currency', 'rate'])
             ->groupBy(function ($row) {
@@ -104,7 +108,7 @@ class AdminController extends Controller
                 return (float) $rows->max('rate');
             });
         $storedRates = collect();
-        if (Schema::hasTable('currency_conversion_rates')) {
+        if ($hasConversionTable) {
             $storedRates = CurrencyConversionRate::query()
                 ->where('base_currency', $baseCurrency)
                 ->orderBy('quote_currency')
@@ -130,6 +134,26 @@ class AdminController extends Controller
             ];
         })->all();
 
+        $totalRevenueXof = [
+            'amount' => null,
+            'rate' => null,
+            'base_currency' => $baseCurrency,
+            'target_currency' => 'XOF',
+        ];
+
+        if ($baseCurrency === 'XOF') {
+            $totalRevenueXof['rate'] = 1.0;
+            $totalRevenueXof['amount'] = round((float) $deposit['total_deposit_amount'], 2);
+        } else {
+            $xofRate = $this->toPositiveFloat(data_get($conversionRates, 'XOF.rate'));
+            $xofRateIsActive = (bool) data_get($conversionRates, 'XOF.is_active', false);
+
+            if ($xofRate !== null && $xofRateIsActive) {
+                $totalRevenueXof['rate'] = $xofRate;
+                $totalRevenueXof['amount'] = round((float) $deposit['total_deposit_amount'] * $xofRate, 2);
+            }
+        }
+
         return view('admin.dashboard', compact(
             'pageTitle',
             'widget',
@@ -137,18 +161,308 @@ class AdminController extends Controller
             'deposit',
             'withdrawals',
             'subscription',
+            'bictorysBalance',
             'baseCurrency',
+            'hasConversionTable',
             'conversionCurrencies',
-            'conversionRates'
+            'conversionRates',
+            'totalRevenueXof'
         ));
+    }
+
+    private function resolveBictorysBalance(): array
+    {
+        return Cache::remember('admin_dashboard_bictorys_balance_v1', now()->addMinutes(3), function () {
+            try {
+                $credentials = $this->extractBictorysCredentials();
+                if (!$credentials) {
+                    return [
+                        'is_available' => false,
+                        'amount' => null,
+                        'currency' => null,
+                    ];
+                }
+
+                $headers = [
+                    'Accept: application/json',
+                    'Content-Type: application/json',
+                    'X-Api-Key: ' . $credentials['api_key'],
+                ];
+
+                foreach ($this->bictorysBalanceEndpointCandidates($credentials) as $endpointUrl) {
+                    $raw = CurlRequest::curlContent($endpointUrl, $headers);
+                    if (!is_string($raw) || trim($raw) === '') {
+                        continue;
+                    }
+
+                    $payload = json_decode($raw, true);
+                    if (!is_array($payload)) {
+                        continue;
+                    }
+
+                    $balance = $this->extractBictorysBalanceFromPayload($payload);
+                    if ($balance !== null) {
+                        return [
+                            'is_available' => true,
+                            'amount' => round((float) $balance['amount'], 2),
+                            'currency' => strtoupper((string) ($balance['currency'] ?: 'XOF')),
+                        ];
+                    }
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to resolve Bictorys balance for admin dashboard', [
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+
+            return [
+                'is_available' => false,
+                'amount' => null,
+                'currency' => null,
+            ];
+        });
+    }
+
+    private function extractBictorysCredentials(): ?array
+    {
+        $gateway = \App\Models\Gateway::query()
+            ->whereIn('alias', ['BictorysDirect', 'BictorysCheckout'])
+            ->where('status', Status::ENABLE)
+            ->orderByRaw("CASE WHEN alias = 'BictorysDirect' THEN 0 ELSE 1 END")
+            ->first();
+
+        if (!$gateway) {
+            return null;
+        }
+
+        $parameters = $this->flattenGatewayParameters($gateway->gateway_parameters);
+
+        $gatewayCurrency = $gateway->singleCurrency()->first();
+        if ($gatewayCurrency && !empty($gatewayCurrency->gateway_parameter)) {
+            $parameters = array_merge($parameters, $this->flattenGatewayParameters($gatewayCurrency->gateway_parameter));
+        }
+
+        $apiKey = trim((string) ($parameters['api_key'] ?? ''));
+        if ($apiKey === '') {
+            return null;
+        }
+
+        $baseUrl = trim((string) ($parameters['api_base_url'] ?? 'https://api.bictorys.com'));
+        $baseUrl = rtrim($baseUrl !== '' ? $baseUrl : 'https://api.bictorys.com', '/');
+
+        return [
+            'base_url' => $baseUrl,
+            'api_key' => $apiKey,
+            'merchant_reference' => trim((string) ($parameters['merchant_reference'] ?? '')),
+            'custom_balance_endpoint' => trim((string) ($parameters['balance_endpoint'] ?? $parameters['balance_path'] ?? '')),
+        ];
+    }
+
+    private function flattenGatewayParameters($raw): array
+    {
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        } elseif (is_object($raw)) {
+            $raw = (array) $raw;
+        }
+
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $output = [];
+        foreach ($raw as $key => $value) {
+            if (is_array($value)) {
+                if (array_key_exists('value', $value)) {
+                    $output[$key] = $this->scalarParameterValue($value['value']);
+                }
+                continue;
+            }
+
+            if (is_object($value)) {
+                if (isset($value->value)) {
+                    $output[$key] = $this->scalarParameterValue($value->value);
+                }
+                continue;
+            }
+
+            $scalar = $this->scalarParameterValue($value);
+            if ($scalar !== null) {
+                $output[$key] = $scalar;
+            }
+        }
+
+        return $output;
+    }
+
+    private function scalarParameterValue($value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        return trim((string) $value);
+    }
+
+    private function bictorysBalanceEndpointCandidates(array $credentials): array
+    {
+        $baseUrl = $credentials['base_url'];
+        $merchantReference = $credentials['merchant_reference'] ?? '';
+
+        $paths = [];
+        $custom = trim((string) ($credentials['custom_balance_endpoint'] ?? ''));
+        if ($custom !== '') {
+            $paths[] = $custom;
+        }
+
+        $paths = array_merge($paths, [
+            '/pay/v1/balance',
+            '/pay/v1/wallet/balance',
+            '/pay/v1/account/balance',
+            '/pay/v1/accounts/balance',
+            '/pay/v1/merchant/balance',
+            '/pay/v1/me/balance',
+        ]);
+
+        $urls = [];
+        foreach ($paths as $path) {
+            $path = trim((string) $path);
+            if ($path === '') {
+                continue;
+            }
+
+            $isAbsolute = str_starts_with($path, 'http://') || str_starts_with($path, 'https://');
+            $url = $isAbsolute ? $path : $baseUrl . '/' . ltrim($path, '/');
+            $urls[] = $url;
+
+            if ($merchantReference !== '') {
+                $separator = str_contains($url, '?') ? '&' : '?';
+                $urls[] = $url . $separator . 'merchantReference=' . urlencode($merchantReference);
+            }
+        }
+
+        return array_values(array_unique($urls));
+    }
+
+    private function extractBictorysBalanceFromPayload(array $payload): ?array
+    {
+        $rows = [];
+        $directList = [
+            data_get($payload, 'balances'),
+            data_get($payload, 'data.balances'),
+            data_get($payload, 'data.wallets'),
+            data_get($payload, 'wallets'),
+        ];
+
+        foreach ($directList as $candidate) {
+            if (is_array($candidate)) {
+                foreach ($candidate as $row) {
+                    if (is_array($row)) {
+                        $rows[] = $row;
+                    }
+                }
+            }
+        }
+
+        $rows[] = $payload;
+        if (is_array(data_get($payload, 'data'))) {
+            $rows[] = data_get($payload, 'data');
+        }
+        if (is_array(data_get($payload, 'wallet'))) {
+            $rows[] = data_get($payload, 'wallet');
+        }
+        if (is_array(data_get($payload, 'data.wallet'))) {
+            $rows[] = data_get($payload, 'data.wallet');
+        }
+        if (is_array(data_get($payload, 'account'))) {
+            $rows[] = data_get($payload, 'account');
+        }
+        if (is_array(data_get($payload, 'data.account'))) {
+            $rows[] = data_get($payload, 'data.account');
+        }
+
+        $amountPaths = [
+            'amount',
+            'balance',
+            'availableBalance',
+            'available_balance',
+            'currentBalance',
+            'current_balance',
+            'walletBalance',
+            'wallet_balance',
+            'totalBalance',
+            'total_balance',
+            'value',
+            'data.amount',
+            'data.balance',
+            'data.availableBalance',
+            'data.available_balance',
+        ];
+
+        $currencyPaths = [
+            'currency',
+            'currencyCode',
+            'currency_code',
+            'asset',
+            'unit',
+            'data.currency',
+            'data.currencyCode',
+            'data.currency_code',
+        ];
+
+        foreach ($rows as $row) {
+            foreach ($amountPaths as $amountPath) {
+                $amount = $this->normalizeApiNumeric(data_get($row, $amountPath));
+                if ($amount === null) {
+                    continue;
+                }
+
+                $currency = null;
+                foreach ($currencyPaths as $currencyPath) {
+                    $candidate = trim((string) data_get($row, $currencyPath, ''));
+                    if ($candidate !== '') {
+                        $currency = strtoupper($candidate);
+                        break;
+                    }
+                }
+
+                return [
+                    'amount' => $amount,
+                    'currency' => $currency ?: 'XOF',
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeApiNumeric($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+            $value = str_replace(',', '.', $value);
+            if (!preg_match('/^-?\d+(\.\d+)?$/', $value)) {
+                return null;
+            }
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
     }
 
     public function updateCurrencyConversion(Request $request)
     {
-        if (!Schema::hasTable('currency_conversion_rates')) {
-            $notify[] = ['error', 'Currency conversion table is missing. Please run migrations first.'];
-            return back()->withNotify($notify);
-        }
+        $hasRatesTable = Schema::hasTable('currency_conversion_rates');
 
         $normalizedRates = collect($request->input('rates', []))
             ->map(function ($row) {
@@ -174,10 +488,12 @@ class AdminController extends Controller
         ]);
 
         $baseCurrency = strtoupper((string) gs('cur_text'));
-        $existingRates = CurrencyConversionRate::query()
-            ->where('base_currency', $baseCurrency)
-            ->get()
-            ->keyBy('quote_currency');
+        $existingRates = $hasRatesTable
+            ? CurrencyConversionRate::query()
+                ->where('base_currency', $baseCurrency)
+                ->get()
+                ->keyBy('quote_currency')
+            : collect();
         $upsertPayload = [];
 
         foreach ($request->input('rates', []) as $row) {
@@ -214,11 +530,13 @@ class AdminController extends Controller
             return back()->withNotify($notify);
         }
 
-        CurrencyConversionRate::query()->upsert(
-            $upsertPayload,
-            ['base_currency', 'quote_currency'],
-            ['rate', 'is_active', 'source', 'updated_at']
-        );
+        if ($hasRatesTable) {
+            CurrencyConversionRate::query()->upsert(
+                $upsertPayload,
+                ['base_currency', 'quote_currency'],
+                ['rate', 'is_active', 'source', 'updated_at']
+            );
+        }
 
         // Keep gateway currency rates aligned with central conversion settings.
         foreach ($upsertPayload as $rateRow) {
@@ -231,7 +549,11 @@ class AdminController extends Controller
                 ->update(['rate' => $rateRow['rate']]);
         }
 
-        $notify[] = ['success', 'Currency conversion rates updated successfully'];
+        if ($hasRatesTable) {
+            $notify[] = ['success', 'Currency conversion rates updated successfully'];
+        } else {
+            $notify[] = ['success', 'Rates were saved to gateway currencies. Run migrations to enable central conversion table.'];
+        }
         return back()->withNotify($notify);
     }
 
