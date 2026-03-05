@@ -12,18 +12,34 @@ use Illuminate\Support\Facades\Log;
 
 class BictorysDepositSyncService
 {
-    private const LOOKBACK_HOURS = 120;
-    private const MAX_PENDING_PER_GATEWAY = 250;
-    private const MAX_CHARGE_LOOKUPS = 60;
+    private const DEFAULT_LOOKBACK_HOURS = 120;
+    private const DEFAULT_MAX_PENDING_PER_GATEWAY = 250;
+    private const DEFAULT_MAX_CHARGE_LOOKUPS = 60;
 
-    public function syncPendingDeposits(): array
+    public function syncPendingDeposits(array $options = []): array
     {
         $result = [
             'checked' => 0,
             'synced_success' => 0,
             'synced_rejected' => 0,
             'gateways' => 0,
+            'hydrated_tokens' => 0,
+            'manual_success' => 0,
+            'manual_rejected' => 0,
         ];
+
+        $lookbackHours = $this->readIntOption($options, 'lookback_hours', self::DEFAULT_LOOKBACK_HOURS);
+        $maxPending = $this->readIntOption($options, 'max_pending_per_gateway', self::DEFAULT_MAX_PENDING_PER_GATEWAY);
+        $maxChargeLookups = $this->readIntOption($options, 'max_charge_lookups', self::DEFAULT_MAX_CHARGE_LOOKUPS);
+        $replayLogs = (bool) ($options['replay_logs'] ?? false);
+        $dryRun = (bool) ($options['dry_run'] ?? false);
+
+        if ($replayLogs) {
+            $hydration = $this->hydratePendingTokensFromLogs($dryRun);
+            $result['hydrated_tokens'] += $hydration['hydrated_tokens'];
+            $result['manual_success'] += $hydration['manual_success'];
+            $result['manual_rejected'] += $hydration['manual_rejected'];
+        }
 
         $gateways = Gateway::query()
             ->whereIn('alias', ['BictorysCheckout', 'BictorysDirect'])
@@ -31,7 +47,13 @@ class BictorysDepositSyncService
             ->get();
 
         foreach ($gateways as $gateway) {
-            $gatewayStats = $this->syncGatewayPendingDeposits($gateway);
+            $gatewayStats = $this->syncGatewayPendingDeposits(
+                $gateway,
+                $lookbackHours,
+                $maxPending,
+                $maxChargeLookups,
+                $dryRun
+            );
             $result['checked'] += $gatewayStats['checked'];
             $result['synced_success'] += $gatewayStats['synced_success'];
             $result['synced_rejected'] += $gatewayStats['synced_rejected'];
@@ -40,10 +62,24 @@ class BictorysDepositSyncService
             }
         }
 
+        $manualRefsResult = $this->reconcileManualReferences(
+            $this->normalizeReferenceList($options['success_refs'] ?? []),
+            $this->normalizeReferenceList($options['reject_refs'] ?? []),
+            $dryRun
+        );
+        $result['manual_success'] += $manualRefsResult['manual_success'];
+        $result['manual_rejected'] += $manualRefsResult['manual_rejected'];
+
         return $result;
     }
 
-    private function syncGatewayPendingDeposits(Gateway $gateway): array
+    private function syncGatewayPendingDeposits(
+        Gateway $gateway,
+        int $lookbackHours,
+        int $maxPendingPerGateway,
+        int $maxChargeLookups,
+        bool $dryRun
+    ): array
     {
         $stats = [
             'checked' => 0,
@@ -62,12 +98,17 @@ class BictorysDepositSyncService
             $baseUrl = 'https://api.bictorys.com';
         }
 
-        $pendingDeposits = Deposit::query()
+        $pendingDepositsQuery = Deposit::query()
             ->where('method_code', $gateway->code)
-            ->whereIn('status', [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING])
-            ->where('created_at', '>=', now()->subHours(self::LOOKBACK_HOURS))
+            ->whereIn('status', [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING]);
+
+        if ($lookbackHours > 0) {
+            $pendingDepositsQuery->where('created_at', '>=', now()->subHours($lookbackHours));
+        }
+
+        $pendingDeposits = $pendingDepositsQuery
             ->orderByDesc('id')
-            ->limit(self::MAX_PENDING_PER_GATEWAY)
+            ->limit(max(1, $maxPendingPerGateway))
             ->get();
 
         if ($pendingDeposits->isEmpty()) {
@@ -81,7 +122,7 @@ class BictorysDepositSyncService
 
         $transactions = $this->fetchTransactionsSnapshot($baseUrl, $apiKey);
         foreach ($transactions as $transactionPayload) {
-            $newStatus = $this->classifyStatus($this->extractStatus($transactionPayload));
+            $newStatus = $this->classifyPayloadStatus($transactionPayload);
             if ($newStatus === null) {
                 continue;
             }
@@ -101,7 +142,7 @@ class BictorysDepositSyncService
         // Charge-level fallback for unresolved pending records.
         $remaining = $pendingDeposits
             ->filter(fn(Deposit $deposit) => !isset($decisions[$deposit->id]))
-            ->take(self::MAX_CHARGE_LOOKUPS);
+            ->take(max(1, $maxChargeLookups));
 
         foreach ($remaining as $deposit) {
             $chargeId = trim((string) ($deposit->btc_wallet ?? ''));
@@ -123,7 +164,7 @@ class BictorysDepositSyncService
                 continue;
             }
 
-            $newStatus = $this->classifyStatus($this->extractStatus($chargeSnapshot));
+            $newStatus = $this->classifyPayloadStatus($chargeSnapshot);
             if ($newStatus === null) {
                 continue;
             }
@@ -139,18 +180,13 @@ class BictorysDepositSyncService
             }
 
             if ($decision['status'] === Status::PAYMENT_SUCCESS) {
-                PaymentController::userDataUpdate($deposit);
+                $this->applyStatusDecision($deposit, Status::PAYMENT_SUCCESS, $dryRun);
                 $stats['synced_success']++;
                 continue;
             }
 
             if ($decision['status'] === Status::PAYMENT_REJECT) {
-                $deposit->status = Status::PAYMENT_REJECT;
-                $deposit->save();
-                if ($deposit->apiPayment) {
-                    $deposit->apiPayment->status = Status::PAYMENT_REJECT;
-                    $deposit->apiPayment->save();
-                }
+                $this->applyStatusDecision($deposit, Status::PAYMENT_REJECT, $dryRun);
                 $stats['synced_rejected']++;
             }
         }
@@ -229,6 +265,243 @@ class BictorysDepositSyncService
         }
 
         return trim((string) $value);
+    }
+
+    private function readIntOption(array $options, string $key, int $default): int
+    {
+        $value = $options[$key] ?? $default;
+        $value = (int) $value;
+        return $value > 0 ? $value : $default;
+    }
+
+    private function normalizeReferenceList($value): array
+    {
+        if (is_string($value)) {
+            $value = preg_split('/[\s,;]+/', $value, -1, PREG_SPLIT_NO_EMPTY);
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $refs = [];
+        foreach ($value as $item) {
+            $normalized = $this->normalizeReference($item);
+            if ($normalized !== null) {
+                $refs[] = $normalized;
+            }
+        }
+
+        return array_values(array_unique($refs));
+    }
+
+    private function reconcileManualReferences(array $successRefs, array $rejectRefs, bool $dryRun): array
+    {
+        $result = [
+            'manual_success' => 0,
+            'manual_rejected' => 0,
+        ];
+
+        $byStatus = [
+            Status::PAYMENT_SUCCESS => $successRefs,
+            Status::PAYMENT_REJECT => $rejectRefs,
+        ];
+
+        foreach ($byStatus as $targetStatus => $refs) {
+            if (empty($refs)) {
+                continue;
+            }
+
+            $deposits = Deposit::query()
+                ->whereIn('status', [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING])
+                ->where(function ($query) use ($refs) {
+                    $query->whereIn('trx', $refs)->orWhereIn('btc_wallet', $refs);
+                })
+                ->get();
+
+            foreach ($deposits as $deposit) {
+                $this->applyStatusDecision($deposit, $targetStatus, $dryRun);
+                if ($targetStatus === Status::PAYMENT_SUCCESS) {
+                    $result['manual_success']++;
+                } elseif ($targetStatus === Status::PAYMENT_REJECT) {
+                    $result['manual_rejected']++;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private function applyStatusDecision(Deposit $deposit, int $status, bool $dryRun): void
+    {
+        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+            return;
+        }
+
+        if ($status === Status::PAYMENT_SUCCESS) {
+            if (!$dryRun) {
+                PaymentController::userDataUpdate($deposit);
+            }
+
+            return;
+        }
+
+        if ($status !== Status::PAYMENT_REJECT) {
+            return;
+        }
+
+        if (!$dryRun) {
+            $deposit->status = Status::PAYMENT_REJECT;
+            $deposit->save();
+
+            if ($deposit->apiPayment) {
+                $deposit->apiPayment->status = Status::PAYMENT_REJECT;
+                $deposit->apiPayment->save();
+            }
+        }
+    }
+
+    private function hydratePendingTokensFromLogs(bool $dryRun): array
+    {
+        $result = [
+            'hydrated_tokens' => 0,
+            'manual_success' => 0,
+            'manual_rejected' => 0,
+        ];
+
+        $logPath = storage_path('logs/laravel.log');
+        if (!is_file($logPath) || !is_readable($logPath)) {
+            return $result;
+        }
+
+        $tokenMapByDepositId = [];
+        $successDepositIds = [];
+        $rejectDepositIds = [];
+
+        $handle = fopen($logPath, 'r');
+        if (!$handle) {
+            return $result;
+        }
+
+        while (($line = fgets($handle)) !== false) {
+            if (str_contains($line, 'Bictorys') && (str_contains($line, 'direct response') || str_contains($line, 'checkout response'))) {
+                if (preg_match('/"deposit_id":(\d+)/', $line, $idMatch)) {
+                    $depositId = (int) $idMatch[1];
+                    $chargeId = null;
+                    $opToken = null;
+
+                    if (preg_match('/"chargeId":"([^"]+)"/', $line, $chargeMatch)) {
+                        $chargeId = trim((string) $chargeMatch[1]);
+                    }
+
+                    if (preg_match('/"opToken":"([^"]+)"/', $line, $tokenMatch)) {
+                        $opToken = trim((string) $tokenMatch[1]);
+                    }
+
+                    if ($chargeId !== null || $opToken !== null) {
+                        $tokenMapByDepositId[$depositId] = [
+                            'charge_id' => $chargeId,
+                            'op_token' => $opToken,
+                        ];
+                    }
+                }
+            }
+
+            if (str_contains($line, 'IPN marked deposit successful') && preg_match('/"deposit_id":(\d+)/', $line, $idMatch)) {
+                $successDepositIds[(int) $idMatch[1]] = true;
+            }
+
+            if (str_contains($line, 'IPN marked deposit rejected') && preg_match('/"deposit_id":(\d+)/', $line, $idMatch)) {
+                $rejectDepositIds[(int) $idMatch[1]] = true;
+            }
+        }
+
+        fclose($handle);
+
+        if (!empty($tokenMapByDepositId)) {
+            $deposits = Deposit::query()
+                ->whereIn('id', array_keys($tokenMapByDepositId))
+                ->whereIn('status', [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING])
+                ->get();
+
+            foreach ($deposits as $deposit) {
+                $payload = $tokenMapByDepositId[$deposit->id] ?? null;
+                if (!$payload) {
+                    continue;
+                }
+
+                $detail = $this->normalizeDetailPayload($deposit->detail);
+                $changed = false;
+
+                $existingToken = data_get($detail, 'bictorys.op_token');
+                $existingCharge = data_get($detail, 'bictorys.charge_id');
+
+                if (!$existingToken && !empty($payload['op_token'])) {
+                    data_set($detail, 'bictorys.op_token', $payload['op_token']);
+                    $changed = true;
+                }
+
+                if (!$existingCharge && !empty($payload['charge_id'])) {
+                    data_set($detail, 'bictorys.charge_id', $payload['charge_id']);
+                    $changed = true;
+                }
+
+                if (empty($deposit->btc_wallet) && !empty($payload['charge_id'])) {
+                    $deposit->btc_wallet = $payload['charge_id'];
+                    $changed = true;
+                }
+
+                if ($changed) {
+                    if (!$dryRun) {
+                        $deposit->detail = $detail;
+                        $deposit->save();
+                    }
+                    $result['hydrated_tokens']++;
+                }
+            }
+        }
+
+        $successIds = array_keys($successDepositIds);
+        if (!empty($successIds)) {
+            $deposits = Deposit::query()
+                ->whereIn('id', $successIds)
+                ->whereIn('status', [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING])
+                ->get();
+
+            foreach ($deposits as $deposit) {
+                $this->applyStatusDecision($deposit, Status::PAYMENT_SUCCESS, $dryRun);
+                $result['manual_success']++;
+            }
+        }
+
+        $rejectIds = array_keys($rejectDepositIds);
+        if (!empty($rejectIds)) {
+            $deposits = Deposit::query()
+                ->whereIn('id', $rejectIds)
+                ->whereIn('status', [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING])
+                ->get();
+
+            foreach ($deposits as $deposit) {
+                $this->applyStatusDecision($deposit, Status::PAYMENT_REJECT, $dryRun);
+                $result['manual_rejected']++;
+            }
+        }
+
+        return $result;
+    }
+
+    private function normalizeDetailPayload($detail): array
+    {
+        if (is_array($detail)) {
+            return $detail;
+        }
+
+        if (is_object($detail)) {
+            return (array) $detail;
+        }
+
+        $decoded = json_decode((string) $detail, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
     private function buildPendingDepositIndex(Collection $pendingDeposits): array
@@ -369,7 +642,7 @@ class BictorysDepositSyncService
         return false;
     }
 
-    private function extractStatus(array $payload): string
+    private function extractStatusCandidates(array $payload): array
     {
         $paths = [
             'status',
@@ -390,8 +663,21 @@ class BictorysDepositSyncService
             'data.result',
             'data.transactionStatus',
             'data.transaction_status',
+            'title',
+            'details',
+            'error',
+            'message',
+            'reason',
+            'description',
+            'data.title',
+            'data.details',
+            'data.error',
+            'data.message',
+            'data.reason',
+            'data.description',
         ];
 
+        $candidates = [];
         foreach ($paths as $path) {
             $value = data_get($payload, $path);
             if (!is_scalar($value)) {
@@ -400,11 +686,29 @@ class BictorysDepositSyncService
 
             $status = $this->normalizeStatus((string) $value);
             if ($status !== '') {
-                return $status;
+                $candidates[] = $status;
             }
         }
 
-        return '';
+        return array_values(array_unique($candidates));
+    }
+
+    private function classifyPayloadStatus(array $payload): ?int
+    {
+        $statuses = $this->extractStatusCandidates($payload);
+        foreach ($statuses as $status) {
+            if ($this->isFailureStatus($status)) {
+                return Status::PAYMENT_REJECT;
+            }
+        }
+
+        foreach ($statuses as $status) {
+            if ($this->isSuccessStatus($status)) {
+                return Status::PAYMENT_SUCCESS;
+            }
+        }
+
+        return null;
     }
 
     private function extractReferences(array $payload): array
@@ -454,23 +758,6 @@ class BictorysDepositSyncService
         }
 
         return array_values(array_unique($references));
-    }
-
-    private function classifyStatus(string $status): ?int
-    {
-        if ($status === '') {
-            return null;
-        }
-
-        if ($this->isFailureStatus($status)) {
-            return Status::PAYMENT_REJECT;
-        }
-
-        if ($this->isSuccessStatus($status)) {
-            return Status::PAYMENT_SUCCESS;
-        }
-
-        return null;
     }
 
     private function isSuccessStatus(string $status): bool
