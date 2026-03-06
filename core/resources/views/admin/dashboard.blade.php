@@ -22,23 +22,6 @@
                     <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Updated this month')</span>
                 </div>
             </a>
-            <div class="pf-admin-stat-card">
-                <div class="pf-admin-stat-icon">
-                    <i class="las la-landmark"></i>
-                </div>
-                <div class="pf-admin-stat-body">
-                    <p class="pf-admin-stat-label">@lang('Bictorys Balance')</p>
-                    @if($bictorysBalance['is_available'])
-                        <h3 class="pf-admin-stat-value">
-                            {{ number_format((float) $bictorysBalance['amount'], 2) }} {{ $bictorysBalance['currency'] }}
-                        </h3>
-                        <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Live API (cached 3 min)')</span>
-                    @else
-                        <h3 class="pf-admin-stat-value">N/A</h3>
-                        <span class="pf-admin-stat-change">@lang('Unavailable right now')</span>
-                    @endif
-                </div>
-            </div>
             <a href="{{ route('admin.users.active') }}" class="pf-admin-stat-card">
                 <div class="pf-admin-stat-icon">
                     <i class="las la-users"></i>
