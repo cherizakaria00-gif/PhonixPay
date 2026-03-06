@@ -96,14 +96,14 @@
                         <div class="form-group mt-3">
                             <label for="payment_fixed_charge">@lang('Payment Fixed Charge')</label>
                             <div class="input-group">
-                                <input type="number" step="any" name="payment_fixed_charge" value="{{ getAmount(gs('payment_fixed_charge')) }}" class="form-control">
+                                <input type="number" step="any" name="payment_fixed_charge" value="{{ getAmount($user->payment_fixed_charge ?? gs('payment_fixed_charge')) }}" class="form-control">
                                 <div class="input-group-text">{{ __(gs('cur_text')) }}</div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="payment_percent_charge">@lang('Payment Percent Charge')</label>
                             <div class="input-group">
-                                <input type="number" step="any" name="payment_percent_charge" value="{{ getAmount(gs('payment_percent_charge')) }}" class="form-control">
+                                <input type="number" step="any" name="payment_percent_charge" value="{{ getAmount($user->payment_percent_charge ?? gs('payment_percent_charge')) }}" class="form-control">
                                 <div class="input-group-text">%</div>
                             </div>
                         </div>
