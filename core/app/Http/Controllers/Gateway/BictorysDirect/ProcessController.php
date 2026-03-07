@@ -9,6 +9,8 @@ use App\Lib\CurlRequest;
 use App\Models\Deposit;
 use App\Services\CurrencyConversionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ProcessController extends Controller
@@ -39,7 +41,8 @@ class ProcessController extends Controller
         );
         $redirectUrl = self::appendQueryParam(route('payment.redirect.success', $deposit->id), 'vtoken', $verificationToken);
         $cancelUrl = self::appendQueryParam(route('payment.redirect.cancel', $deposit->id), 'vtoken', $verificationToken);
-        $callbackUrl = self::appendQueryParam(route('ipn.BictorysDirect'), 'vtoken', $verificationToken);
+        $callbackUrl = route('webhooks.bictorys', ['gateway' => 'direct']);
+        $callbackUrl = self::appendQueryParam($callbackUrl, 'vtoken', $verificationToken);
 
         $apiPayment = $deposit->apiPayment;
         $customer = $apiPayment->customer ?? null;
@@ -252,54 +255,79 @@ class ProcessController extends Controller
             return response('OK', 200);
         }
 
-        if (!$deposit->btc_wallet) {
-            $chargeReference = self::resolveChargeReference($references, (string) $deposit->trx);
-            if ($chargeReference) {
-                $deposit->btc_wallet = $chargeReference;
-                $deposit->save();
-            }
-        }
-
-        $successFlag = self::extractSuccessFlag($payload);
-        $hasValidToken = self::hasValidVerificationToken($deposit, $verificationToken);
-        $isFailureStatus = self::isIpnFailureStatus($status);
-        $hasWebhookSignal = !empty($references)
-            || $status !== ''
-            || $successFlag !== null
-            || self::extractEventName($payload) !== '';
-
-        if ($successFlag === false || $isFailureStatus) {
-            if (in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
-                $deposit->status = Status::PAYMENT_REJECT;
-                $deposit->save();
-            }
-            Log::info('Bictorys direct IPN marked deposit rejected', [
+        $payloadFingerprint = self::payloadFingerprint($payload, $status);
+        if (!Cache::add(self::webhookDedupCacheKey((int) $deposit->id, $payloadFingerprint), now()->timestamp, 3600)) {
+            Log::info('Bictorys direct IPN ignored duplicate payload', [
                 'deposit_id' => $deposit->id,
                 'trx' => $deposit->trx,
                 'status' => $status,
-                'success_flag' => $successFlag,
             ]);
             return response('OK', 200);
         }
 
-        $isSuccess = self::isIpnSuccessPayload($payload, $status)
-            || ($hasValidToken && $hasWebhookSignal && $successFlag !== false && !$isFailureStatus);
+        $processingLockKey = self::webhookProcessingLockKey((int) $deposit->id);
+        if (!Cache::add($processingLockKey, now()->timestamp, 12)) {
+            Log::info('Bictorys direct IPN skipped while processing lock is active', [
+                'deposit_id' => $deposit->id,
+                'trx' => $deposit->trx,
+            ]);
+            return response('OK', 200);
+        }
 
-        if ($isSuccess) {
-            PaymentController::userDataUpdate($deposit);
-            Log::info('Bictorys direct IPN marked deposit successful', [
-                'deposit_id' => $deposit->id,
-                'trx' => $deposit->trx,
-                'status' => $status,
-                'matched_by_token' => $hasValidToken,
-            ]);
-        } else {
-            Log::info('Bictorys direct IPN ignored (non-success status)', [
-                'deposit_id' => $deposit->id,
-                'trx' => $deposit->trx,
-                'status' => $status,
-                'matched_by_token' => $hasValidToken,
-            ]);
+        try {
+            self::trackWebhookReceipt($deposit, $status);
+
+            if (!$deposit->btc_wallet) {
+                $chargeReference = self::resolveChargeReference($references, (string) $deposit->trx);
+                if ($chargeReference) {
+                    $deposit->btc_wallet = $chargeReference;
+                    $deposit->save();
+                }
+            }
+
+            $successFlag = self::extractSuccessFlag($payload);
+            $hasValidToken = self::hasValidVerificationToken($deposit, $verificationToken);
+            $isFailureStatus = self::isIpnFailureStatus($status);
+            $hasWebhookSignal = !empty($references)
+                || $status !== ''
+                || $successFlag !== null
+                || self::extractEventName($payload) !== '';
+
+            if ($successFlag === false || $isFailureStatus) {
+                if (in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+                    $deposit->status = Status::PAYMENT_REJECT;
+                    $deposit->save();
+                }
+                Log::info('Bictorys direct IPN marked deposit rejected', [
+                    'deposit_id' => $deposit->id,
+                    'trx' => $deposit->trx,
+                    'status' => $status,
+                    'success_flag' => $successFlag,
+                ]);
+                return response('OK', 200);
+            }
+
+            $isSuccess = self::isIpnSuccessPayload($payload, $status)
+                || ($hasValidToken && $hasWebhookSignal && $successFlag !== false && !$isFailureStatus);
+
+            if ($isSuccess) {
+                PaymentController::userDataUpdate($deposit);
+                Log::info('Bictorys direct IPN marked deposit successful', [
+                    'deposit_id' => $deposit->id,
+                    'trx' => $deposit->trx,
+                    'status' => $status,
+                    'matched_by_token' => $hasValidToken,
+                ]);
+            } else {
+                Log::info('Bictorys direct IPN ignored (non-success status)', [
+                    'deposit_id' => $deposit->id,
+                    'trx' => $deposit->trx,
+                    'status' => $status,
+                    'matched_by_token' => $hasValidToken,
+                ]);
+            }
+        } finally {
+            Cache::forget($processingLockKey);
         }
 
         return response('OK', 200);
@@ -307,10 +335,32 @@ class ProcessController extends Controller
 
     protected static function findPendingDepositByReferences(array $references): ?Deposit
     {
+        if (empty($references)) {
+            return null;
+        }
+
+        $normalizedReferences = [];
+        foreach ($references as $reference) {
+            if (!is_scalar($reference)) {
+                continue;
+            }
+
+            $normalized = strtolower(trim((string) $reference));
+            if ($normalized !== '') {
+                $normalizedReferences[] = $normalized;
+            }
+        }
+        $normalizedReferences = array_values(array_unique($normalizedReferences));
+
         $pendingStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING];
 
         $deposit = Deposit::whereIn('status', $pendingStatuses)
-            ->whereIn('trx', $references)
+            ->where(function ($query) use ($references, $normalizedReferences) {
+                $query->whereIn('trx', $references);
+                if (!empty($normalizedReferences)) {
+                    $query->orWhereIn(DB::raw('LOWER(trx)'), $normalizedReferences);
+                }
+            })
             ->orderBy('id', 'desc')
             ->first();
 
@@ -319,7 +369,12 @@ class ProcessController extends Controller
         }
 
         return Deposit::whereIn('status', $pendingStatuses)
-            ->whereIn('btc_wallet', $references)
+            ->where(function ($query) use ($references, $normalizedReferences) {
+                $query->whereIn('btc_wallet', $references);
+                if (!empty($normalizedReferences)) {
+                    $query->orWhereIn(DB::raw('LOWER(btc_wallet)'), $normalizedReferences);
+                }
+            })
             ->orderBy('id', 'desc')
             ->first();
     }
@@ -648,6 +703,43 @@ class ProcessController extends Controller
         );
 
         return hash_equals($expected, $token);
+    }
+
+    protected static function trackWebhookReceipt(Deposit $deposit, string $status): void
+    {
+        $detail = self::normalizeDetailPayload($deposit->detail);
+        $changed = false;
+
+        $webhookAt = now()->toIso8601String();
+        if (data_get($detail, 'bictorys.webhook_received_at') !== $webhookAt) {
+            data_set($detail, 'bictorys.webhook_received_at', $webhookAt);
+            $changed = true;
+        }
+
+        if ($status !== '' && data_get($detail, 'bictorys.webhook_last_status') !== $status) {
+            data_set($detail, 'bictorys.webhook_last_status', $status);
+            $changed = true;
+        }
+
+        if ($changed) {
+            $deposit->detail = $detail;
+            $deposit->save();
+        }
+    }
+
+    protected static function payloadFingerprint(array $payload, string $status): string
+    {
+        return hash('sha256', json_encode($payload) . '|' . $status);
+    }
+
+    protected static function webhookDedupCacheKey(int $depositId, string $fingerprint): string
+    {
+        return 'flujipay_bictorys_direct_webhook_' . $depositId . '_' . $fingerprint;
+    }
+
+    protected static function webhookProcessingLockKey(int $depositId): string
+    {
+        return 'flujipay_bictorys_direct_webhook_processing_' . $depositId;
     }
 
     protected static function extractRedirectUrl(array $response): ?string

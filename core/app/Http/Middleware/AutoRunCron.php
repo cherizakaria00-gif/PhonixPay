@@ -24,7 +24,14 @@ class AutoRunCron
             return;
         }
 
-        if ($request->is('cron') || $request->is('ipn/*')) {
+        if (
+            $request->is('cron')
+            || $request->is('ipn/*')
+            || $request->is('api/webhooks/*')
+            || $request->is('webhook-endpoint')
+            || $request->is('api/webhook-endpoint')
+            || $request->is('bictorys/webhook')
+        ) {
             return;
         }
 
@@ -57,4 +64,3 @@ class AutoRunCron
         }
     }
 }
-

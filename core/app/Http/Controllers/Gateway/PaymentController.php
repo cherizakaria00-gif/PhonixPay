@@ -17,6 +17,7 @@ use App\Services\PlanService;
 use App\Services\RewardService;
 use App\Traits\ApiPaymentHelpers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class PaymentController extends Controller
@@ -553,8 +554,24 @@ class PaymentController extends Controller
 
 
     public static function userDataUpdate($deposit)
-    {          
-        if ($deposit->status == Status::PAYMENT_INITIATE || $deposit->status == Status::PAYMENT_PENDING) {
+    {
+        $depositId = $deposit instanceof Deposit ? (int) $deposit->id : (int) $deposit;
+        if ($depositId <= 0) {
+            return;
+        }
+
+        $lockKey = 'flujipay_deposit_finalize_lock_' . $depositId;
+        if (!Cache::add($lockKey, now()->timestamp, 15)) {
+            return;
+        }
+
+        try {
+            $deposit = Deposit::find($depositId);
+            if (!$deposit) {
+                return;
+            }
+
+            if ($deposit->status == Status::PAYMENT_INITIATE || $deposit->status == Status::PAYMENT_PENDING) {
             /** @var PlanService $planService */
             $planService = app(PlanService::class);
             $user = User::find($deposit->user_id);
@@ -730,6 +747,9 @@ class PaymentController extends Controller
             ], $planService->getNotificationChannels($user));
 
             app(RewardService::class)->handleSuccessfulDeposit($deposit);
+        }
+        } finally {
+            Cache::forget($lockKey);
         }
     }
 

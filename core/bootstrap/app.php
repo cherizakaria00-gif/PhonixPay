@@ -86,7 +86,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(
-            except: ['user/deposit','ipn*','payment/initiate','test/payment/initiate','payment-link/ipn*']
+            except: [
+                'user/deposit',
+                'ipn*',
+                'payment/initiate',
+                'test/payment/initiate',
+                'payment-link/ipn*',
+                'api/webhooks/bictorys',
+                'webhook-endpoint',
+                'api/webhook-endpoint',
+                'bictorys/webhook',
+            ]
         );
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -7,17 +7,35 @@ use App\Http\Controllers\Gateway\PaymentController;
 use App\Lib\CurlRequest;
 use App\Models\Deposit;
 use App\Models\Gateway;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class BictorysDepositSyncService
 {
     private const DEFAULT_LOOKBACK_HOURS = 120;
     private const DEFAULT_MAX_PENDING_PER_GATEWAY = 250;
-    private const DEFAULT_MAX_CHARGE_LOOKUPS = 60;
+    private const DEFAULT_MAX_CHARGE_LOOKUPS = 0;
+    private const DEFAULT_CHARGE_WEBHOOK_GRACE_SECONDS = 180;
+    private const DEFAULT_CHARGE_MAX_ATTEMPTS = 3;
+    private const DEFAULT_CHARGE_BACKOFF_SECONDS = 1;
+    private const DEFAULT_CHARGE_MAX_BACKOFF_SECONDS = 5;
+    private const DEFAULT_CHARGE_THROTTLE_SECONDS = 30;
+    private const DEFAULT_CHARGE_SNAPSHOT_CACHE_SECONDS = 30;
+    private const DEFAULT_CHARGE_HTTP_RETRIES = 3;
+    private const SYNC_LOCK_KEY = 'flujipay_bictorys_pending_sync_lock';
+    private const SYNC_LOCK_TTL_SECONDS = 120;
+
+    private static bool $syncExecutedInRequest = false;
 
     public function syncPendingDeposits(array $options = []): array
     {
+        $normalizedSuccessRefs = $this->normalizeReferenceList($options['success_refs'] ?? []);
+        $normalizedRejectRefs = $this->normalizeReferenceList($options['reject_refs'] ?? []);
+        $forceSync = (bool) ($options['force'] ?? false) || !empty($normalizedSuccessRefs) || !empty($normalizedRejectRefs);
+
         $result = [
             'checked' => 0,
             'synced_success' => 0,
@@ -26,11 +44,40 @@ class BictorysDepositSyncService
             'hydrated_tokens' => 0,
             'manual_success' => 0,
             'manual_rejected' => 0,
+            'skipped' => false,
+            'skip_reason' => null,
         ];
+
+        if (self::$syncExecutedInRequest && !$forceSync) {
+            $result['skipped'] = true;
+            $result['skip_reason'] = 'already_executed_in_request';
+            return $result;
+        }
+
+        if (!$forceSync && !Cache::add(self::SYNC_LOCK_KEY, now()->timestamp, self::SYNC_LOCK_TTL_SECONDS)) {
+            $result['skipped'] = true;
+            $result['skip_reason'] = 'global_lock_active';
+            return $result;
+        }
+
+        self::$syncExecutedInRequest = true;
 
         $lookbackHours = $this->readIntOption($options, 'lookback_hours', self::DEFAULT_LOOKBACK_HOURS);
         $maxPending = $this->readIntOption($options, 'max_pending_per_gateway', self::DEFAULT_MAX_PENDING_PER_GATEWAY);
         $maxChargeLookups = $this->readIntOption($options, 'max_charge_lookups', self::DEFAULT_MAX_CHARGE_LOOKUPS);
+        $allowChargeLookup = (bool) ($options['allow_charge_lookup'] ?? false);
+        if (!$allowChargeLookup) {
+            $maxChargeLookups = 0;
+        }
+        $lookupPolicy = [
+            'webhook_grace_seconds' => $this->readIntOption($options, 'webhook_grace_seconds', self::DEFAULT_CHARGE_WEBHOOK_GRACE_SECONDS),
+            'max_attempts' => $this->readIntOption($options, 'max_charge_attempts', self::DEFAULT_CHARGE_MAX_ATTEMPTS),
+            'base_backoff_seconds' => $this->readIntOption($options, 'charge_backoff_seconds', self::DEFAULT_CHARGE_BACKOFF_SECONDS),
+            'max_backoff_seconds' => $this->readIntOption($options, 'charge_max_backoff_seconds', self::DEFAULT_CHARGE_MAX_BACKOFF_SECONDS),
+            'throttle_seconds' => $this->readIntOption($options, 'charge_throttle_seconds', self::DEFAULT_CHARGE_THROTTLE_SECONDS),
+            'snapshot_cache_seconds' => $this->readIntOption($options, 'charge_snapshot_cache_seconds', self::DEFAULT_CHARGE_SNAPSHOT_CACHE_SECONDS),
+            'http_retries' => $this->readIntOption($options, 'charge_http_retries', self::DEFAULT_CHARGE_HTTP_RETRIES),
+        ];
         $replayLogs = (bool) ($options['replay_logs'] ?? false);
         $dryRun = (bool) ($options['dry_run'] ?? false);
 
@@ -52,7 +99,9 @@ class BictorysDepositSyncService
                 $lookbackHours,
                 $maxPending,
                 $maxChargeLookups,
-                $dryRun
+                $allowChargeLookup,
+                $dryRun,
+                $lookupPolicy
             );
             $result['checked'] += $gatewayStats['checked'];
             $result['synced_success'] += $gatewayStats['synced_success'];
@@ -63,8 +112,8 @@ class BictorysDepositSyncService
         }
 
         $manualRefsResult = $this->reconcileManualReferences(
-            $this->normalizeReferenceList($options['success_refs'] ?? []),
-            $this->normalizeReferenceList($options['reject_refs'] ?? []),
+            $normalizedSuccessRefs,
+            $normalizedRejectRefs,
             $dryRun
         );
         $result['manual_success'] += $manualRefsResult['manual_success'];
@@ -78,7 +127,9 @@ class BictorysDepositSyncService
         int $lookbackHours,
         int $maxPendingPerGateway,
         int $maxChargeLookups,
-        bool $dryRun
+        bool $allowChargeLookup,
+        bool $dryRun,
+        array $lookupPolicy
     ): array
     {
         $stats = [
@@ -139,37 +190,48 @@ class BictorysDepositSyncService
             }
         }
 
-        // Charge-level fallback for unresolved pending records.
-        $remaining = $pendingDeposits
-            ->filter(fn(Deposit $deposit) => !isset($decisions[$deposit->id]))
-            ->take(max(1, $maxChargeLookups));
+        if ($allowChargeLookup && $maxChargeLookups > 0) {
+            // Manual fallback only: disabled in automated cron flow to avoid PSP polling.
+            $remaining = $pendingDeposits
+                ->filter(fn(Deposit $deposit) => !isset($decisions[$deposit->id]))
+                ->take($maxChargeLookups);
 
-        foreach ($remaining as $deposit) {
-            $chargeId = trim((string) ($deposit->btc_wallet ?? ''));
-            if ($chargeId === '') {
-                continue;
+            foreach ($remaining as $deposit) {
+                $chargeId = trim((string) ($deposit->btc_wallet ?? ''));
+                if ($chargeId === '') {
+                    continue;
+                }
+
+                if (!$this->canLookupChargeStatus($deposit, $chargeId, $lookupPolicy)) {
+                    continue;
+                }
+
+                $this->recordChargeLookupAttempt($deposit, $lookupPolicy, $dryRun);
+                $opToken = $this->extractOpTokenFromDepositDetail($deposit);
+                $chargeSnapshot = $this->fetchChargeSnapshot($baseUrl, $apiKey, $chargeId, $opToken, $lookupPolicy);
+                if (!$chargeSnapshot) {
+                    $this->scheduleNextChargeLookup($deposit, $lookupPolicy, $dryRun);
+                    continue;
+                }
+
+                $chargeRef = $this->normalizeReference($chargeId);
+                $trxRef = $this->normalizeReference($deposit->trx);
+                $snapshotRefs = $this->extractReferences($chargeSnapshot);
+                $mustMatchRefs = array_values(array_filter([$chargeRef, $trxRef], static fn($value) => $value !== null));
+                if (!empty($mustMatchRefs) && empty(array_intersect($mustMatchRefs, $snapshotRefs))) {
+                    $this->scheduleNextChargeLookup($deposit, $lookupPolicy, $dryRun);
+                    continue;
+                }
+
+                $newStatus = $this->classifyPayloadStatus($chargeSnapshot);
+                if ($newStatus === null) {
+                    $this->scheduleNextChargeLookup($deposit, $lookupPolicy, $dryRun);
+                    continue;
+                }
+
+                $this->clearChargeLookupState($deposit, $dryRun);
+                $this->rememberDecision($decisions, $deposit, $newStatus);
             }
-
-            $opToken = $this->extractOpTokenFromDepositDetail($deposit);
-            $chargeSnapshot = $this->fetchChargeSnapshot($baseUrl, $apiKey, $chargeId, $opToken);
-            if (!$chargeSnapshot) {
-                continue;
-            }
-
-            $chargeRef = $this->normalizeReference($chargeId);
-            $trxRef = $this->normalizeReference($deposit->trx);
-            $snapshotRefs = $this->extractReferences($chargeSnapshot);
-            $mustMatchRefs = array_values(array_filter([$chargeRef, $trxRef], static fn($value) => $value !== null));
-            if (!empty($mustMatchRefs) && empty(array_intersect($mustMatchRefs, $snapshotRefs))) {
-                continue;
-            }
-
-            $newStatus = $this->classifyPayloadStatus($chargeSnapshot);
-            if ($newStatus === null) {
-                continue;
-            }
-
-            $this->rememberDecision($decisions, $deposit, $newStatus);
         }
 
         foreach ($decisions as $decision) {
@@ -180,12 +242,14 @@ class BictorysDepositSyncService
             }
 
             if ($decision['status'] === Status::PAYMENT_SUCCESS) {
+                $this->clearChargeLookupState($deposit, $dryRun);
                 $this->applyStatusDecision($deposit, Status::PAYMENT_SUCCESS, $dryRun);
                 $stats['synced_success']++;
                 continue;
             }
 
             if ($decision['status'] === Status::PAYMENT_REJECT) {
+                $this->clearChargeLookupState($deposit, $dryRun);
                 $this->applyStatusDecision($deposit, Status::PAYMENT_REJECT, $dryRun);
                 $stats['synced_rejected']++;
             }
@@ -315,7 +379,10 @@ class BictorysDepositSyncService
             $deposits = Deposit::query()
                 ->whereIn('status', [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING])
                 ->where(function ($query) use ($refs) {
-                    $query->whereIn('trx', $refs)->orWhereIn('btc_wallet', $refs);
+                    $query->whereIn('trx', $refs)
+                        ->orWhereIn('btc_wallet', $refs)
+                        ->orWhereIn(DB::raw('LOWER(trx)'), $refs)
+                        ->orWhereIn(DB::raw('LOWER(btc_wallet)'), $refs);
                 })
                 ->get();
 
@@ -559,8 +626,15 @@ class BictorysDepositSyncService
         return [];
     }
 
-    private function fetchChargeSnapshot(string $baseUrl, string $apiKey, string $chargeId, ?string $opToken): ?array
+    private function fetchChargeSnapshot(string $baseUrl, string $apiKey, string $chargeId, ?string $opToken, array $lookupPolicy = []): ?array
     {
+        $cacheSeconds = max(1, (int) ($lookupPolicy['snapshot_cache_seconds'] ?? self::DEFAULT_CHARGE_SNAPSHOT_CACHE_SECONDS));
+        $cacheKey = $this->chargeSnapshotCacheKey($baseUrl, $chargeId, $opToken);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
         $headers = [
             'Accept: application/json',
             "X-Api-Key: {$apiKey}",
@@ -570,13 +644,141 @@ class BictorysDepositSyncService
             $headers[] = 'Op-Token: ' . $opToken;
         }
 
-        $raw = CurlRequest::curlContent($baseUrl . '/pay/v1/charges/' . urlencode($chargeId), $headers);
-        if (!is_string($raw) || trim($raw) === '') {
+        $maxRetries = max(1, min(3, (int) ($lookupPolicy['http_retries'] ?? self::DEFAULT_CHARGE_HTTP_RETRIES)));
+        $retryBackoff = [1, 2, 5];
+        $attempt = 0;
+        while ($attempt < $maxRetries) {
+            $raw = CurlRequest::curlContent($baseUrl . '/pay/v1/charges/' . urlencode($chargeId), $headers);
+            if (is_string($raw) && trim($raw) !== '') {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    Cache::put($cacheKey, $decoded, $cacheSeconds);
+                    return $decoded;
+                }
+            }
+
+            if ($attempt + 1 < $maxRetries) {
+                $sleepSeconds = $retryBackoff[$attempt] ?? 5;
+                sleep($sleepSeconds);
+            }
+
+            $attempt++;
+        }
+
+        return null;
+    }
+
+    private function canLookupChargeStatus(Deposit $deposit, string $chargeId, array $lookupPolicy): bool
+    {
+        $now = now();
+        $webhookGraceSeconds = max(10, (int) ($lookupPolicy['webhook_grace_seconds'] ?? self::DEFAULT_CHARGE_WEBHOOK_GRACE_SECONDS));
+        if ($deposit->created_at && $deposit->created_at->gt($now->copy()->subSeconds($webhookGraceSeconds))) {
+            return false;
+        }
+
+        $detail = $this->normalizeDetailPayload($deposit->detail);
+        $webhookReceivedAt = $this->parseDate(data_get($detail, 'bictorys.webhook_received_at'));
+        if ($webhookReceivedAt && $webhookReceivedAt->gt($now->copy()->subSeconds($webhookGraceSeconds))) {
+            return false;
+        }
+
+        $attempts = (int) data_get($detail, 'bictorys.status_sync.attempts', 0);
+        $maxAttempts = max(1, (int) ($lookupPolicy['max_attempts'] ?? self::DEFAULT_CHARGE_MAX_ATTEMPTS));
+        if ($attempts >= $maxAttempts) {
+            return false;
+        }
+
+        $nextCheckAt = $this->parseDate(data_get($detail, 'bictorys.status_sync.next_check_at'));
+        if ($nextCheckAt && $nextCheckAt->isFuture()) {
+            return false;
+        }
+
+        $throttleSeconds = max(1, (int) ($lookupPolicy['throttle_seconds'] ?? self::DEFAULT_CHARGE_THROTTLE_SECONDS));
+        return Cache::add($this->chargeLookupThrottleKey($chargeId), $now->timestamp, $throttleSeconds);
+    }
+
+    private function recordChargeLookupAttempt(Deposit $deposit, array $lookupPolicy, bool $dryRun): void
+    {
+        if ($dryRun) {
+            return;
+        }
+
+        $detail = $this->normalizeDetailPayload($deposit->detail);
+        $syncState = data_get($detail, 'bictorys.status_sync', []);
+        if (!is_array($syncState)) {
+            $syncState = [];
+        }
+
+        $syncState['attempts'] = max(0, (int) ($syncState['attempts'] ?? 0)) + 1;
+        $syncState['last_checked_at'] = now()->toIso8601String();
+        data_set($detail, 'bictorys.status_sync', $syncState);
+
+        $deposit->detail = $detail;
+        $deposit->save();
+    }
+
+    private function scheduleNextChargeLookup(Deposit $deposit, array $lookupPolicy, bool $dryRun): void
+    {
+        if ($dryRun) {
+            return;
+        }
+
+        $detail = $this->normalizeDetailPayload($deposit->detail);
+        $syncState = data_get($detail, 'bictorys.status_sync', []);
+        if (!is_array($syncState)) {
+            $syncState = [];
+        }
+
+        $attempts = max(1, (int) ($syncState['attempts'] ?? 1));
+        $baseDelay = max(1, (int) ($lookupPolicy['base_backoff_seconds'] ?? self::DEFAULT_CHARGE_BACKOFF_SECONDS));
+        $maxDelay = max($baseDelay, (int) ($lookupPolicy['max_backoff_seconds'] ?? self::DEFAULT_CHARGE_MAX_BACKOFF_SECONDS));
+        $preset = [$baseDelay, $baseDelay * 2, $maxDelay];
+        $delaySeconds = (int) ($preset[min(count($preset) - 1, $attempts - 1)] ?? $maxDelay);
+
+        $syncState['next_check_at'] = now()->addSeconds($delaySeconds)->toIso8601String();
+        data_set($detail, 'bictorys.status_sync', $syncState);
+
+        $deposit->detail = $detail;
+        $deposit->save();
+    }
+
+    private function clearChargeLookupState(Deposit $deposit, bool $dryRun): void
+    {
+        if ($dryRun) {
+            return;
+        }
+
+        $detail = $this->normalizeDetailPayload($deposit->detail);
+        if (data_get($detail, 'bictorys.status_sync') === null) {
+            return;
+        }
+
+        data_forget($detail, 'bictorys.status_sync');
+        $deposit->detail = $detail;
+        $deposit->save();
+    }
+
+    private function parseDate($value): ?Carbon
+    {
+        if (!is_scalar($value) || trim((string) $value) === '') {
             return null;
         }
 
-        $decoded = json_decode($raw, true);
-        return is_array($decoded) ? $decoded : null;
+        try {
+            return Carbon::parse((string) $value);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function chargeLookupThrottleKey(string $chargeId): string
+    {
+        return 'flujipay_bictorys_charge_lookup_throttle_' . sha1(strtolower(trim($chargeId)));
+    }
+
+    private function chargeSnapshotCacheKey(string $baseUrl, string $chargeId, ?string $opToken): string
+    {
+        return 'flujipay_bictorys_charge_snapshot_' . sha1($baseUrl . '|' . strtolower(trim($chargeId)) . '|' . (string) $opToken);
     }
 
     private function extractRows(array $payload): array
