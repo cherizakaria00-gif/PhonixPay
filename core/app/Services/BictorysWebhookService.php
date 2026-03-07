@@ -186,7 +186,7 @@ class BictorysWebhookService
                 return ['processed' => 'rejected', 'deposit_id' => (int) $deposit->id, 'event_uid' => $eventUid];
             }
 
-            if ($isSuccess && in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+            if ($isSuccess && in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT], true)) {
                 // Webhook-first finalization: one atomic path used by all payment methods.
                 PaymentController::userDataUpdate((int) $deposit->id);
 
@@ -273,15 +273,15 @@ class BictorysWebhookService
 
     private function findDeposit(array $references, string $verificationToken, ?string $gatewayAlias): ?Deposit
     {
-        $pendingStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING];
+        $processableStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT];
 
-        $deposit = $this->findDepositByReferences($references, $pendingStatuses, $gatewayAlias);
+        $deposit = $this->findDepositByReferences($references, $processableStatuses, $gatewayAlias);
         if ($deposit) {
             return $deposit;
         }
 
         if ($verificationToken !== '') {
-            $deposit = $this->findDepositByVerificationToken($verificationToken, $gatewayAlias, $pendingStatuses, 5000);
+            $deposit = $this->findDepositByVerificationToken($verificationToken, $gatewayAlias, $processableStatuses, 5000);
             if ($deposit) {
                 return $deposit;
             }

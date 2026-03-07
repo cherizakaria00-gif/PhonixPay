@@ -352,9 +352,9 @@ class ProcessController extends Controller
         }
         $normalizedReferences = array_values(array_unique($normalizedReferences));
 
-        $pendingStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING];
+        $processableStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT];
 
-        $deposit = Deposit::whereIn('status', $pendingStatuses)
+        $deposit = Deposit::whereIn('status', $processableStatuses)
             ->where(function ($query) use ($references, $normalizedReferences) {
                 $query->whereIn('trx', $references);
                 if (!empty($normalizedReferences)) {
@@ -368,7 +368,7 @@ class ProcessController extends Controller
             return $deposit;
         }
 
-        return Deposit::whereIn('status', $pendingStatuses)
+        return Deposit::whereIn('status', $processableStatuses)
             ->where(function ($query) use ($references, $normalizedReferences) {
                 $query->whereIn('btc_wallet', $references);
                 if (!empty($normalizedReferences)) {
@@ -385,7 +385,7 @@ class ProcessController extends Controller
             return null;
         }
 
-        $pendingStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING];
+        $pendingStatuses = [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT];
         $candidates = Deposit::query()
             ->whereIn('status', $pendingStatuses)
             ->whereHas('gateway', function ($query) {

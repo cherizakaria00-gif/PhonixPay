@@ -571,7 +571,21 @@ class PaymentController extends Controller
                 return;
             }
 
-            if ($deposit->status == Status::PAYMENT_INITIATE || $deposit->status == Status::PAYMENT_PENDING) {
+            $canFinalize = in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true);
+
+            // Some PSP flows can emit a transient failed event followed by success for the same charge.
+            // Allow promotion from REJECT -> SUCCESS only when the payment credit was never applied.
+            if (!$canFinalize && (int) $deposit->status === Status::PAYMENT_REJECT) {
+                $alreadyCredited = Transaction::where('trx', $deposit->trx)
+                    ->where('remark', 'payment')
+                    ->exists();
+
+                if (!$alreadyCredited) {
+                    $canFinalize = true;
+                }
+            }
+
+            if ($canFinalize) {
             /** @var PlanService $planService */
             $planService = app(PlanService::class);
             $user = User::find($deposit->user_id);
