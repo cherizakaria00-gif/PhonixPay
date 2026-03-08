@@ -75,31 +75,13 @@ class BictorysWebhookController extends Controller
             'user_agent' => (string) $request->userAgent(),
         ];
 
-        $queueEnabled = (bool) config('services.bictorys.webhook_queue_enabled', false);
-        $processInline = (bool) config('services.bictorys.webhook_process_inline', true);
-
-        if ($queueEnabled) {
-            // Queue-first mode when worker infrastructure is available.
-            ProcessBictorysWebhookJob::dispatchAfterResponse(
-                $payload,
-                $rawPayload,
-                $context
-            )->onQueue('webhooks');
-        }
-
-        if ($processInline) {
-            try {
-                // Inline fallback keeps production stable even when queue workers are down.
-                $result = $service->processWebhook($payload, $rawPayload, $context);
-                Log::info('Bictorys webhook processed inline', [
-                    'result' => $result,
-                ]);
-            } catch (\Throwable $exception) {
-                Log::error('Bictorys webhook inline processing failed', [
-                    'error' => $exception->getMessage(),
-                ]);
-            }
-        }
+        // Webhook-first, non-blocking handler:
+        // validate + enqueue + return 200 quickly.
+        ProcessBictorysWebhookJob::dispatchAfterResponse(
+            $payload,
+            $rawPayload,
+            $context
+        )->onQueue((string) config('services.bictorys.webhook_queue', 'webhooks'));
 
         return response()->json(['received' => true], 200);
     }

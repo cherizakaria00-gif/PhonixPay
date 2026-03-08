@@ -269,10 +269,13 @@ class SiteController extends Controller
         return view('Template::api_documentation', compact('pageTitle', 'allCurrency'));
     }
 
-    public function successPaymentRedirect(Request $request, $depositId)
+    public function successPaymentRedirect($depositId)
     {
         $deposit = Deposit::where('id', $depositId)->orderBy('id', 'desc')->firstOrFail();
 
+        // Webhook-first flow:
+        // redirect signals never finalize payment state.
+        // Final status is written only by PSP webhook processing.
         if ($deposit->status == Status::PAYMENT_SUCCESS) {
             $successUrl = $this->appendUrlQuery((string) ($deposit->success_url ?? route('home')), 'status', 'success');
             return redirect($successUrl);
@@ -280,14 +283,6 @@ class SiteController extends Controller
 
         if ($deposit->gateway && $deposit->gateway->alias === 'StripePaymentLink') {
             $this->confirmStripePaymentLink($deposit);
-        }
-
-        if ($deposit->gateway && $deposit->gateway->alias === 'BictorysCheckout') {
-            $this->confirmBictorysCheckout($deposit, $request);
-        }
-
-        if ($deposit->gateway && $deposit->gateway->alias === 'BictorysDirect') {
-            $this->confirmBictorysDirect($deposit, $request);
         }
 
         if ($deposit->status == Status::PAYMENT_REJECT) {
@@ -407,218 +402,4 @@ class SiteController extends Controller
         }
     }
 
-    private function confirmBictorysCheckout(Deposit $deposit, Request $request): void
-    {
-        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
-            return;
-        }
-
-        $status = $this->extractBictorysStatus($request);
-        $successFlag = $this->extractBooleanFlag($request->input('success'));
-        $reference = $this->extractBictorysReference($request);
-        $hasRedirectSignal = $reference !== null || $status !== '' || $successFlag !== null;
-        $hasValidToken = $this->hasValidBictorysVerificationToken($deposit, $request);
-
-        if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
-            $deposit->status = Status::PAYMENT_REJECT;
-            $deposit->save();
-            return;
-        }
-
-        $isSuccess = $successFlag === true
-            || $this->isBictorysSuccessStatus($status)
-            || ($hasValidToken && ($hasRedirectSignal || $request->routeIs('payment.redirect.success')));
-
-        if (!$isSuccess) {
-            return;
-        }
-
-        if (!$deposit->btc_wallet && $reference) {
-            $deposit->btc_wallet = $reference;
-            $deposit->save();
-        }
-
-        PaymentController::userDataUpdate($deposit);
-    }
-
-    private function confirmBictorysDirect(Deposit $deposit, Request $request): void
-    {
-        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
-            return;
-        }
-
-        $status = $this->extractBictorysStatus($request);
-        $successFlag = $this->extractBooleanFlag($request->input('success'));
-        $reference = $this->extractBictorysReference($request);
-        $hasRedirectSignal = $reference !== null || $status !== '' || $successFlag !== null;
-        $hasValidToken = $this->hasValidBictorysVerificationToken($deposit, $request);
-
-        if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
-            $deposit->status = Status::PAYMENT_REJECT;
-            $deposit->save();
-            return;
-        }
-
-        $isSuccess = $successFlag === true
-            || $this->isBictorysSuccessStatus($status)
-            || ($hasValidToken && ($hasRedirectSignal || $request->routeIs('payment.redirect.success')));
-
-        if (!$isSuccess) {
-            return;
-        }
-
-        if (!$deposit->btc_wallet && $reference) {
-            $deposit->btc_wallet = $reference;
-            $deposit->save();
-        }
-
-        PaymentController::userDataUpdate($deposit);
-    }
-
-    private function hasValidBictorysVerificationToken(Deposit $deposit, Request $request): bool
-    {
-        $token = trim((string) $request->input('vtoken', ''));
-        if ($token === '') {
-            return false;
-        }
-
-        $expected = hash_hmac(
-            'sha256',
-            $deposit->id . '|' . $deposit->trx,
-            (string) config('app.key')
-        );
-
-        return hash_equals($expected, $token);
-    }
-
-    private function extractBictorysStatus(Request $request): string
-    {
-        $status = $request->input('status')
-            ?? $request->input('paymentStatus')
-            ?? $request->input('payment_status')
-            ?? $request->input('state')
-            ?? $request->input('paymentState')
-            ?? $request->input('payment_state')
-            ?? $request->input('transactionStatus')
-            ?? $request->input('transaction_status')
-            ?? $request->input('result')
-            ?? '';
-
-        return $this->normalizeBictorysStatus((string) $status);
-    }
-
-    private function extractBictorysReference(Request $request): ?string
-    {
-        $reference = $request->input('paymentReference')
-            ?? $request->input('payment_reference')
-            ?? $request->input('reference')
-            ?? $request->input('id')
-            ?? $request->input('chargeId')
-            ?? $request->input('charge_id')
-            ?? $request->input('paymentId')
-            ?? $request->input('payment_id')
-            ?? $request->input('transactionId')
-            ?? $request->input('transaction_id');
-
-        if (!is_scalar($reference)) {
-            return null;
-        }
-
-        $reference = trim((string) $reference);
-        return $reference === '' ? null : $reference;
-    }
-
-    private function extractBooleanFlag($value): ?bool
-    {
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        if (is_numeric($value)) {
-            return ((int) $value) === 1;
-        }
-
-        if (!is_scalar($value)) {
-            return null;
-        }
-
-        $normalized = strtolower(trim((string) $value));
-        if (in_array($normalized, ['1', 'true', 'yes', 'ok'], true)) {
-            return true;
-        }
-
-        if (in_array($normalized, ['0', 'false', 'no', 'failed', 'failure', 'error'], true)) {
-            return false;
-        }
-
-        return null;
-    }
-
-    private function isBictorysSuccessStatus(string $status): bool
-    {
-        if ($status === '' || $this->isBictorysFailureStatus($status)) {
-            return false;
-        }
-
-        $exact = ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved', 'received', 'captured', 'settled', 'done'];
-        if (in_array($status, $exact, true)) {
-            return true;
-        }
-
-        return $this->bictorysStatusContainsAny($status, [
-            'success',
-            'succeed',
-            'paid',
-            'complete',
-            'approved',
-            'receiv',
-            'captur',
-            'settl',
-        ]);
-    }
-
-    private function isBictorysFailureStatus(string $status): bool
-    {
-        if (in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired', 'refunded', 'chargeback', 'declined', 'unpaid', 'void'], true)) {
-            return true;
-        }
-
-        return $this->bictorysStatusContainsAny($status, [
-            'fail',
-            'error',
-            'cancel',
-            'reject',
-            'expire',
-            'refund',
-            'chargeback',
-            'declin',
-            'unpaid',
-            'not_paid',
-        ]);
-    }
-
-    private function normalizeBictorysStatus(string $status): string
-    {
-        $status = strtolower(trim($status));
-        if ($status === '') {
-            return '';
-        }
-
-        $status = str_replace(['-', ' '], '_', $status);
-        $status = preg_replace('/[^a-z0-9_]+/', '', $status) ?? '';
-        $status = preg_replace('/_+/', '_', $status) ?? '';
-
-        return trim($status, '_');
-    }
-
-    private function bictorysStatusContainsAny(string $status, array $needles): bool
-    {
-        foreach ($needles as $needle) {
-            if ($needle !== '' && str_contains($status, $needle)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

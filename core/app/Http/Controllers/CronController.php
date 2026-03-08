@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Withdrawal;
 use App\Models\WithdrawSetting;
+use App\Services\BictorysDepositSyncService;
 use App\Services\PlanService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -286,8 +287,16 @@ class CronController extends Controller
 
     public function bictorysStatusSync()
     {
-        // Webhook-first mode: disable automatic PSP status polling from cron.
-        // Use bictorys:repair command manually for reconciliation/debug only.
-        return;
+        // Webhook-first mode:
+        // - no PSP status polling
+        // - no external verification calls
+        // - only local expiration of stale pending records
+        app(BictorysDepositSyncService::class)->syncPendingDeposits([
+            'expire_pending' => true,
+            'replay_logs' => false,
+            'lookback_hours' => (int) config('services.bictorys.pending_expire_lookback_hours', 720),
+            'max_pending_per_gateway' => 500,
+            'expire_after_minutes' => (int) config('services.bictorys.pending_expire_minutes', 180),
+        ]);
     }
 }

@@ -35,8 +35,9 @@ return [
         'webhook_secret' => env('BICTORYS_WEBHOOK_SECRET'),
         'webhook_require_signature' => env('BICTORYS_WEBHOOK_REQUIRE_SIGNATURE', false),
         'webhook_require_https' => env('BICTORYS_WEBHOOK_REQUIRE_HTTPS', false),
-        'webhook_queue_enabled' => env('BICTORYS_WEBHOOK_QUEUE_ENABLED', false),
-        'webhook_process_inline' => env('BICTORYS_WEBHOOK_PROCESS_INLINE', true),
+        'webhook_queue' => env('BICTORYS_WEBHOOK_QUEUE', 'webhooks'),
+        'pending_expire_minutes' => env('BICTORYS_PENDING_EXPIRE_MINUTES', 180),
+        'pending_expire_lookback_hours' => env('BICTORYS_PENDING_EXPIRE_LOOKBACK_HOURS', 720),
     ],
 
 ];
