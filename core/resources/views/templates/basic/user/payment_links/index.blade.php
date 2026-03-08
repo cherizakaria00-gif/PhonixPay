@@ -321,6 +321,34 @@
         border-bottom-color: #eef2f7;
     }
 
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 118px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 14px;
+        line-height: 1;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .status-badge--warning {
+        background: #f3eab3;
+        color: #ac6c00;
+    }
+
+    .status-badge--success {
+        background: #bfeccf;
+        color: #0f9f4a;
+    }
+
+    .status-badge--danger {
+        background: #f7d5d9;
+        color: #ea4040;
+    }
+
     @media (max-width: 575px) {
         .pf-link-meta {
             flex-direction: column;
