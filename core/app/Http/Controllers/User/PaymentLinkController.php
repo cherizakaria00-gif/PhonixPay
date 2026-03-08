@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Constants\Status;
 use App\Http\Controllers\Controller;
+use App\Models\Deposit;
 use App\Models\GatewayCurrency;
 use App\Models\PaymentLink;
 use App\Services\PlanService;
@@ -34,7 +35,16 @@ class PaymentLinkController extends Controller
         $paymentLinks = $query->paginate(getPaginate());
         $paymentLinks->getCollection()->each->markExpiredIfNeeded();
 
-        return view('Template::user.payment_links.index', compact('pageTitle', 'paymentLinks'));
+        $paymentLinkPayments = Deposit::where('user_id', auth()->id())
+            ->whereNotNull('payment_link_id')
+            ->with([
+                'apiPayment:id,deposit_id,customer',
+                'paymentLink:id,description,code',
+            ])
+            ->orderBy('id', 'desc')
+            ->paginate(getPaginate(), ['*'], 'history_page');
+
+        return view('Template::user.payment_links.index', compact('pageTitle', 'paymentLinks', 'paymentLinkPayments'));
     }
 
     public function create()

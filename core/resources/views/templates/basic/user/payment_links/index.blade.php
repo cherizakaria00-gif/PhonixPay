@@ -90,6 +90,81 @@
                     @php echo paginateLinks($paymentLinks) @endphp
                 </div>
             @endif
+
+            <div class="pf-link-history mt-4">
+                <div class="pf-link-history__header">
+                    <h5 class="mb-0">@lang('Payment Link History')</h5>
+                    <p class="text-muted mb-0">@lang('Only payments made through your payment links are shown here.')</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table pf-link-history__table">
+                        <thead>
+                            <tr>
+                                <th>@lang('Customer')</th>
+                                <th>@lang('Link')</th>
+                                <th class="text-end">@lang('Amount')</th>
+                                <th>@lang('Status')</th>
+                                <th>@lang('Reference')</th>
+                                <th>@lang('Date')</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($paymentLinkPayments as $deposit)
+                                @php
+                                    $statusLabel = 'Initiated';
+                                    $statusClass = 'status-badge--warning';
+                                    if ($deposit->status == \App\Constants\Status::PAYMENT_SUCCESS) {
+                                        $statusLabel = 'Succeeded';
+                                        $statusClass = 'status-badge--success';
+                                    } elseif ($deposit->status == \App\Constants\Status::PAYMENT_REFUNDED) {
+                                        $statusLabel = 'Refunded';
+                                        $statusClass = 'status-badge--warning';
+                                    } elseif ($deposit->status == \App\Constants\Status::PAYMENT_REJECT) {
+                                        $statusLabel = 'Canceled';
+                                        $statusClass = 'status-badge--danger';
+                                    }
+
+                                    $customer = $deposit->apiPayment->customer ?? null;
+                                    $customerName = '';
+                                    if ($customer) {
+                                        $customerName = trim($customer->name ?? (($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')));
+                                    }
+
+                                    $paidCurrency = strtoupper((string) ($deposit->method_currency ?? ''));
+                                    $baseCurrency = strtoupper((string) gs('cur_text'));
+                                    $showPaidAmount = $paidCurrency !== '' && $paidCurrency !== $baseCurrency;
+                                @endphp
+                                <tr>
+                                    <td>{{ $customerName ?: __('N/A') }}</td>
+                                    <td>{{ $deposit->paymentLink->description ?? $deposit->paymentLink->code ?? __('N/A') }}</td>
+                                    <td class="text-end">
+                                        <strong>{{ showAmount($deposit->amount) }}</strong>
+                                        @if($showPaidAmount)
+                                            <small class="d-block text-muted">
+                                                @lang('Paid'): {{ showAmount((float) $deposit->gateway_amount, currencyFormat: false) }} {{ $paidCurrency }}
+                                            </small>
+                                        @endif
+                                    </td>
+                                    <td><span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
+                                    <td>{{ $deposit->trx ?: __('N/A') }}</td>
+                                    <td>{{ showDateTime($deposit->created_at, 'M d, Y h:i A') }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">@lang('No payment link payments found')</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if($paymentLinkPayments->hasPages())
+                    <div class="mt-3">
+                        @php echo paginateLinks($paymentLinkPayments) @endphp
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 @endsection
@@ -215,6 +290,35 @@
         border-radius: 12px;
         padding: 24px;
         text-align: center;
+    }
+
+    .pf-link-history {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    }
+
+    .pf-link-history__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .pf-link-history__table thead th {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 700;
+        border-bottom-color: #e5e7eb;
+    }
+
+    .pf-link-history__table tbody td {
+        vertical-align: middle;
+        border-bottom-color: #eef2f7;
     }
 
     @media (max-width: 575px) {
