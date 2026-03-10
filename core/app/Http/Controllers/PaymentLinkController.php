@@ -16,7 +16,7 @@ class PaymentLinkController extends Controller
         $paymentLink = PaymentLink::where('code', $code)->with('user')->firstOrFail();
         $paymentLink->markExpiredIfNeeded();
 
-        if ($paymentLink->status == PaymentLink::STATUS_PAID) {
+        if ($paymentLink->status == PaymentLink::STATUS_PAID && !$paymentLink->allowsMultiplePayments()) {
             $pageTitle = 'Payment Link';
             $message = 'This payment link has already been paid.';
             return view('Template::payment.payment_link_status', compact('pageTitle', 'message'));

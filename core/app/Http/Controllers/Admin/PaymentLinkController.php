@@ -11,7 +11,7 @@ class PaymentLinkController extends Controller
     public function index(Request $request)
     {
         $pageTitle = 'Payment Links';
-        $query = PaymentLink::with('user')->orderBy('id', 'desc');
+        $query = PaymentLink::with('user')->withCount('deposits')->orderBy('id', 'desc');
 
         if ($request->search) {
             $search = $request->search;
