@@ -71,6 +71,15 @@
                 </a>
             </li>
 
+            <li class="sidebar-menu__item {{ menuActive('user.plugin.licenses*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.plugin.licenses.index') }}"
+                   class="sidebar-menu__link {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
+                    <i class="las la-key"></i>
+                    @lang('Plugin Licenses')
+                </a>
+            </li>
+
             <li class="sidebar-menu__item {{ menuActive('user.plan.billing') }}">
                 <a href="{{ route('user.plan.billing') }}" class="sidebar-menu__link">
                     <i class="las la-crown"></i>

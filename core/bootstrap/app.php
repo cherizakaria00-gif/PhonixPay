@@ -93,6 +93,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'test/payment/initiate',
                 'payment-link/ipn*',
                 'api/webhooks/bictorys',
+                'api/plugin-license/*',
                 'webhook-endpoint',
                 'api/webhook-endpoint',
                 'bictorys/webhook',

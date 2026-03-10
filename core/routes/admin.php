@@ -164,6 +164,13 @@ Route::middleware('admin')->group(function () {
         Route::get('/', 'index')->name('index');
     });
 
+    // Plugin Licenses
+    Route::controller('PluginLicenseController')->prefix('plugin-licenses')->name('plugin.licenses.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{id}', 'show')->name('show');
+        Route::post('revoke/{id}', 'revoke')->name('revoke');
+    });
+
 
     // WITHDRAW SYSTEM
     Route::name('withdraw.')->prefix('withdraw')->group(function(){

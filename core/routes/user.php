@@ -94,6 +94,13 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('edit/{id}', 'update')->name('update');
             });
 
+            Route::controller('PluginLicenseController')->prefix('developer/plugin-licenses')->name('plugin.licenses.')->middleware('user.restricted')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('generate', 'store')->name('store');
+                Route::post('revoke/{id}', 'revoke')->name('revoke');
+                Route::post('regenerate/{id}', 'regenerate')->name('regenerate');
+            });
+
             Route::controller('RewardController')->prefix('rewards')->name('rewards.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::get('overview-data', 'overview')->name('overview');
