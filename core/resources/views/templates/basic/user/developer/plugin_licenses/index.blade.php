@@ -16,11 +16,19 @@
                         @csrf
                         <div class="form-group">
                             <label>@lang('Email')</label>
-                            <input type="email" name="email" class="form--control" value="{{ old('email', auth()->user()->email) }}" required>
+                            <input type="email" name="email" class="form--control" value="{{ old('email', auth()->user()->email) }}" required {{ $currentLicense ? 'readonly' : '' }}>
                         </div>
                         <div class="form-group">
                             <label>@lang('Website URL / Domain')</label>
-                            <input type="text" name="domain" class="form--control" value="{{ old('domain') }}" placeholder="https://www.example.com" required>
+                            <input type="text" name="domain" class="form--control"
+                                   value="{{ old('domain', $currentLicense?->domain) }}"
+                                   placeholder="https://www.example.com"
+                                   required {{ $currentLicense ? 'readonly' : '' }}>
+                            @if($currentLicense)
+                                <small class="text-muted d-block mt-1">
+                                    @lang('Domain is locked after license generation. Contact admin to change it.')
+                                </small>
+                            @endif
                         </div>
                         <div class="form-group">
                             <label>@lang('Plugin Name')</label>
@@ -30,7 +38,9 @@
                             <label>@lang('Notes') (@lang('Optional'))</label>
                             <textarea name="notes" class="form--control" rows="3">{{ old('notes') }}</textarea>
                         </div>
-                        <button type="submit" class="btn btn--base w-100">@lang('Generate License')</button>
+                        <button type="submit" class="btn btn--base w-100" {{ $currentLicense ? 'disabled' : '' }}>
+                            {{ $currentLicense ? __('License Already Generated') : __('Generate License') }}
+                        </button>
                     </form>
                 </div>
             </div>

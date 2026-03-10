@@ -57,11 +57,35 @@
                         <i class="la la-ban"></i> @lang('Revoke License')
                     </button>
                 @endif
+
+                <button class="btn btn-outline--danger btn-sm w-100 mt-2 confirmationBtn"
+                        data-question="@lang('Delete this license permanently?')"
+                        data-action="{{ route('admin.plugin.licenses.delete', $license->id) }}">
+                    <i class="la la-trash"></i> @lang('Delete License')
+                </button>
             </div>
         </div>
     </div>
 
     <div class="col-xl-8 col-md-7 mb-30">
+        <div class="card b-radius--10 mb-30">
+            <div class="card-header">
+                <h5 class="card-title mb-0">@lang('Update Domain')</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ route('admin.plugin.licenses.update.domain', $license->id) }}" class="row g-2">
+                    @csrf
+                    <div class="col-md-9">
+                        <label class="form-label">@lang('Allowed Domain')</label>
+                        <input type="text" name="domain" class="form-control" value="{{ $license->domain }}" required>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn--primary w-100">@lang('Update URL')</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="card b-radius--10">
             <div class="card-header">
                 <h5 class="card-title mb-0">@lang('Validation History')</h5>

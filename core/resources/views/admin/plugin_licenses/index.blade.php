@@ -1,6 +1,38 @@
 @extends('admin.layouts.app')
 @section('panel')
 <div class="row justify-content-center">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">@lang('Create License')</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ route('admin.plugin.licenses.store') }}" method="post" class="row g-3">
+                    @csrf
+                    <div class="col-md-3">
+                        <label class="form-label">@lang('Merchant (ID/username/email)')</label>
+                        <input type="text" name="merchant" class="form-control" value="{{ old('merchant') }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">@lang('Email')</label>
+                        <input type="email" name="email" class="form-control" value="{{ old('email') }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">@lang('Domain')</label>
+                        <input type="text" name="domain" class="form-control" value="{{ old('domain') }}" placeholder="example.com" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">@lang('Plugin')</label>
+                        <input type="text" name="plugin_name" class="form-control" value="{{ old('plugin_name', 'flujipay-woocommerce') }}">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn--primary w-100">@lang('Create')</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="col-md-12">
         <div class="card">
             <div class="card-body p-0">

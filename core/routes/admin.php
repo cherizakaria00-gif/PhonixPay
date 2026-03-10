@@ -167,8 +167,11 @@ Route::middleware('admin')->group(function () {
     // Plugin Licenses
     Route::controller('PluginLicenseController')->prefix('plugin-licenses')->name('plugin.licenses.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::post('/create', 'store')->name('store');
         Route::get('/{id}', 'show')->name('show');
         Route::post('revoke/{id}', 'revoke')->name('revoke');
+        Route::post('update-domain/{id}', 'updateDomain')->name('update.domain');
+        Route::post('delete/{id}', 'delete')->name('delete');
     });
 
 

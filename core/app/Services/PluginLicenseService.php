@@ -11,6 +11,42 @@ use Illuminate\Support\Str;
 
 class PluginLicenseService
 {
+    public function merchantCurrentLicense(User $merchant, string $pluginName = 'flujipay-woocommerce'): ?PluginLicense
+    {
+        return PluginLicense::query()
+            ->where('merchant_id', $merchant->id)
+            ->where('plugin_name', $pluginName)
+            ->whereIn('status', [PluginLicense::STATUS_ACTIVE, PluginLicense::STATUS_INACTIVE])
+            ->latest('id')
+            ->first();
+    }
+
+    public function enforceSingleCurrentLicense(User $merchant, string $pluginName = 'flujipay-woocommerce', ?Request $request = null): void
+    {
+        $licenses = PluginLicense::query()
+            ->where('merchant_id', $merchant->id)
+            ->where('plugin_name', $pluginName)
+            ->whereIn('status', [PluginLicense::STATUS_ACTIVE, PluginLicense::STATUS_INACTIVE])
+            ->orderByDesc('id')
+            ->get();
+
+        if ($licenses->count() <= 1) {
+            return;
+        }
+
+        $keep = $licenses->shift();
+        foreach ($licenses as $license) {
+            $this->revokeLicense($license, null, $request, 'Auto-revoked to enforce one-license policy');
+        }
+
+        Log::warning('Plugin license deduplication applied', [
+            'merchant_id' => $merchant->id,
+            'plugin_name' => $pluginName,
+            'kept_license_id' => $keep?->id,
+            'revoked_count' => $licenses->count(),
+        ]);
+    }
+
     public function normalizeDomain(?string $value): ?string
     {
         $value = trim((string) $value);
@@ -87,15 +123,12 @@ class PluginLicenseService
             return ['ok' => false, 'message' => 'Invalid email'];
         }
 
-        $existing = PluginLicense::query()
-            ->where('merchant_id', $merchant->id)
-            ->where('normalized_domain', $normalizedDomain)
-            ->where('plugin_name', $pluginName)
-            ->whereIn('status', [PluginLicense::STATUS_ACTIVE, PluginLicense::STATUS_INACTIVE])
-            ->first();
+        $this->enforceSingleCurrentLicense($merchant, $pluginName, $request);
+
+        $existing = $this->merchantCurrentLicense($merchant, $pluginName);
 
         if ($existing) {
-            return ['ok' => false, 'message' => 'A license already exists for this domain and plugin'];
+            return ['ok' => false, 'message' => 'Only one active license is allowed per merchant. Contact admin to change URL.'];
         }
 
         $license = PluginLicense::create([
@@ -156,33 +189,83 @@ class PluginLicenseService
             return ['ok' => false, 'message' => 'Cannot regenerate a revoked license'];
         }
 
-        $this->revokeLicense($license, $actorId, $request, 'Regenerated');
-
-        $newLicense = PluginLicense::create([
-            'merchant_id' => $license->merchant_id,
-            'email' => $license->email,
-            'domain' => $license->domain,
-            'normalized_domain' => $license->normalized_domain,
-            'license_key' => $this->generateLicenseKey(),
-            'status' => PluginLicense::STATUS_ACTIVE,
-            'plugin_name' => $license->plugin_name,
-            'notes' => $license->notes,
-            'regenerated_from_id' => $license->id,
-        ]);
+        $oldKey = $license->license_key;
+        $license->license_key = $this->generateLicenseKey();
+        $license->status = PluginLicense::STATUS_ACTIVE;
+        $license->revoked_at = null;
+        $license->revoked_by = null;
+        $license->save();
 
         $this->storeAudit($request, [
-            'license' => $newLicense,
-            'merchant_id' => $newLicense->merchant_id,
+            'license' => $license,
+            'merchant_id' => $license->merchant_id,
             'action' => 'regenerate',
             'result' => 'success',
             'message' => 'License regenerated successfully',
-            'request_email' => $newLicense->email,
-            'request_domain' => $newLicense->domain,
-            'normalized_domain' => $newLicense->normalized_domain,
-            'context' => ['previous_license_id' => $license->id, 'actor_id' => $actorId],
+            'request_email' => $license->email,
+            'request_domain' => $license->domain,
+            'normalized_domain' => $license->normalized_domain,
+            'context' => ['previous_key' => $oldKey, 'actor_id' => $actorId],
         ]);
 
-        return ['ok' => true, 'license' => $newLicense];
+        return ['ok' => true, 'license' => $license];
+    }
+
+    public function updateDomain(PluginLicense $license, string $domain, ?int $actorId = null, ?Request $request = null): array
+    {
+        $normalizedDomain = $this->normalizeDomain($domain);
+        if (!$normalizedDomain) {
+            return ['ok' => false, 'message' => 'Invalid domain format'];
+        }
+
+        $license->domain = trim($domain);
+        $license->normalized_domain = $normalizedDomain;
+        $license->domain_change_requested_at = null;
+        $license->pending_domain = null;
+        $license->pending_normalized_domain = null;
+        $license->save();
+
+        $this->storeAudit($request, [
+            'license' => $license,
+            'merchant_id' => $license->merchant_id,
+            'action' => 'domain_change',
+            'result' => 'success',
+            'message' => 'Domain updated',
+            'request_email' => $license->email,
+            'request_domain' => $domain,
+            'normalized_domain' => $normalizedDomain,
+            'context' => ['actor_id' => $actorId],
+        ]);
+
+        return ['ok' => true, 'license' => $license];
+    }
+
+    public function deleteLicense(PluginLicense $license, ?int $actorId = null, ?Request $request = null): array
+    {
+        $snapshot = [
+            'license_key' => $license->license_key,
+            'email' => $license->email,
+            'domain' => $license->domain,
+            'normalized_domain' => $license->normalized_domain,
+            'plugin_name' => $license->plugin_name,
+            'status' => $license->status,
+        ];
+
+        $this->storeAudit($request, [
+            'license' => $license,
+            'merchant_id' => $license->merchant_id,
+            'action' => 'delete',
+            'result' => 'success',
+            'message' => 'License deleted',
+            'request_email' => $license->email,
+            'request_domain' => $license->domain,
+            'normalized_domain' => $license->normalized_domain,
+            'context' => ['actor_id' => $actorId, 'snapshot' => $snapshot],
+        ]);
+
+        $license->delete();
+
+        return ['ok' => true];
     }
 
     public function validateLicense(array $payload, ?Request $request = null): array

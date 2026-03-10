@@ -17,17 +17,25 @@ class PluginLicenseController extends Controller
     public function index()
     {
         $pageTitle = 'Plugin Licenses';
+        $this->licenseService->enforceSingleCurrentLicense(auth()->user());
+
+        $currentLicense = $this->licenseService->merchantCurrentLicense(auth()->user());
         $licenses = PluginLicense::query()
             ->where('merchant_id', auth()->id())
             ->with('latestValidation')
             ->latest('id')
             ->paginate(getPaginate());
 
-        return view('Template::user.developer.plugin_licenses.index', compact('pageTitle', 'licenses'));
+        return view('Template::user.developer.plugin_licenses.index', compact('pageTitle', 'licenses', 'currentLicense'));
     }
 
     public function store(Request $request)
     {
+        if ($this->licenseService->merchantCurrentLicense(auth()->user())) {
+            $notify[] = ['error', 'You can only have one active license. Contact admin to change the URL.'];
+            return back()->withNotify($notify);
+        }
+
         $request->validate([
             'email' => 'required|email|max:191',
             'domain' => 'required|string|max:255',
