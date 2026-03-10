@@ -25,15 +25,14 @@ Route::controller('PaymentLinkController')->group(function () {
     Route::get('payment-link/redirect/{code}', 'redirect')->name('payment.link.redirect');
 });
 
-Route::post('api/webhooks/bictorys', BictorysWebhookController::class)
+Route::any('api/webhooks/bictorys', BictorysWebhookController::class)
     ->middleware('throttle:120,1')
     ->name('webhooks.bictorys');
 
 // Backward-compatible aliases for legacy PSP webhook configurations.
-Route::post('webhook-endpoint', BictorysWebhookController::class)->middleware('throttle:120,1');
-Route::post('api/webhook-endpoint', BictorysWebhookController::class)->middleware('throttle:120,1');
-Route::post('bictorys/webhook', BictorysWebhookController::class)->middleware('throttle:120,1');
-
+Route::any('webhook-endpoint', BictorysWebhookController::class)->middleware('throttle:120,1');
+Route::any('api/webhook-endpoint', BictorysWebhookController::class)->middleware('throttle:120,1');
+Route::any('bictorys/webhook', BictorysWebhookController::class)->middleware('throttle:120,1');
 // User Support Ticket
 Route::controller('TicketController')->prefix('ticket')->name('ticket.')->group(function () {
     Route::get('/', 'supportTicket')->name('index');

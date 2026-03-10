@@ -3,7 +3,13 @@
     @php
         $sessionData = session('SEND_NOTIFICATION') ?? [];
         $viaName     = $sessionData['via'] ?? 'email';
-        $viaText     = @$sessionData['via'] == 'push' ? 'Push notification ' : ucfirst($viaName);
+        if (($sessionData['via'] ?? null) == 'push') {
+            $viaText = 'Push notification ';
+        } elseif (($sessionData['via'] ?? null) == 'email_push') {
+            $viaText = 'Email + Push notification ';
+        } else {
+            $viaText = ucfirst($viaName);
+        }
     @endphp
 
     @empty(!$sessionData)
@@ -97,6 +103,17 @@
                                                 <div class="send-via-method">
                                                     <i class="las la-bell"></i>
                                                     <h5>@lang('Send Via Firebase')</h5>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @if (gs('en') && gs('pn'))
+                                        <div class="col-xxl-2 col-xl-3 col-lg-4 col-md-3 col-sm-12">
+                                            <div class="notification-via mb-4 @if ($viaName == 'email_push') active @endif" data-method="email_push">
+                                                <span class="active-badge"> <i class="las la-check"></i> </span>
+                                                <div class="send-via-method">
+                                                    <i class="las la-bullhorn"></i>
+                                                    <h5>@lang('Send Via Email + Push')</h5>
                                                 </div>
                                             </div>
                                         </div>
@@ -307,14 +324,14 @@
                     $('.nicEdit').val("")
                 }
 
-                if ($(this).data('method') == 'push') {
+                if ($(this).data('method') == 'push' || $(this).data('method') == 'email_push') {
                     $('.push-notification-file').removeClass('d-none');
                 } else {
                     $('.push-notification-file').addClass('d-none');
                     $('.push-notification-file [type=file]').val('');
                 }
 
-                if ($(this).data('method') == 'push' || $(this).data('method') == 'email') {
+                if ($(this).data('method') == 'push' || $(this).data('method') == 'email' || $(this).data('method') == 'email_push') {
                     $('.subject-wrapper').removeClass('d-none');
                 } else {
                     $('.subject-wrapper').addClass('d-none')
@@ -323,6 +340,12 @@
             });
 
             $(".notify-form").on("submit", function(e) {
+                try {
+                    if (typeof nicEditors !== 'undefined' && nicEditors.findEditor('nicEdit')) {
+                        const content = nicEditors.findEditor('nicEdit').getContent();
+                        $('#nicEdit').val(content);
+                    }
+                } catch (err) {}
                 formSubmit = true;
             });
 

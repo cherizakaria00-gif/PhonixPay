@@ -134,6 +134,24 @@
             }
         ]
     },
+    "merchant_notifications": {
+        "title": "Notifications",
+        "icon": "las la-bell",
+        "menu_active": ["admin.users.notification.all", "admin.users.all", "admin.users.detail", "admin.users.notification.single"],
+        "submenu": [{
+                "keyword": ["merchant notifications", "broadcast notification", "send to all merchants", "notification all merchants"],
+                "title": "All Merchants",
+                "route_name": "admin.users.notification.all",
+                "menu_active": "admin.users.notification.all"
+            },
+            {
+                "keyword": ["single merchant notification", "send to merchant", "merchant list notification"],
+                "title": "By Merchant",
+                "route_name": "admin.users.all",
+                "menu_active": ["admin.users.all", "admin.users.detail", "admin.users.notification.single"]
+            }
+        ]
+    },
     "payments": {
         "title": "Payments",
         "icon": "las la-file-invoice-dollar",
