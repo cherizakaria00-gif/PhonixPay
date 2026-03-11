@@ -28,6 +28,7 @@
                             <th>@lang('Amount')</th>
                             <th>@lang('Conversion')</th>
                             <th>@lang('Status')</th>
+                            <th>@lang('Source')</th>
                             <th>@lang('Action')</th>
                         </tr>
                         </thead>
@@ -111,6 +112,9 @@
                                 </td>
                                 <td>
                                     @php echo $deposit->statusBadge @endphp
+                                </td>
+                                <td>
+                                    {{ $deposit->integration_source_type ?: __('N/A') }}
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.deposit.details', $deposit->id) }}"

@@ -60,6 +60,11 @@ class Deposit extends Model
         return $this->belongsTo(Payout::class);
     }
 
+    public function aiIntegration()
+    {
+        return $this->belongsTo(AiIntegration::class, 'ai_integration_id');
+    }
+
     public function referrer()
     {
         return $this->belongsTo(User::class, 'referrer_user_id');

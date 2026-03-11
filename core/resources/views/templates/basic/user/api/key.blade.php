@@ -10,6 +10,11 @@
                     @lang('Manage API credentials, plugin package, and WooCommerce license from one place.')
                 </p>
             </div>
+            <div class="pf-dev-actions">
+                <a href="{{ route('user.ai.integration.index') }}" class="btn btn-outline--primary btn-sm">
+                    <i class="las la-robot"></i> @lang('AI Integration')
+                </a>
+            </div>
         </div>
     </div>
     <div class="col-12">

@@ -171,9 +171,14 @@ class UserController extends Controller
             $gateway->select('code', 'name');
         }])->get('method_code');
 
+        $filters = ['method_currency', 'gateway:method_code'];
+        if (Schema::hasColumn('deposits', 'integration_source_type')) {
+            $filters[] = 'integration_source_type';
+        }
+
         $deposits = Deposit::where('user_id', $user->id)->when($scope, function($query) use ($scope){
                 $query->$scope();
-            })->searchable(['trx'])->filter(['method_currency', 'gateway:method_code'])->dateFilter()
+            })->searchable(['trx'])->filter($filters)->dateFilter()
         ->with(['gateway', 'apiPayment', 'stripeAccount'])->orderBy('id','desc');
 
         if($request->export_type){
