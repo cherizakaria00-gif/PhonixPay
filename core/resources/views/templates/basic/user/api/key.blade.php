@@ -7,190 +7,210 @@
             <div>
                 <h3 class="pf-dev-title mb-2">{{ __($pageTitle) }}</h3>
                 <p class="pf-dev-subtitle mb-0">
-                    @lang('Take control of your API access with our comprehensive API key page, providing both production and test mode keys with corresponding secrets. Manage your keys with ease and ensure secure access to your account.')
+                    @lang('Manage API credentials, plugin package, and WooCommerce license from one place.')
                 </p>
-            </div>
-            <div class="pf-dev-actions">
-                <button 
-                    class="btn btn--base btn-sm confirmationBtn"
-                    data-question="@lang('All API keys will be reset. Are you sure to generate new keys?')" 
-                    data-action="{{ route('user.generate.key') }}"
-                >
-                    <i class="las la-key"></i> @lang('Generate API Keys')
-                </button>
-            </div>
-        </div>
-    </div>
-    <div class="col-12">
-        <div class="card custom--card api_key h-auto pf-dev-card">
-            <div class="card-header d-flex flex-wrap justify-content-between bg-white pf-dev-card__header">
-                <div class="card-title mb-0">
-                    <h6 class="mb-1">@lang('API Credentials')</h6>
-                    <p class="pf-dev-card__desc mb-0">@lang('Use these keys to authenticate your API requests.')</p>
-                </div>
-                <div class="custom-switch">
-                    <div class="form-check form-switch mt-xl-0">
-                        <input class="form-check-input" type="checkbox" role="switch" id="api_mode">
-                        <label class="form-check-label mb-0" for="api_mode">@lang('Live Mode')</label>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="test">
-                    <div class="form-group">
-                        <label>@lang('Test Public Key')</label>
-                        <div class="copy-link">
-                            <input type="text" class="copyURL" id="testPublicKey" value="{{ $user->test_public_api_key }}" readonly="">
-                            <span class="copy" data-id="testPublicKey">
-                                <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>@lang('Test Secret Key')</label>
-                        <div class="copy-link">
-                            <input type="text" class="copyURL" id="testSecretKey" value="{{ $user->test_secret_api_key }}" readonly="">
-                            <span class="copy" data-id="testSecretKey">
-                                <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
-                            </span>
-                        </div>
-                        <p class="pf-dev-warning mb-0">@lang('Keep your secret key safe. Do not share it in client-side code.')</p>
-                    </div>
-                </div>
-                <div class="live d-none">
-                    <div class="form-group">
-                        <label>@lang('Public Key')</label>
-                        <div class="copy-link">
-                            <input type="text" class="copyURL" id="publicKey" value="{{ $user->public_api_key }}" readonly="">
-                            <span class="copy" data-id="publicKey">
-                                <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>@lang('Secret Key')</label>
-                        <div class="copy-link">
-                            <input type="text" class="copyURL" id="secretKey" value="{{ $user->secret_api_key }}" readonly="">
-                            <span class="copy" data-id="secretKey">
-                                <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
-                            </span>
-                        </div>
-                        <p class="pf-dev-warning mb-0">@lang('Keep your secret key safe. Do not share it in client-side code.')</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-12">
-        <div class="card custom--card h-auto pf-dev-card pf-dev-plugin">
-            <div class="card-header d-flex flex-wrap justify-content-between bg-white pf-dev-card__header">
-                <div class="card-title mb-0">
-                    <h6 class="mb-1">@lang('WooCommerce Plugin')</h6>
-                    <p class="pf-dev-card__desc mb-0">@lang('Easily integrate FlujiPay into your WordPress store.')</p>
-                </div>
-                <div class="pf-dev-actions">
-                    <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}" download="FlujiPay Plug V2.1.zip">
-                        <i class="las la-download"></i> @lang('FlujiPay Plugin v2.1')
-                    </a>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="pf-dev-plugin__content">
-                    <h6 class="mb-2">@lang('FlujiPay for WooCommerce v2.1.0')</h6>
-                    <ol class="pf-dev-plugin__list mb-0">
-                        <li>@lang('Download the ZIP file.')</li>
-                        <li>@lang('Go to WordPress Admin > Plugins > Add New > Upload.')</li>
-                        <li>@lang('Activate and enter your API Keys.')</li>
-                    </ol>
-                </div>
             </div>
         </div>
     </div>
     <div class="col-12">
         <div class="card custom--card h-auto pf-dev-card">
-            <div class="card-header d-flex flex-wrap justify-content-between bg-white pf-dev-card__header">
-                <div class="card-title mb-0">
-                    <h6 class="mb-1">@lang('License Key')</h6>
-                    <p class="pf-dev-card__desc mb-0">@lang('Your license is generated automatically from your profile domain.')</p>
-                </div>
+            <div class="card-header bg-white pf-dev-card__header p-0">
+                <ul class="nav nav-tabs pf-dev-tabs" id="developerTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-api" data-bs-toggle="tab" data-bs-target="#pane-api" type="button" role="tab" aria-controls="pane-api" aria-selected="true">
+                            @lang('Api Key')
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-plugin" data-bs-toggle="tab" data-bs-target="#pane-plugin" type="button" role="tab" aria-controls="pane-plugin" aria-selected="false">
+                            @lang('WooCommerce Plugin')
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-license" data-bs-toggle="tab" data-bs-target="#pane-license" type="button" role="tab" aria-controls="pane-license" aria-selected="false">
+                            @lang('License Key')
+                        </button>
+                    </li>
+                </ul>
             </div>
+
             <div class="card-body">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label">@lang('Email')</label>
-                        <input type="text" class="form-control" value="{{ $user->email }}" readonly>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">@lang('Allowed Domain')</label>
-                        <input type="text" class="form-control" value="{{ $user->website_domain ?: $user->website_url }}" readonly>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">@lang('Current Key')</label>
-                        <div class="copy-link">
-                            <input type="text" class="copyURL" id="merchantLicenseKey" value="{{ $currentLicense?->license_key ?: '' }}" readonly>
-                            <span class="copy" data-id="merchantLicenseKey">
-                                <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
-                            </span>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="pane-api" role="tabpanel" aria-labelledby="tab-api" tabindex="0">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h6 class="mb-1">@lang('API Credentials')</h6>
+                                <p class="pf-dev-card__desc mb-0">@lang('Use these keys to authenticate your API requests.')</p>
+                            </div>
+                            <div class="pf-dev-actions">
+                                <button
+                                    class="btn btn--base btn-sm confirmationBtn"
+                                    data-question="@lang('All API keys will be reset. Are you sure to generate new keys?')"
+                                    data-action="{{ route('user.generate.key') }}"
+                                >
+                                    <i class="las la-key"></i> @lang('Generate API Keys')
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="custom-switch mb-3">
+                            <div class="form-check form-switch mt-xl-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="api_mode">
+                                <label class="form-check-label mb-0" for="api_mode">@lang('Live Mode')</label>
+                            </div>
+                        </div>
+
+                        <div class="test">
+                            <div class="form-group">
+                                <label>@lang('Test Public Key')</label>
+                                <div class="copy-link">
+                                    <input type="text" class="copyURL" id="testPublicKey" value="{{ $user->test_public_api_key }}" readonly="">
+                                    <span class="copy" data-id="testPublicKey">
+                                        <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>@lang('Test Secret Key')</label>
+                                <div class="copy-link">
+                                    <input type="text" class="copyURL" id="testSecretKey" value="{{ $user->test_secret_api_key }}" readonly="">
+                                    <span class="copy" data-id="testSecretKey">
+                                        <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
+                                    </span>
+                                </div>
+                                <p class="pf-dev-warning mb-0">@lang('Keep your secret key safe. Do not share it in client-side code.')</p>
+                            </div>
+                        </div>
+                        <div class="live d-none">
+                            <div class="form-group">
+                                <label>@lang('Public Key')</label>
+                                <div class="copy-link">
+                                    <input type="text" class="copyURL" id="publicKey" value="{{ $user->public_api_key }}" readonly="">
+                                    <span class="copy" data-id="publicKey">
+                                        <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>@lang('Secret Key')</label>
+                                <div class="copy-link">
+                                    <input type="text" class="copyURL" id="secretKey" value="{{ $user->secret_api_key }}" readonly="">
+                                    <span class="copy" data-id="secretKey">
+                                        <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
+                                    </span>
+                                </div>
+                                <p class="pf-dev-warning mb-0">@lang('Keep your secret key safe. Do not share it in client-side code.')</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                        <tr>
-                            <th>@lang('Key')</th>
-                            <th>@lang('Domain')</th>
-                            <th>@lang('Status')</th>
-                            <th>@lang('Last Validation')</th>
-                            <th>@lang('Action')</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @forelse($licenses as $license)
-                            <tr>
-                                <td>
-                                    <div class="small fw-bold">{{ $license->license_key }}</div>
-                                    <button type="button" class="btn btn-sm btn-outline--primary mt-1 copy-license-btn" data-license="{{ $license->license_key }}">
-                                        @lang('Copy')
-                                    </button>
-                                </td>
-                                <td>{{ $license->normalized_domain }}</td>
-                                <td>@php echo $license->statusBadge; @endphp</td>
-                                <td>
-                                    @if($license->last_validated_at)
-                                        {{ diffForHumans($license->last_validated_at) }}
-                                    @else
-                                        <span class="text-muted">@lang('Never')</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($license->status !== \App\Models\PluginLicense::STATUS_REVOKED)
-                                        <form method="post" action="{{ route('user.plugin.licenses.regenerate', $license->id) }}">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline--warning w-100"
-                                                    onclick="return confirm('@lang('Regenerate this license key? The current key will be revoked.')')">
-                                                @lang('Regenerate')
-                                            </button>
-                                        </form>
-                                    @else
-                                        <span class="text-muted">@lang('Revoked')</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="100%" class="text-center text-muted py-4">@lang('No plugin licenses found')</td>
-                            </tr>
-                        @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                @if($licenses->hasPages())
-                    <div class="pt-3">
-                        @php echo paginateLinks($licenses) @endphp
+                    <div class="tab-pane fade" id="pane-plugin" role="tabpanel" aria-labelledby="tab-plugin" tabindex="0">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h6 class="mb-1">@lang('WooCommerce Plugin')</h6>
+                                <p class="pf-dev-card__desc mb-0">@lang('Easily integrate FlujiPay into your WordPress store.')</p>
+                            </div>
+                            <div class="pf-dev-actions">
+                                <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}" download="FlujiPay Plug V2.1.zip">
+                                    <i class="las la-download"></i> @lang('FlujiPay Plugin v2.1')
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="pf-dev-plugin__content">
+                            <h6 class="mb-2">@lang('FlujiPay for WooCommerce v2.1.0')</h6>
+                            <ol class="pf-dev-plugin__list mb-0">
+                                <li>@lang('Download the ZIP file.')</li>
+                                <li>@lang('Go to WordPress Admin > Plugins > Add New > Upload.')</li>
+                                <li>@lang('Activate and enter your API Keys.')</li>
+                            </ol>
+                        </div>
                     </div>
-                @endif
+
+                    <div class="tab-pane fade" id="pane-license" role="tabpanel" aria-labelledby="tab-license" tabindex="0">
+                        <div class="mb-3">
+                            <h6 class="mb-1">@lang('License Key')</h6>
+                            <p class="pf-dev-card__desc mb-0">@lang('Your license is generated automatically from your profile domain.')</p>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">@lang('Email')</label>
+                                <input type="text" class="form-control" value="{{ $user->email }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">@lang('Allowed Domain')</label>
+                                <input type="text" class="form-control" value="{{ $user->website_domain ?: $user->website_url }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">@lang('Current Key')</label>
+                                <div class="copy-link">
+                                    <input type="text" class="copyURL" id="merchantLicenseKey" value="{{ $currentLicense?->license_key ?: '' }}" readonly>
+                                    <span class="copy" data-id="merchantLicenseKey">
+                                        <i class="las la-copy"></i> <strong class="copyText">@lang('Copy')</strong>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                <tr>
+                                    <th>@lang('Key')</th>
+                                    <th>@lang('Domain')</th>
+                                    <th>@lang('Status')</th>
+                                    <th>@lang('Last Validation')</th>
+                                    <th>@lang('Action')</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @forelse($licenses as $license)
+                                    <tr>
+                                        <td>
+                                            <div class="small fw-bold">{{ $license->license_key }}</div>
+                                            <button type="button" class="btn btn-sm btn-outline--primary mt-1 copy-license-btn" data-license="{{ $license->license_key }}">
+                                                @lang('Copy')
+                                            </button>
+                                        </td>
+                                        <td>{{ $license->normalized_domain }}</td>
+                                        <td>@php echo $license->statusBadge; @endphp</td>
+                                        <td>
+                                            @if($license->last_validated_at)
+                                                {{ diffForHumans($license->last_validated_at) }}
+                                            @else
+                                                <span class="text-muted">@lang('Never')</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($license->status !== \App\Models\PluginLicense::STATUS_REVOKED)
+                                                <form method="post" action="{{ route('user.plugin.licenses.regenerate', $license->id) }}">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline--warning w-100"
+                                                            onclick="return confirm('@lang('Regenerate this license key? The current key will be revoked.')')">
+                                                        @lang('Regenerate')
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-muted">@lang('Revoked')</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="100%" class="text-center text-muted py-4">@lang('No plugin licenses found')</td>
+                                    </tr>
+                                @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        @if($licenses->hasPages())
+                            <div class="pt-3">
+                                @php echo paginateLinks($licenses) @endphp
+                            </div>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -236,6 +256,33 @@
         .pf-dev-card__header {
             border-bottom: 1px solid #e5e7eb;
             padding: 16px 20px;
+        }
+
+        .pf-dev-tabs {
+            border-bottom: 1px solid #edf2f7;
+            padding: 0 22px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            margin-bottom: 0;
+        }
+
+        .pf-dev-tabs .nav-link {
+            border: 0 !important;
+            background: transparent !important;
+            color: #6b7280 !important;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 16px 2px 14px;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent !important;
+            border-radius: 0;
+        }
+
+        .pf-dev-tabs .nav-link.active {
+            color: #2d5bff !important;
+            border-bottom-color: #2d5bff !important;
         }
 
         .pf-dev-card__desc {
@@ -297,6 +344,11 @@
         @media (max-width: 767px) {
             .pf-dev-card__header {
                 padding: 14px 16px;
+            }
+
+            .pf-dev-tabs {
+                padding: 0 12px;
+                gap: 12px;
             }
 
             .copy-link span {
