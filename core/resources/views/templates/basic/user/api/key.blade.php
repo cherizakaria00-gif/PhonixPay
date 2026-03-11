@@ -10,10 +10,19 @@
                     @lang('Manage API credentials, plugin package, and WooCommerce license from one place.')
                 </p>
             </div>
-            <div class="pf-dev-actions">
-                <a href="{{ route('user.ai.integration.index') }}" class="btn btn-outline--primary btn-sm">
-                    <i class="las la-robot"></i> @lang('AI Integration')
-                </a>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card custom--card h-auto pf-dev-card">
+            <div class="card-header p-0 bg-white">
+                <ul class="nav nav-tabs pf-dev-main-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" href="{{ route('user.api.key') }}">@lang('Developer Toolkit')</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" href="{{ route('user.ai.integration.index') }}">@lang('AI Integration')</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -263,6 +272,33 @@
             padding: 16px 20px;
         }
 
+        .pf-dev-main-tabs {
+            border-bottom: 1px solid #edf2f7;
+            padding: 0 22px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            margin-bottom: 0;
+        }
+
+        .pf-dev-main-tabs .nav-link {
+            border: 0 !important;
+            background: transparent !important;
+            color: #6b7280 !important;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 16px 2px 14px;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent !important;
+            border-radius: 0;
+        }
+
+        .pf-dev-main-tabs .nav-link.active {
+            color: #2d5bff !important;
+            border-bottom-color: #2d5bff !important;
+        }
+
         .pf-dev-tabs {
             border-bottom: 1px solid #edf2f7;
             padding: 0 22px;
@@ -352,6 +388,11 @@
             }
 
             .pf-dev-tabs {
+                padding: 0 12px;
+                gap: 12px;
+            }
+
+            .pf-dev-main-tabs {
                 padding: 0 12px;
                 gap: 12px;
             }
