@@ -80,6 +80,10 @@ class DepositController extends Controller
             }
         }
 
+        if ($request->source_type) {
+            $deposits = $deposits->where('integration_source_type', $request->source_type);
+        }
+
         if (!$summary) {
             if($request->export_type){
                 return $deposits->export();

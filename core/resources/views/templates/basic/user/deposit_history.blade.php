@@ -68,6 +68,17 @@
                             </select>
                         </div>
                     </div>
+                    <div class="flex-grow-1">
+                        <div class="custom-input-box">
+                            <label>@lang('Source')</label>
+                            <select name="integration_source_type">
+                                <option value=\"\">@lang('All')</option>
+                                <option value=\"api_keys\" @selected($request->integration_source_type == 'api_keys')>API Keys</option>
+                                <option value=\"payment_link\" @selected($request->integration_source_type == 'payment_link')>Payment Link</option>
+                                <option value=\"plugin_sdk\" @selected($request->integration_source_type == 'plugin_sdk')>Plugin / SDK</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -91,6 +102,7 @@
                                 <th>@lang('Phone')</th>
                                 <th class="text-end">@lang('Amount')</th>
                                 <th>@lang('Status')</th>
+                                <th>@lang('Source')</th>
                                 <th>@lang('Date')</th>
                             </tr>
                         </thead>
@@ -134,11 +146,12 @@
                                         @endif
                                     </td>
                                     <td><span class="status-badge {{ $statusClass }}">{{ __($statusLabel) }}</span></td>
+                                    <td>{{ $deposit->integration_source_type ?: __('N/A') }}</td>
                                     <td>{{ showDateTime(@$deposit->created_at, 'M d, Y') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td class="text-muted text-center" colspan="7">{{ __('Data not found') }}</td>
+                                    <td class="text-muted text-center" colspan="8">{{ __('Data not found') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

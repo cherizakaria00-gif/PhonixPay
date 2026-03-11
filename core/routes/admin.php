@@ -175,6 +175,10 @@ Route::middleware('admin')->group(function () {
         Route::post('delete/{id}', 'delete')->name('delete');
     });
 
+    Route::controller('AiIntegrationController')->prefix('ai-integrations')->name('ai.integrations.')->group(function () {
+        Route::get('/', 'index')->name('index');
+    });
+
 
     // WITHDRAW SYSTEM
     Route::name('withdraw.')->prefix('withdraw')->group(function(){

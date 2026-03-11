@@ -6,6 +6,7 @@ use App\Constants\Status;
 use App\Http\Controllers\Controller;
 use App\Lib\FormProcessor;
 use App\Models\AdminNotification;
+use App\Models\AiIntegration;
 use App\Models\Deposit;
 use App\Models\GatewayCurrency;
 use App\Models\PaymentLink;
@@ -247,6 +248,30 @@ class PaymentController extends Controller
         $data->btc_wallet = "";
         if ($paymentLink) {
             $data->payment_link_id = $paymentLink->id;
+            if (Schema::hasColumn('deposits', 'integration_source_type')) {
+                $data->integration_source_type = 'payment_link';
+            }
+            if (Schema::hasColumn('deposits', 'ai_integration_id')) {
+                $data->ai_integration_id = AiIntegration::query()
+                    ->where('merchant_id', $user->id)
+                    ->where('selected_option', AiIntegration::OPTION_PAYMENT_LINK)
+                    ->where('payment_link_id', $paymentLink->id)
+                    ->value('id');
+            }
+        } elseif (Schema::hasColumn('deposits', 'integration_source_type')) {
+            $identifier = strtolower((string) $apiPayment->identifier);
+            if (str_starts_with($identifier, 'ai_api')) {
+                $data->integration_source_type = 'api_keys';
+            } elseif (str_starts_with($identifier, 'ai_sdk') || str_starts_with($identifier, 'ai_plugin')) {
+                $data->integration_source_type = 'plugin_sdk';
+            }
+
+            if ($data->integration_source_type && Schema::hasColumn('deposits', 'ai_integration_id')) {
+                $data->ai_integration_id = AiIntegration::query()
+                    ->where('merchant_id', $user->id)
+                    ->where('selected_option', $data->integration_source_type === 'api_keys' ? AiIntegration::OPTION_API_KEYS : AiIntegration::OPTION_PLUGIN_SDK)
+                    ->value('id');
+            }
         }
         $data->trx = getTrx();
         $data->success_url = $apiPayment->success_url;

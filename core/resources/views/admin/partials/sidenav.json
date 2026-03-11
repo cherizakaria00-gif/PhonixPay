@@ -188,6 +188,12 @@
                 "menu_active": ["admin.plugin.licenses.index", "admin.plugin.licenses.show"]
             },
             {
+                "keyword": ["AI Integrations", "AI Integration", "Developer integrations", "Merchant AI setup"],
+                "title": "AI Integrations",
+                "route_name": "admin.ai.integrations.index",
+                "menu_active": ["admin.ai.integrations.index"]
+            },
+            {
                 "keyword": ["Initiated Payments", "Payments", "Payment management", "Payment activity"],
                 "title": "Initiated Payments",
                 "route_name": "admin.deposit.initiated",
@@ -213,6 +219,13 @@
         "icon": "las la-key",
         "route_name": "admin.plugin.licenses.index",
         "menu_active": ["admin.plugin.licenses.index", "admin.plugin.licenses.show"]
+    },
+    "ai_integrations": {
+        "keyword": ["AI Integrations", "AI Integration", "Builder integrations", "Developer setup"],
+        "title": "AI Integrations",
+        "icon": "las la-robot",
+        "route_name": "admin.ai.integrations.index",
+        "menu_active": ["admin.ai.integrations.index"]
     },
     "payment_statistics": {
         "keyword": ["Payment", "Payment Statistics", "Statistics", "Payment activity", "Payment Report", "Report", "Graph", "Chart"],

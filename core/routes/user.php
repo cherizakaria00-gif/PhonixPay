@@ -101,6 +101,16 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('regenerate/{id}', 'regenerate')->name('regenerate');
             });
 
+            Route::controller('AiIntegrationController')->prefix('developer/ai-integration')->name('ai.integration.')->middleware('user.restricted')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('select-option', 'selectOption')->name('select.option');
+                Route::post('option-a', 'saveApiKeys')->name('save.api.keys');
+                Route::post('option-b/select-link', 'selectPaymentLink')->name('select.payment.link');
+                Route::post('option-b/create-link', 'createPaymentLink')->name('create.payment.link');
+                Route::post('option-c', 'savePluginSdk')->name('save.plugin.sdk');
+                Route::post('option-c/generate-license', 'generateLicense')->name('generate.license');
+            });
+
             Route::controller('RewardController')->prefix('rewards')->name('rewards.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::get('overview-data', 'overview')->name('overview');
