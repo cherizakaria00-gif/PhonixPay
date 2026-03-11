@@ -233,4 +233,180 @@ class PluginLicenseApiController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Legacy endpoint used by WooCommerce plugin:
+     * POST /api/licenses/validate
+     */
+    public function validateLegacy(Request $request)
+    {
+        $request->validate([
+            'license_key' => 'required|string|max:191',
+            'email' => 'required|email|max:191',
+            'domain' => 'nullable|string|max:255',
+            'site_url' => 'nullable|string|max:255',
+            'version' => 'nullable|string|max:50',
+        ]);
+
+        $result = $this->licenseService->validateLicense([
+            'license_key' => $request->input('license_key'),
+            'email' => $request->input('email'),
+            'domain' => $request->input('domain'),
+            'site_url' => $request->input('site_url'),
+            'plugin_version' => $request->input('version'),
+        ], $request);
+
+        $license = PluginLicense::query()
+            ->where('license_key', strtoupper(trim((string) $request->input('license_key'))))
+            ->first();
+
+        $response = [
+            'success' => (bool) ($result['valid'] ?? false),
+            'status' => ($result['valid'] ?? false) ? 'active' : 'invalid',
+            'code' => ($result['valid'] ?? false) ? 'valid' : $this->legacyCodeFromMessage((string) ($result['message'] ?? 'validation_failed')),
+            'message' => (string) ($result['message'] ?? 'License validation failed'),
+            'data' => [
+                'email' => $license?->email ?: strtolower(trim((string) $request->input('email'))),
+                'site_url' => (string) $request->input('site_url', ''),
+                'domain' => $license?->normalized_domain ?: $this->licenseService->normalizeDomain((string) ($request->input('domain') ?: $request->input('site_url'))),
+                'license_status' => (string) ($result['status'] ?? 'invalid'),
+            ],
+        ];
+
+        return response()->json($response, ($result['valid'] ?? false) ? 200 : 422);
+    }
+
+    /**
+     * Legacy endpoint used by WooCommerce plugin:
+     * POST /api/licenses/deactivate
+     */
+    public function deactivateLegacy(Request $request)
+    {
+        $request->validate([
+            'license_key' => 'required|string|max:191',
+            'email' => 'required|email|max:191',
+            'domain' => 'nullable|string|max:255',
+            'site_url' => 'nullable|string|max:255',
+        ]);
+
+        $license = PluginLicense::query()
+            ->where('license_key', strtoupper(trim((string) $request->input('license_key'))))
+            ->first();
+
+        if (!$license) {
+            return response()->json([
+                'success' => false,
+                'status' => 'invalid',
+                'code' => 'invalid_license',
+                'message' => 'Invalid license key',
+                'data' => [],
+            ], 404);
+        }
+
+        if (!hash_equals(strtolower((string) $license->email), strtolower(trim((string) $request->input('email'))))) {
+            return response()->json([
+                'success' => false,
+                'status' => 'invalid',
+                'code' => 'email_mismatch',
+                'message' => 'Email mismatch',
+                'data' => [
+                    'email' => $license->email,
+                    'domain' => $license->normalized_domain,
+                    'license_status' => $license->status,
+                ],
+            ], 422);
+        }
+
+        if ($license->status !== PluginLicense::STATUS_REVOKED) {
+            $license->status = PluginLicense::STATUS_INACTIVE;
+            $license->save();
+        }
+
+        $this->licenseService->storeAudit($request, [
+            'license' => $license,
+            'merchant_id' => $license->merchant_id,
+            'action' => 'deactivate',
+            'result' => 'success',
+            'message' => 'License deactivated via legacy endpoint',
+            'request_email' => $request->input('email'),
+            'request_domain' => $request->input('domain') ?: $request->input('site_url'),
+            'normalized_domain' => $this->licenseService->normalizeDomain((string) ($request->input('domain') ?: $request->input('site_url'))),
+            'site_url' => $request->input('site_url'),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'status' => 'inactive',
+            'code' => 'deactivated',
+            'message' => 'License deactivated successfully',
+            'data' => [
+                'email' => $license->email,
+                'domain' => $license->normalized_domain,
+                'license_status' => $license->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Legacy endpoint used by WooCommerce plugin:
+     * POST /api/licenses/details
+     */
+    public function detailsLegacy(Request $request)
+    {
+        $request->validate([
+            'license_key' => 'required|string|max:191',
+            'email' => 'nullable|email|max:191',
+            'domain' => 'nullable|string|max:255',
+            'site_url' => 'nullable|string|max:255',
+        ]);
+
+        $license = PluginLicense::query()
+            ->where('license_key', strtoupper(trim((string) $request->input('license_key'))))
+            ->first();
+
+        if (!$license) {
+            return response()->json([
+                'success' => false,
+                'status' => 'invalid',
+                'code' => 'invalid_license',
+                'message' => 'Invalid license key',
+                'data' => [],
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'status' => $license->status,
+            'code' => 'ok',
+            'message' => 'License details loaded',
+            'data' => [
+                'email' => $license->email,
+                'site_url' => $request->input('site_url', ''),
+                'domain' => $license->normalized_domain,
+                'license_status' => $license->status,
+                'plugin_version_last_seen' => $license->plugin_version_last_seen,
+                'last_validated_at' => optional($license->last_validated_at)->toIso8601String(),
+            ],
+        ]);
+    }
+
+    private function legacyCodeFromMessage(string $message): string
+    {
+        $message = strtolower(trim($message));
+
+        if (str_contains($message, 'domain')) {
+            return 'domain_mismatch';
+        }
+        if (str_contains($message, 'email')) {
+            return 'email_mismatch';
+        }
+        if (str_contains($message, 'revoked')) {
+            return 'revoked';
+        }
+        if (str_contains($message, 'expired')) {
+            return 'expired';
+        }
+
+        return 'validation_failed';
+    }
 }
