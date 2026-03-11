@@ -87,6 +87,17 @@ class BictorysWebhookService
         ]);
 
         $eventUid = $this->buildEventUid($eventId, $payloadHash, $gatewayAlias, $chargeId, $paymentReference);
+        $eventName = $this->extractEventName($payload);
+
+        Log::info('Bictorys webhook payload received', [
+            'event_uid' => $eventUid,
+            'event_name' => $eventName,
+            'gateway_alias' => $gatewayAlias,
+            'charge_id' => $chargeId,
+            'payment_reference' => $paymentReference,
+            'payload_hash' => $payloadHash,
+            'payload' => $payload,
+        ]);
 
         $persistEvents = Schema::hasTable('bictorys_webhook_events');
         $event = null;
@@ -128,6 +139,7 @@ class BictorysWebhookService
             $references = $this->extractReferences($payload);
             $status = $this->extractStatus($payload);
             $successFlag = $this->extractSuccessFlag($payload);
+            $statusMap = $this->mapExternalStatus($status, $eventName, $successFlag);
 
             $deposit = $this->findDeposit($references, $verificationToken, $gatewayAlias);
 
@@ -140,6 +152,9 @@ class BictorysWebhookService
 
                 Log::warning('Bictorys webhook ignored: deposit not found', [
                     'event_uid' => $eventUid,
+                    'event_name' => $eventName,
+                    'external_status' => $status,
+                    'normalized_external_status' => $statusMap['external'],
                     'references' => $references,
                     'gateway_alias' => $gatewayAlias,
                 ]);
@@ -165,10 +180,19 @@ class BictorysWebhookService
                 }
             }
 
-            $isFailure = ($successFlag === false) || $this->isFailureStatus($status);
-            $isSuccess = $this->isSuccessPayload($payload, $status, $successFlag);
+            $oldStatus = (int) $deposit->status;
+            $newStatus = $oldStatus;
+            $processedAs = 'no_state_change';
 
-            if ($isFailure && in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+            if ($statusMap['target'] === Status::PAYMENT_SUCCESS
+                && in_array($oldStatus, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT], true)) {
+                // Webhook-first finalization: one atomic path used by all payment methods.
+                PaymentController::userDataUpdate((int) $deposit->id);
+                $deposit->refresh();
+                $newStatus = (int) $deposit->status;
+                $processedAs = 'paid';
+            } elseif ($statusMap['target'] === Status::PAYMENT_REJECT
+                && in_array($oldStatus, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
                 $deposit->status = Status::PAYMENT_REJECT;
                 $deposit->save();
 
@@ -177,32 +201,60 @@ class BictorysWebhookService
                     $deposit->apiPayment->save();
                 }
 
-                if ($event) {
-                    $event->status = 'processed_rejected';
-                    $event->processed_at = now();
-                    $event->save();
+                $newStatus = Status::PAYMENT_REJECT;
+                $processedAs = 'rejected';
+            } elseif ($statusMap['target'] === Status::PAYMENT_CANCEL
+                && in_array($oldStatus, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+                $deposit->status = Status::PAYMENT_CANCEL;
+                $deposit->save();
+
+                if ($deposit->apiPayment) {
+                    $deposit->apiPayment->status = Status::PAYMENT_CANCEL;
+                    $deposit->apiPayment->save();
                 }
 
-                return ['processed' => 'rejected', 'deposit_id' => (int) $deposit->id, 'event_uid' => $eventUid];
-            }
+                $newStatus = Status::PAYMENT_CANCEL;
+                $processedAs = 'expired';
+            } elseif ($statusMap['target'] === Status::PAYMENT_PENDING && $oldStatus === Status::PAYMENT_INITIATE) {
+                $deposit->status = Status::PAYMENT_PENDING;
+                $deposit->save();
 
-            if ($isSuccess && in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT], true)) {
-                // Webhook-first finalization: one atomic path used by all payment methods.
-                PaymentController::userDataUpdate((int) $deposit->id);
-
-                if ($event) {
-                    $event->status = 'processed_paid';
-                    $event->processed_at = now();
-                    $event->save();
+                if ($deposit->apiPayment) {
+                    $deposit->apiPayment->status = Status::PAYMENT_PENDING;
+                    $deposit->apiPayment->save();
                 }
 
-                return ['processed' => 'paid', 'deposit_id' => (int) $deposit->id, 'event_uid' => $eventUid];
+                $newStatus = Status::PAYMENT_PENDING;
+                $processedAs = 'pending';
             }
+
+            Log::info('Bictorys webhook status mapping', [
+                'event_uid' => $eventUid,
+                'event_name' => $eventName,
+                'deposit_id' => (int) $deposit->id,
+                'trx' => (string) $deposit->trx,
+                'external_status' => $status,
+                'normalized_external_status' => $statusMap['external'],
+                'mapped_internal_target' => $statusMap['target'],
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'processed_as' => $processedAs,
+            ]);
 
             if ($event) {
-                $event->status = 'ignored_no_state_change';
+                $event->status = match ($processedAs) {
+                    'paid' => 'processed_paid',
+                    'rejected' => 'processed_rejected',
+                    'expired' => 'processed_expired',
+                    'pending' => 'processed_pending',
+                    default => 'ignored_no_state_change',
+                };
                 $event->processed_at = now();
                 $event->save();
+            }
+
+            if ($processedAs !== 'no_state_change') {
+                return ['processed' => $processedAs, 'deposit_id' => (int) $deposit->id, 'event_uid' => $eventUid];
             }
 
             return ['ignored' => 'no_state_change', 'deposit_id' => (int) $deposit->id, 'event_uid' => $eventUid];
@@ -325,6 +377,11 @@ class BictorysWebhookService
             if (!empty($normalizedReferences)) {
                 $builder->orWhereIn(DB::raw('LOWER(trx)'), $normalizedReferences)
                     ->orWhereIn(DB::raw('LOWER(btc_wallet)'), $normalizedReferences);
+
+                // Last-resort fallback: match reference inside serialized gateway detail payload.
+                foreach ($normalizedReferences as $ref) {
+                    $builder->orWhereRaw('LOWER(CAST(detail AS CHAR)) LIKE ?', ['%' . $ref . '%']);
+                }
             }
         })->latest('id')->first();
     }
@@ -481,17 +538,74 @@ class BictorysWebhookService
         return false;
     }
 
+    private function mapExternalStatus(string $status, string $eventName, ?bool $successFlag): array
+    {
+        $normalizedStatus = $this->normalizeStatus($status);
+
+        if ($successFlag === true || $this->isSuccessStatus($normalizedStatus) || $this->isSuccessEvent($eventName)) {
+            return ['external' => $normalizedStatus, 'target' => Status::PAYMENT_SUCCESS];
+        }
+
+        if ($this->isExpiredStatus($normalizedStatus) || $this->isExpiredEvent($eventName)) {
+            return ['external' => $normalizedStatus, 'target' => Status::PAYMENT_CANCEL];
+        }
+
+        if ($successFlag === false || $this->isFailureStatus($normalizedStatus) || $this->isFailureEvent($eventName)) {
+            return ['external' => $normalizedStatus, 'target' => Status::PAYMENT_REJECT];
+        }
+
+        if ($this->isPendingStatus($normalizedStatus) || $this->isPendingEvent($eventName)) {
+            return ['external' => $normalizedStatus, 'target' => Status::PAYMENT_PENDING];
+        }
+
+        if ($this->isInitiatedStatus($normalizedStatus) || $this->isInitiatedEvent($eventName)) {
+            return ['external' => $normalizedStatus, 'target' => Status::PAYMENT_INITIATE];
+        }
+
+        return ['external' => $normalizedStatus, 'target' => null];
+    }
+
+    private function isSuccessEvent(string $eventName): bool
+    {
+        return in_array($eventName, ['charge_successful', 'payment_successful', 'charge_succeeded', 'payment_succeeded'], true)
+            || $this->statusContainsAny($eventName, ['success', 'succeed', 'paid', 'complete', 'captur', 'receiv', 'russi', 'reu']);
+    }
+
+    private function isFailureEvent(string $eventName): bool
+    {
+        return in_array($eventName, ['charge_failed', 'payment_failed', 'charge_error', 'payment_error'], true)
+            || $this->statusContainsAny($eventName, ['fail', 'error', 'reject', 'declin', 'chou']);
+    }
+
+    private function isExpiredEvent(string $eventName): bool
+    {
+        return in_array($eventName, ['charge_expired', 'payment_expired'], true)
+            || $this->statusContainsAny($eventName, ['expire', 'timeout', 'timed_out']);
+    }
+
+    private function isPendingEvent(string $eventName): bool
+    {
+        return in_array($eventName, ['charge_pending', 'payment_pending', 'charge_processing', 'payment_processing'], true)
+            || $this->statusContainsAny($eventName, ['pending', 'process', 'await', 'attente']);
+    }
+
+    private function isInitiatedEvent(string $eventName): bool
+    {
+        return in_array($eventName, ['charge_initiated', 'payment_initiated', 'charge_created', 'payment_created'], true)
+            || $this->statusContainsAny($eventName, ['initiat', 'create', 'start', 'new']);
+    }
+
     private function isSuccessStatus(string $status): bool
     {
         if ($status === '' || $this->isFailureStatus($status)) {
             return false;
         }
 
-        if (in_array($status, ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved', 'received', 'captured', 'settled', 'done'], true)) {
+        if (in_array($status, ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved', 'received', 'captured', 'settled', 'done', 'paye', 'payer', 'valide'], true)) {
             return true;
         }
 
-        return $this->statusContainsAny($status, ['success', 'succeed', 'paid', 'complete', 'approved', 'receiv', 'captur', 'settl']);
+        return $this->statusContainsAny($status, ['success', 'succeed', 'paid', 'complete', 'approved', 'receiv', 'captur', 'settl', 'russi', 'reu', 'effectu', 'valid']);
     }
 
     private function isFailureStatus(string $status): bool
@@ -500,11 +614,38 @@ class BictorysWebhookService
             return false;
         }
 
-        if (in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired', 'refunded', 'chargeback', 'declined', 'unpaid', 'void'], true)) {
+        if (in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired', 'refunded', 'chargeback', 'declined', 'unpaid', 'void', 'echoue'], true)) {
             return true;
         }
 
-        return $this->statusContainsAny($status, ['fail', 'error', 'cancel', 'reject', 'expire', 'refund', 'chargeback', 'declin', 'unpaid', 'not_paid']);
+        return $this->statusContainsAny($status, ['fail', 'error', 'cancel', 'reject', 'refund', 'chargeback', 'declin', 'unpaid', 'not_paid', 'chou']);
+    }
+
+    private function isExpiredStatus(string $status): bool
+    {
+        if (in_array($status, ['expired', 'timeout', 'timed_out', 'time_out'], true)) {
+            return true;
+        }
+
+        return $this->statusContainsAny($status, ['expire', 'timeout']);
+    }
+
+    private function isPendingStatus(string $status): bool
+    {
+        if (in_array($status, ['pending', 'processing', 'in_progress', 'awaiting', 'en_attente'], true)) {
+            return true;
+        }
+
+        return $this->statusContainsAny($status, ['pending', 'process', 'await', 'attente']);
+    }
+
+    private function isInitiatedStatus(string $status): bool
+    {
+        if (in_array($status, ['initiated', 'initialized', 'created', 'new', 'started'], true)) {
+            return true;
+        }
+
+        return $this->statusContainsAny($status, ['initiat', 'initial', 'create', 'start']);
     }
 
     private function extractEventName(array $payload): string

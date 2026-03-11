@@ -327,8 +327,8 @@ class ManageUsersController extends Controller
     {
         $request->validate([
             'message' => 'required',
-            'via'     => 'required|in:email,sms,push',
-            'subject' => 'required_if:via,email,push',
+            'via'     => 'required|in:email,sms,push,email_push',
+            'subject' => 'required_if:via,email,push,email_push',
             'image'   => ['nullable', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
         ]);
 
@@ -337,14 +337,20 @@ class ManageUsersController extends Controller
             return to_route('admin.dashboard')->withNotify($notify);
         }
 
+        if (!$this->hasVisibleMessage($request->message)) {
+            $notify[] = ['error', 'Message is empty. Please type a real notification message.'];
+            return back()->withNotify($notify)->withInput();
+        }
+
+        $sendVia = $this->resolveChannels($request->via);
         $imageUrl = null;
-        if($request->via == 'push' && $request->hasFile('image')){
+        if (in_array('push', $sendVia) && $request->hasFile('image')) {
             $imageUrl = fileUploader($request->image, getFilePath('push'));
         }
 
-        $template = NotificationTemplate::where('act', 'DEFAULT')->where($request->via.'_status', Status::ENABLE)->exists();
-        if(!$template){
-            $notify[] = ['warning', 'Default notification template is not enabled'];
+        $templateReady = $this->ensureDefaultTemplateChannelEnabled($sendVia);
+        if (!$templateReady) {
+            $notify[] = ['warning', 'Default notification template is missing. Please create template act DEFAULT first'];
             return back()->withNotify($notify);
         }
 
@@ -352,7 +358,8 @@ class ManageUsersController extends Controller
         notify($user,'DEFAULT',[
             'subject'=>$request->subject,
             'message'=>$request->message,
-        ],[$request->via],pushImage:$imageUrl);
+            '__plain_notification' => 1,
+        ],$sendVia,pushImage:$imageUrl);
         $notify[] = ['success', 'Notification sent successfully'];
         return back()->withNotify($notify);
     }
@@ -378,9 +385,9 @@ class ManageUsersController extends Controller
     public function sendNotificationAll(Request $request)
     {
         $request->validate([
-            'via'                          => 'required|in:email,sms,push',
+            'via'                          => 'required|in:email,sms,push,email_push',
             'message'                      => 'required',
-            'subject'                      => 'required_if:via,email,push',
+            'subject'                      => 'required_if:via,email,push,email_push',
             'start'                        => 'required|integer|gte:1',
             'batch'                        => 'required|integer|gte:1',
             'being_sent_to'                => 'required',
@@ -398,10 +405,16 @@ class ManageUsersController extends Controller
             return to_route('admin.dashboard')->withNotify($notify);
         }
 
+        if (!$this->hasVisibleMessage($request->message)) {
+            $notify[] = ['error', 'Message is empty. Please type a real notification message.'];
+            return back()->withNotify($notify)->withInput();
+        }
 
-        $template = NotificationTemplate::where('act', 'DEFAULT')->where($request->via.'_status', Status::ENABLE)->exists();
-        if(!$template){
-            $notify[] = ['warning', 'Default notification template is not enabled'];
+
+        $sendVia = $this->resolveChannels($request->via);
+        $templateReady = $this->ensureDefaultTemplateChannelEnabled($sendVia);
+        if (!$templateReady) {
+            $notify[] = ['warning', 'Default notification template is missing. Please create template act DEFAULT first'];
             return back()->withNotify($notify);
         }
 
@@ -434,7 +447,7 @@ class ManageUsersController extends Controller
 
         $imageUrl = null;
 
-        if ($request->via == 'push' && $request->hasFile('image')) {
+        if (in_array('push', $sendVia) && $request->hasFile('image')) {
             if (session()->has("SEND_NOTIFICATION")) {
                 $request->merge(['image' => session()->get('SEND_NOTIFICATION')['image']]);
             }
@@ -449,7 +462,8 @@ class ManageUsersController extends Controller
             notify($user, 'DEFAULT', [
                 'subject' => $request->subject,
                 'message' => $request->message,
-            ], [$request->via], pushImage: $imageUrl);
+                '__plain_notification' => 1,
+            ], $sendVia, pushImage: $imageUrl);
         }
 
         return $this->sessionForNotification($totalUserCount, $request);
@@ -508,6 +522,47 @@ class ManageUsersController extends Controller
         $pageTitle = 'Notifications Sent to '.$user->username;
         $logs = NotificationLog::where('user_id',$id)->with('user')->orderBy('id','desc')->paginate(getPaginate());
         return view('admin.reports.notification_history', compact('pageTitle','logs','user'));
+    }
+
+    protected function ensureDefaultTemplateChannelEnabled($via): bool
+    {
+        $channels = is_array($via) ? $via : [$via];
+        $template = NotificationTemplate::where('act', 'DEFAULT')->first();
+
+        if (!$template) {
+            return false;
+        }
+
+        $updated = false;
+        foreach ($channels as $channel) {
+            $statusField = $channel . '_status';
+            if ((int) ($template->{$statusField} ?? Status::DISABLE) !== Status::ENABLE) {
+                $template->{$statusField} = Status::ENABLE;
+                $updated = true;
+            }
+        }
+
+        if ($updated) {
+            $template->save();
+        }
+
+        return true;
+    }
+
+    protected function resolveChannels(string $via): array
+    {
+        if ($via === 'email_push') {
+            return ['email', 'push'];
+        }
+
+        return [$via];
+    }
+
+    protected function hasVisibleMessage(?string $message): bool
+    {
+        $decoded = html_entity_decode((string) $message, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim(preg_replace('/\s+/u', ' ', strip_tags($decoded)));
+        return $text !== '';
     }
 
 }

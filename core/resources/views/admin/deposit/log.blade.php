@@ -46,6 +46,8 @@
                                 <td>
                                     @php
                                         $isStripeGateway = $gateway && (stripos($gatewayAlias ?? '', 'stripe') !== false || stripos($gatewayName ?? '', 'stripe') !== false);
+                                        $isBictorysGateway = $gateway && (stripos($gatewayAlias ?? '', 'bictorys') !== false || stripos($gatewayName ?? '', 'bictorys') !== false);
+                                        $isRefundableGateway = $isStripeGateway || $isBictorysGateway;
                                     @endphp
                                     @if($isStripeGateway)
                                         <span class="fw-bold">
@@ -115,7 +117,7 @@
                                        class="btn btn-sm btn-outline--primary ms-1">
                                         <i class="la la-desktop"></i> @lang('Details')
                                     </a>
-                                    @if($isStripeGateway && $deposit->status == \App\Constants\Status::PAYMENT_SUCCESS)
+                                    @if($isRefundableGateway && $deposit->status == \App\Constants\Status::PAYMENT_SUCCESS)
                                         <button class="btn btn-sm btn-outline--danger ms-1 confirmationBtn"
                                                 data-question="@lang('Are you sure to refund this payment?')"
                                                 data-action="{{ route('admin.deposit.refund', $deposit->id) }}">

@@ -27,7 +27,51 @@
 </div>
 <div class="form-group">
     <label>@lang('Expiration')</label>
-    <input type="datetime-local" name="expires_at" class="form--control"
-           value="{{ old('expires_at', isset($paymentLink) && $paymentLink->expires_at ? $paymentLink->expires_at->format('Y-m-d\\TH:i') : '') }}" required>
+    @php
+        $noExpiryChecked = old('no_expiry', isset($paymentLink) && !$paymentLink->expires_at ? 1 : 0);
+    @endphp
+    <input type="datetime-local" name="expires_at" id="expires_at_input" class="form--control"
+           value="{{ old('expires_at', isset($paymentLink) && $paymentLink->expires_at ? $paymentLink->expires_at->format('Y-m-d\\TH:i') : '') }}">
+    <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" id="no_expiry" name="no_expiry" value="1" {{ $noExpiryChecked ? 'checked' : '' }}>
+        <label class="form-check-label" for="no_expiry">
+            @lang('No expiry (never expires)')
+        </label>
+    </div>
+</div>
+<div class="form-group">
+    <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" id="is_reusable" name="is_reusable" value="1" {{ old('is_reusable', isset($paymentLink) && $paymentLink->allowsMultiplePayments() ? 1 : 0) ? 'checked' : '' }}>
+        <label class="form-check-label" for="is_reusable">
+            @lang('Allow multiple payments (reusable link)')
+        </label>
+    </div>
 </div>
 <button type="submit" class="btn btn--base w-100">{{ $buttonText }}</button>
+
+@push('script')
+<script>
+    (function () {
+        const noExpiry = document.getElementById('no_expiry');
+        const expiresInput = document.getElementById('expires_at_input');
+
+        if (!noExpiry || !expiresInput) {
+            return;
+        }
+
+        const syncExpiryInputState = () => {
+            const disabled = noExpiry.checked;
+            expiresInput.disabled = disabled;
+            if (disabled) {
+                expiresInput.removeAttribute('required');
+                expiresInput.value = '';
+            } else {
+                expiresInput.setAttribute('required', 'required');
+            }
+        };
+
+        noExpiry.addEventListener('change', syncExpiryInputState);
+        syncExpiryInputState();
+    })();
+</script>
+@endpush

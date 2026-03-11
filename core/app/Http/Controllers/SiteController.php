@@ -18,6 +18,7 @@ use App\Services\SpamProtectionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
@@ -281,6 +282,9 @@ class SiteController extends Controller
             return redirect($successUrl);
         }
 
+        $this->finalizeBictorysOnSuccessRedirect($request, $deposit);
+        $deposit->refresh();
+
         if ($deposit->gateway && $deposit->gateway->alias === 'StripePaymentLink') {
             $this->confirmStripePaymentLink($deposit);
         }
@@ -298,6 +302,83 @@ class SiteController extends Controller
         $pendingUrl = (string) ($deposit->success_url ?: ($deposit->failed_url ?: route('home')));
         $pendingUrl = $this->appendUrlQuery($pendingUrl, 'status', 'pending');
         return redirect($pendingUrl);
+    }
+
+    private function finalizeBictorysOnSuccessRedirect(Request $request, Deposit $deposit): void
+    {
+        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT], true)) {
+            return;
+        }
+
+        if (!$this->isBictorysGateway($deposit)) {
+            return;
+        }
+
+        $token = trim((string) ($request->query('vtoken', '')));
+        if (!$this->hasValidBictorysVerificationToken($deposit, $token)) {
+            return;
+        }
+
+        if ($this->hasFailureSignalInSuccessRedirect($request)) {
+            return;
+        }
+
+        PaymentController::userDataUpdate((int) $deposit->id);
+
+        Log::info('Bictorys fallback finalization applied from success redirect', [
+            'deposit_id' => (int) $deposit->id,
+            'trx' => (string) $deposit->trx,
+        ]);
+    }
+
+    private function isBictorysGateway(Deposit $deposit): bool
+    {
+        $alias = (string) ($deposit->gateway->alias ?? '');
+        return in_array($alias, ['BictorysCheckout', 'BictorysDirect'], true);
+    }
+
+    private function hasValidBictorysVerificationToken(Deposit $deposit, string $token): bool
+    {
+        if ($token === '') {
+            return false;
+        }
+
+        $expected = hash_hmac('sha256', $deposit->id . '|' . $deposit->trx, (string) config('app.key'));
+        return hash_equals($expected, $token);
+    }
+
+    private function hasFailureSignalInSuccessRedirect(Request $request): bool
+    {
+        $candidates = [
+            $request->query('status'),
+            $request->query('payment_status'),
+            $request->query('paymentStatus'),
+            $request->query('state'),
+            $request->query('result'),
+            $request->query('success'),
+            $request->query('isSuccess'),
+            $request->query('is_success'),
+            $request->query('paid'),
+            $request->query('isPaid'),
+            $request->query('is_paid'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!is_scalar($candidate)) {
+                continue;
+            }
+
+            $normalized = strtolower(trim((string) $candidate));
+            if ($normalized === '') {
+                continue;
+            }
+
+            if (in_array($normalized, ['0', 'false', 'no', 'fail', 'failed', 'error', 'rejected', 'cancel', 'cancelled', 'canceled', 'expired', 'void', 'unpaid'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function cancelPaymentRedirect($depositId)

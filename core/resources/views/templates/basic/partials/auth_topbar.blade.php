@@ -95,9 +95,6 @@
                                         <div class="header-notification-item__message">
                                             {{ $headerNotification->preview_message }}
                                         </div>
-                                        <div class="header-notification-item__time">
-                                            {{ diffForHumans($headerNotification->created_at) }}
-                                        </div>
                                     </a>
                                 @empty
                                     <div class="header-notification-empty">@lang('No notifications yet')</div>
@@ -199,7 +196,6 @@
                     html += '<a href="' + escapeHtml(notification.url) + '" class="header-notification-item ' + (notification.unread ? 'is-unread' : '') + '">';
                     html += '<div class="header-notification-item__subject">' + escapeHtml(notification.subject) + '</div>';
                     html += '<div class="header-notification-item__message">' + escapeHtml(notification.message) + '</div>';
-                    html += '<div class="header-notification-item__time">' + escapeHtml(notification.time) + '</div>';
                     html += '</a>';
                 });
                 $list.html(html);

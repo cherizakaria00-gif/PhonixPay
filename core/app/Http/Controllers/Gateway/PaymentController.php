@@ -116,7 +116,11 @@ class PaymentController extends Controller
             }
 
             $paymentLink->markExpiredIfNeeded();
-            if ($paymentLink->status != PaymentLink::STATUS_ACTIVE) {
+            $isReusableLink = $paymentLink->allowsMultiplePayments();
+            $isUsableStatus = $paymentLink->status == PaymentLink::STATUS_ACTIVE
+                || ($isReusableLink && $paymentLink->status == PaymentLink::STATUS_PAID);
+
+            if (!$isUsableStatus) {
                 $notify[] = ['error', 'This payment link is not available'];
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -620,10 +624,17 @@ class PaymentController extends Controller
 
             if ($deposit->payment_link_id) {
                 $paymentLink = PaymentLink::with('plan')->find($deposit->payment_link_id);
-                if ($paymentLink && $paymentLink->status != PaymentLink::STATUS_PAID) {
-                    $paymentLink->status = PaymentLink::STATUS_PAID;
+                if ($paymentLink) {
                     $paymentLink->deposit_id = $deposit->id;
                     $paymentLink->paid_at = now();
+
+                    // Reusable links stay active after each successful payment.
+                    if (!$paymentLink->allowsMultiplePayments()) {
+                        $paymentLink->status = PaymentLink::STATUS_PAID;
+                    } elseif ($paymentLink->status == PaymentLink::STATUS_PAID) {
+                        $paymentLink->status = PaymentLink::STATUS_ACTIVE;
+                    }
+
                     $paymentLink->save();
                 }
 

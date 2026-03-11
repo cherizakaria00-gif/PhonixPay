@@ -21,7 +21,7 @@
                 @forelse($paymentLinks as $link)
                     @php
                         $linkUrl = route('payment.link.show', $link->code);
-                        $salesCount = $link->deposit_id ? 1 : 0;
+                        $salesCount = (int) ($link->deposits_count ?? 0);
                     @endphp
                     <div class="pf-link-card">
                         <div class="pf-link-card__top">
@@ -52,8 +52,14 @@
                                     @if($link->expires_at)
                                         {{ showDateTime($link->expires_at) }}
                                     @else
-                                        —
+                                        @lang('Never')
                                     @endif
+                                </span>
+                            </div>
+                            <div class="pf-link-meta__item">
+                                <span class="pf-link-meta__label">@lang('Mode')</span>
+                                <span class="pf-link-meta__value">
+                                    {{ $link->allowsMultiplePayments() ? __('Multi-use') : __('One-time') }}
                                 </span>
                             </div>
                         </div>

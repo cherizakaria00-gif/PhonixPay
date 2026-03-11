@@ -14,8 +14,10 @@ use App\Models\GatewayCurrency;
 use App\Models\NotificationLog;
 use App\Models\Plan;
 use App\Models\PlanChangeRequest;
+use App\Models\PluginLicense;
 use App\Models\Transaction;
 use App\Models\Withdrawal;
+use App\Services\PluginLicenseService;
 use App\Services\PlanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -373,7 +375,7 @@ class UserController extends Controller
         return null;
     }
 
-    public function userDataSubmit(Request $request)
+    public function userDataSubmit(Request $request, PluginLicenseService $licenseService)
     {
 
         $user = auth()->user();
@@ -393,6 +395,7 @@ class UserController extends Controller
             'mobile_code'  => 'required|in:' . $mobileCodes,
             'username'     => 'required|unique:users|min:6',
             'mobile'       => ['required','regex:/^([0-9]*)$/',Rule::unique('users')->where('dial_code',$request->mobile_code)],
+            'website_url'  => 'required|string|max:255',
         ]);
 
 
@@ -412,7 +415,15 @@ class UserController extends Controller
         $user->state = $request->state;
         $user->zip = $request->zip;
         $user->country_name = @$request->country;
+        $normalizedDomain = $licenseService->normalizeDomain((string) $request->website_url);
+        if (!$normalizedDomain) {
+            $notify[] = ['error', 'Please enter a valid website URL or domain'];
+            return back()->withNotify($notify)->withInput($request->all());
+        }
+
         $user->dial_code = $request->mobile_code;
+        $user->website_url = trim((string) $request->website_url);
+        $user->website_domain = $normalizedDomain;
 
         $user->profile_complete = Status::YES;
         $user->save();
@@ -566,7 +577,7 @@ class UserController extends Controller
         return view('Template::user.calculate_charge', compact('gatewayCurrency', 'pageTitle', 'user'));
     }
 
-    public function apiKey(){   
+    public function apiKey(PluginLicenseService $licenseService){   
 
         $pageTitle = "Api Key";     
         $user = auth()->user();
@@ -575,7 +586,16 @@ class UserController extends Controller
             $this->makeApiKey();
         }
 
-        return view('Template::user.api.key',compact('pageTitle', 'user'));
+        $licenseService->ensureAutoLicenseForMerchant($user);
+
+        $licenses = PluginLicense::query()
+            ->where('merchant_id', $user->id)
+            ->with('latestValidation')
+            ->latest('id')
+            ->paginate(getPaginate());
+        $currentLicense = $licenseService->merchantCurrentLicense($user);
+
+        return view('Template::user.api.key',compact('pageTitle', 'user', 'licenses', 'currentLicense'));
     }
 
     private function makeApiKey(){

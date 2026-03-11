@@ -14,6 +14,13 @@ class BictorysWebhookController extends Controller
 {
     public function __invoke(Request $request, BictorysWebhookService $service): JsonResponse
     {
+        Log::info('Bictorys webhook received', [
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'gateway' => (string) $request->query('gateway', ''),
+            'ip' => $request->ip(),
+        ]);
+
         $isSecureRequest = $this->isSecureRequest($request);
         $requireHttps = (bool) config('services.bictorys.webhook_require_https', false);
 
@@ -75,13 +82,29 @@ class BictorysWebhookController extends Controller
             'user_agent' => (string) $request->userAgent(),
         ];
 
-        // Webhook-first, non-blocking handler:
-        // validate + enqueue + return 200 quickly.
-        ProcessBictorysWebhookJob::dispatchAfterResponse(
-            $payload,
-            $rawPayload,
-            $context
-        )->onQueue((string) config('services.bictorys.webhook_queue', 'webhooks'));
+        // Default to inline processing to avoid dependency on queue workers in production.
+        // If async is explicitly enabled, queue the job with a safe inline fallback.
+        $asyncEnabled = (bool) config('services.bictorys.webhook_async', false);
+
+        if ($asyncEnabled) {
+            try {
+                ProcessBictorysWebhookJob::dispatchAfterResponse(
+                    $payload,
+                    $rawPayload,
+                    $context
+                )->onQueue((string) config('services.bictorys.webhook_queue', 'webhooks'));
+            } catch (\Throwable $e) {
+                Log::warning('Bictorys webhook queue dispatch failed; processing inline fallback', [
+                    'error' => $e->getMessage(),
+                ]);
+
+                $result = $service->processWebhook($payload, $rawPayload, $context);
+                Log::info('Bictorys webhook processed inline fallback', ['result' => $result]);
+            }
+        } else {
+            $result = $service->processWebhook($payload, $rawPayload, $context);
+            Log::info('Bictorys webhook processed inline', ['result' => $result]);
+        }
 
         return response()->json(['received' => true], 200);
     }

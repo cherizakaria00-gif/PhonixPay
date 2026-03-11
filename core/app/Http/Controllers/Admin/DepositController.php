@@ -7,7 +7,9 @@ use App\Models\Deposit;
 use App\Models\Gateway;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Gateway\PaymentController;
+use App\Services\BictorysRefundService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class DepositController extends Controller
 {
@@ -125,10 +127,34 @@ class DepositController extends Controller
             return back()->withNotify($notify);
         }
 
-        $isStripeGateway = stripos($deposit->gateway->alias, 'stripe') !== false || stripos($deposit->gateway->name, 'stripe') !== false;
-        if (!$isStripeGateway) {
-            $notify[] = ['error', 'Refund is only available for Stripe payments'];
+        $isStripeGateway = $this->isStripeGateway($deposit);
+        $isBictorysGateway = $this->isBictorysGateway($deposit);
+
+        if (!$isStripeGateway && !$isBictorysGateway) {
+            $notify[] = ['error', 'Refund is available only for Stripe and Bictorys payments'];
             return back()->withNotify($notify);
+        }
+
+        if ($isBictorysGateway) {
+            $providerRefund = app(BictorysRefundService::class)->refundDeposit($deposit, 'Refunded by admin');
+            if (!($providerRefund['success'] ?? false)) {
+                Log::warning('Admin refund blocked: Bictorys provider refund failed', [
+                    'deposit_id' => $deposit->id,
+                    'trx' => $deposit->trx,
+                    'gateway_alias' => $deposit->gateway->alias ?? null,
+                    'provider_result' => $providerRefund,
+                ]);
+                $notify[] = ['error', $providerRefund['message'] ?? 'Bictorys refund failed'];
+                return back()->withNotify($notify);
+            }
+
+            $detail = is_array($deposit->detail) ? $deposit->detail : (array) $deposit->detail;
+            data_set($detail, 'bictorys.refund.endpoint', $providerRefund['endpoint'] ?? null);
+            data_set($detail, 'bictorys.refund.reference', $providerRefund['refund_reference'] ?? null);
+            data_set($detail, 'bictorys.refund.response', $providerRefund['response'] ?? []);
+            data_set($detail, 'bictorys.refund.refunded_at', now()->toIso8601String());
+            $deposit->detail = $detail;
+            $deposit->save();
         }
 
         $refunded = PaymentController::refundUserData($deposit, 'Refunded by admin');
@@ -139,6 +165,22 @@ class DepositController extends Controller
 
         $notify[] = ['success', 'Refund recorded successfully'];
         return back()->withNotify($notify);
+    }
+
+    protected function isStripeGateway(Deposit $deposit): bool
+    {
+        $alias = strtolower((string) ($deposit->gateway->alias ?? ''));
+        $name = strtolower((string) ($deposit->gateway->name ?? ''));
+
+        return str_contains($alias, 'stripe') || str_contains($name, 'stripe');
+    }
+
+    protected function isBictorysGateway(Deposit $deposit): bool
+    {
+        $alias = strtolower((string) ($deposit->gateway->alias ?? ''));
+        $name = strtolower((string) ($deposit->gateway->name ?? ''));
+
+        return str_contains($alias, 'bictorys') || str_contains($name, 'bictorys');
     }
 
 

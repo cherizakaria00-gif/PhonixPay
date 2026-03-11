@@ -32,7 +32,7 @@ class PaymentLinkController extends Controller
             $query->where('code', 'like', '%' . $request->search . '%');
         }
 
-        $paymentLinks = $query->paginate(getPaginate());
+        $paymentLinks = $query->withCount('deposits')->paginate(getPaginate());
         $paymentLinks->getCollection()->each->markExpiredIfNeeded();
 
         $paymentLinkPayments = Deposit::where('user_id', auth()->id())
@@ -72,7 +72,9 @@ class PaymentLinkController extends Controller
             'currency' => 'required|string|in:' . implode(',', $currencies),
             'description' => 'required|string|max:255',
             'redirect_url' => 'required|url|max:255',
-            'expires_at' => 'required|date|after:now',
+            'no_expiry' => 'nullable|boolean',
+            'is_reusable' => 'nullable|boolean',
+            'expires_at' => 'required_without:no_expiry|nullable|date|after:now',
         ]);
 
         $paymentLink = new PaymentLink();
@@ -82,7 +84,10 @@ class PaymentLinkController extends Controller
         $paymentLink->currency = strtoupper($request->currency);
         $paymentLink->description = $request->description;
         $paymentLink->redirect_url = $request->redirect_url;
-        $paymentLink->expires_at = $request->expires_at;
+        $paymentLink->expires_at = $request->boolean('no_expiry') ? null : $request->expires_at;
+        if (Schema::hasColumn('payment_links', 'is_reusable')) {
+            $paymentLink->is_reusable = $request->boolean('is_reusable');
+        }
         $paymentLink->status = PaymentLink::STATUS_ACTIVE;
         if (Schema::hasColumn('payment_links', 'link_type')) {
             $paymentLink->link_type = PaymentLink::TYPE_STANDARD;
@@ -142,14 +147,19 @@ class PaymentLinkController extends Controller
             'currency' => 'required|string|in:' . implode(',', $currencies),
             'description' => 'required|string|max:255',
             'redirect_url' => 'required|url|max:255',
-            'expires_at' => 'required|date|after:now',
+            'no_expiry' => 'nullable|boolean',
+            'is_reusable' => 'nullable|boolean',
+            'expires_at' => 'required_without:no_expiry|nullable|date|after:now',
         ]);
 
         $paymentLink->amount = $request->amount;
         $paymentLink->currency = strtoupper($request->currency);
         $paymentLink->description = $request->description;
         $paymentLink->redirect_url = $request->redirect_url;
-        $paymentLink->expires_at = $request->expires_at;
+        $paymentLink->expires_at = $request->boolean('no_expiry') ? null : $request->expires_at;
+        if (Schema::hasColumn('payment_links', 'is_reusable')) {
+            $paymentLink->is_reusable = $request->boolean('is_reusable');
+        }
         $paymentLink->save();
 
         $notify[] = ['success', 'Payment link updated successfully'];

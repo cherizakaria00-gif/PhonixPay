@@ -164,6 +164,17 @@ Route::middleware('admin')->group(function () {
         Route::get('/', 'index')->name('index');
     });
 
+    // Plugin Licenses
+    Route::controller('PluginLicenseController')->prefix('plugin-licenses')->name('plugin.licenses.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/{id}', 'show')->name('show');
+        Route::post('revoke/{id}', 'revoke')->name('revoke');
+        Route::post('regenerate/{id}', 'regenerate')->name('regenerate');
+        Route::post('update-domain/{id}', 'updateDomain')->name('update.domain');
+        Route::post('delete/{id}', 'delete')->name('delete');
+    });
+
 
     // WITHDRAW SYSTEM
     Route::name('withdraw.')->prefix('withdraw')->group(function(){
