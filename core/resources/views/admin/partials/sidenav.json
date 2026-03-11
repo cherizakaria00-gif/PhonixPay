@@ -207,6 +207,13 @@
             }
         ]
     },
+    "license_keys": {
+        "keyword": ["License Keys", "Plugin Licenses", "WooCommerce license", "License key management", "Plugin activation"],
+        "title": "License Keys",
+        "icon": "las la-key",
+        "route_name": "admin.plugin.licenses.index",
+        "menu_active": ["admin.plugin.licenses.index", "admin.plugin.licenses.show"]
+    },
     "payment_statistics": {
         "keyword": ["Payment", "Payment Statistics", "Statistics", "Payment activity", "Payment Report", "Report", "Graph", "Chart"],
         "title": "Payment Statistics",
