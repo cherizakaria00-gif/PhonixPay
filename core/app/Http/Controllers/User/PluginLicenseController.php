@@ -39,11 +39,9 @@ class PluginLicenseController extends Controller
         $request->validate([
             'email' => 'required|email|max:191',
             'domain' => 'required|string|max:255',
-            'plugin_name' => 'nullable|string|max:100',
-            'notes' => 'nullable|string|max:1000',
         ]);
 
-        $result = $this->licenseService->createLicense(auth()->user(), $request->only(['email', 'domain', 'plugin_name', 'notes']), $request);
+        $result = $this->licenseService->createLicense(auth()->user(), $request->only(['email', 'domain']), $request);
 
         if (!($result['ok'] ?? false)) {
             $notify[] = ['error', $result['message'] ?? 'Unable to generate license'];

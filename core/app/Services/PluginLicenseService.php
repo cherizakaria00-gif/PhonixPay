@@ -21,6 +21,28 @@ class PluginLicenseService
             ->first();
     }
 
+    public function ensureAutoLicenseForMerchant(User $merchant, ?Request $request = null): ?PluginLicense
+    {
+        $this->enforceSingleCurrentLicense($merchant, 'flujipay-woocommerce', $request);
+
+        $current = $this->merchantCurrentLicense($merchant, 'flujipay-woocommerce');
+        if ($current) {
+            return $current;
+        }
+
+        $domain = $merchant->website_domain ?: $merchant->website_url;
+        if (!$domain) {
+            return null;
+        }
+
+        $result = $this->createLicense($merchant, [
+            'email' => $merchant->email,
+            'domain' => $domain,
+        ], $request);
+
+        return ($result['ok'] ?? false) ? ($result['license'] ?? null) : null;
+    }
+
     public function enforceSingleCurrentLicense(User $merchant, string $pluginName = 'flujipay-woocommerce', ?Request $request = null): void
     {
         $licenses = PluginLicense::query()
@@ -110,10 +132,7 @@ class PluginLicenseService
         $email = strtolower(trim((string) ($payload['email'] ?? $merchant->email ?? '')));
         $domainInput = (string) ($payload['domain'] ?? '');
         $normalizedDomain = $this->normalizeDomain($domainInput);
-        $pluginName = trim((string) ($payload['plugin_name'] ?? 'flujipay-woocommerce'));
-        if ($pluginName === '') {
-            $pluginName = 'flujipay-woocommerce';
-        }
+        $pluginName = 'flujipay-woocommerce';
 
         if (!$normalizedDomain) {
             return ['ok' => false, 'message' => 'Invalid domain format'];
@@ -139,7 +158,7 @@ class PluginLicenseService
             'license_key' => $this->generateLicenseKey(),
             'status' => PluginLicense::STATUS_ACTIVE,
             'plugin_name' => $pluginName,
-            'notes' => $payload['notes'] ?? null,
+            'notes' => null,
         ]);
 
         $this->storeAudit($request, [

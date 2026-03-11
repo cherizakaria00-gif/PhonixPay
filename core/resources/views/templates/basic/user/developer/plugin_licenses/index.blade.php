@@ -9,39 +9,24 @@
         <div class="col-lg-5 mb-4">
             <div class="card custom--card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0">@lang('Generate Plugin License')</h5>
+                    <h5 class="mb-0">@lang('Plugin License')</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{{ route('user.plugin.licenses.store') }}">
-                        @csrf
-                        <div class="form-group">
-                            <label>@lang('Email')</label>
-                            <input type="email" name="email" class="form--control" value="{{ old('email', auth()->user()->email) }}" required {{ $currentLicense ? 'readonly' : '' }}>
-                        </div>
-                        <div class="form-group">
-                            <label>@lang('Website URL / Domain')</label>
-                            <input type="text" name="domain" class="form--control"
-                                   value="{{ old('domain', $currentLicense?->domain) }}"
-                                   placeholder="https://www.example.com"
-                                   required {{ $currentLicense ? 'readonly' : '' }}>
-                            @if($currentLicense)
-                                <small class="text-muted d-block mt-1">
-                                    @lang('Domain is locked after license generation. Contact admin to change it.')
-                                </small>
-                            @endif
-                        </div>
-                        <div class="form-group">
-                            <label>@lang('Plugin Name')</label>
-                            <input type="text" name="plugin_name" class="form--control" value="{{ old('plugin_name', 'flujipay-woocommerce') }}">
-                        </div>
-                        <div class="form-group">
-                            <label>@lang('Notes') (@lang('Optional'))</label>
-                            <textarea name="notes" class="form--control" rows="3">{{ old('notes') }}</textarea>
-                        </div>
-                        <button type="submit" class="btn btn--base w-100" {{ $currentLicense ? 'disabled' : '' }}>
-                            {{ $currentLicense ? __('License Already Generated') : __('Generate License') }}
-                        </button>
-                    </form>
+                    <div class="form-group">
+                        <label>@lang('Email')</label>
+                        <input type="email" class="form--control" value="{{ auth()->user()->email }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>@lang('Website URL / Domain')</label>
+                        <input type="text" class="form--control" value="{{ auth()->user()->website_domain ?: auth()->user()->website_url }}" readonly>
+                        <small class="text-muted d-block mt-1">
+                            @lang('This domain is locked from profile setup. Contact admin if you need to change it.')
+                        </small>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>@lang('Current License Key')</label>
+                        <input type="text" class="form--control" value="{{ $currentLicense?->license_key ?: __('Not generated yet') }}" readonly>
+                    </div>
                 </div>
             </div>
         </div>

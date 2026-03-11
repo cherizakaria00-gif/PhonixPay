@@ -184,6 +184,12 @@
                         </div>
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Website URL / Domain')</label>
+                        <input type="text" class="form-control form--control" name="website_url" value="{{ old('website_url') }}" placeholder="https://www.example.com" required>
+                        <small class="text-slate-400 d-block mt-2">@lang('This domain will be used for WooCommerce license generation and locked after activation.')</small>
+                    </div>
+
                     <button type="submit" class="w-full rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors">
                         @lang('Submit')
                     </button>
