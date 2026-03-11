@@ -51,6 +51,12 @@
                 </ul>
 
                 @if($license->status !== \App\Models\PluginLicense::STATUS_REVOKED)
+                    <button class="btn btn-outline--warning btn-sm w-100 mt-3 confirmationBtn"
+                            data-question="@lang('Regenerate this license key?')"
+                            data-action="{{ route('admin.plugin.licenses.regenerate', $license->id) }}">
+                        <i class="la la-refresh"></i> @lang('Regenerate License')
+                    </button>
+
                     <button class="btn btn-outline--danger btn-sm w-100 mt-3 confirmationBtn"
                             data-question="@lang('Revoke this plugin license?')"
                             data-action="{{ route('admin.plugin.licenses.revoke', $license->id) }}">

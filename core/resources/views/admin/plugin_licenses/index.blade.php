@@ -4,7 +4,7 @@
     <div class="col-md-12 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">@lang('Create License')</h5>
+                <h5 class="mb-0">@lang('Create License Key')</h5>
             </div>
             <div class="card-body">
                 <form action="{{ route('admin.plugin.licenses.store') }}" method="post" class="row g-3">
@@ -23,7 +23,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">@lang('Plugin')</label>
-                        <input type="text" name="plugin_name" class="form-control" value="{{ old('plugin_name', 'flujipay-woocommerce') }}">
+                        <input type="text" name="plugin_name" class="form-control" value="flujipay-woocommerce" readonly>
                     </div>
                     <div class="col-md-1 d-flex align-items-end">
                         <button type="submit" class="btn btn--primary w-100">@lang('Create')</button>
@@ -81,6 +81,11 @@
                                                 data-question="@lang('Revoke this plugin license?')"
                                                 data-action="{{ route('admin.plugin.licenses.revoke', $license->id) }}">
                                             <i class="la la-ban"></i> @lang('Revoke')
+                                        </button>
+                                        <button class="btn btn-sm btn-outline--warning confirmationBtn mt-1"
+                                                data-question="@lang('Regenerate this license key?')"
+                                                data-action="{{ route('admin.plugin.licenses.regenerate', $license->id) }}">
+                                            <i class="la la-refresh"></i> @lang('Regenerate')
                                         </button>
                                     @endif
                                 </td>

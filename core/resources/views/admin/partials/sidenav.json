@@ -182,8 +182,8 @@
                 "menu_active": "admin.payment.links.index"
             },
             {
-                "keyword": ["Plugin Licenses", "WooCommerce license", "License keys", "Plugin activation"],
-                "title": "Plugin Licenses",
+                "keyword": ["License Keys", "Plugin Licenses", "WooCommerce license", "License key management", "Plugin activation"],
+                "title": "License Keys",
                 "route_name": "admin.plugin.licenses.index",
                 "menu_active": ["admin.plugin.licenses.index", "admin.plugin.licenses.show"]
             },

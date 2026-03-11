@@ -17,7 +17,7 @@ class PluginLicenseController extends Controller
 
     public function index(Request $request)
     {
-        $pageTitle = 'Plugin Licenses';
+        $pageTitle = 'License Keys';
         $search = trim((string) $request->search);
 
         $licenses = PluginLicense::query()
@@ -43,7 +43,7 @@ class PluginLicenseController extends Controller
     public function show($id)
     {
         $license = PluginLicense::with('merchant')->findOrFail($id);
-        $pageTitle = 'License Details';
+        $pageTitle = 'License Key Details';
         $history = PluginLicenseValidation::where('plugin_license_id', $license->id)
             ->latest('id')
             ->paginate(getPaginate());
@@ -121,5 +121,19 @@ class PluginLicenseController extends Controller
 
         $notify[] = ['success', 'License deleted successfully'];
         return to_route('admin.plugin.licenses.index')->withNotify($notify);
+    }
+
+    public function regenerate($id, Request $request)
+    {
+        $license = PluginLicense::findOrFail($id);
+        $result = $this->licenseService->regenerateLicense($license, auth('admin')->id(), $request);
+
+        if (!($result['ok'] ?? false)) {
+            $notify[] = ['error', $result['message'] ?? 'Unable to regenerate license'];
+            return back()->withNotify($notify);
+        }
+
+        $notify[] = ['success', 'License regenerated successfully'];
+        return back()->withNotify($notify);
     }
 }

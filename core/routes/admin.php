@@ -170,6 +170,7 @@ Route::middleware('admin')->group(function () {
         Route::post('/create', 'store')->name('store');
         Route::get('/{id}', 'show')->name('show');
         Route::post('revoke/{id}', 'revoke')->name('revoke');
+        Route::post('regenerate/{id}', 'regenerate')->name('regenerate');
         Route::post('update-domain/{id}', 'updateDomain')->name('update.domain');
         Route::post('delete/{id}', 'delete')->name('delete');
     });
