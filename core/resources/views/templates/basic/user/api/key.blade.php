@@ -154,7 +154,7 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">@lang('Allowed Domain')</label>
-                                <input type="text" class="form-control" value="{{ $currentLicense?->normalized_domain ?: ($user->website_domain ?: $user->website_url) }}" readonly>
+                                <input type="text" class="form-control" value="{{ $user->website_domain ?: $user->website_url }}" readonly>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">@lang('Current Key')</label>
