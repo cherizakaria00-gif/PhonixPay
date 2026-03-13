@@ -14,7 +14,12 @@ class AutomaticGatewayController extends Controller
     public function index()
     {
         $pageTitle = 'Automatic Gateways';
-        $gateways = Gateway::automatic()->with('currencies')->get();
+        // Show only gateways that are still configured in DB (have at least one enabled currency record).
+        // If a gateway is removed from gateway_currencies, it disappears from this admin list.
+        $gateways = Gateway::automatic()
+            ->whereHas('currencies')
+            ->with('currencies')
+            ->get();
         return view('admin.gateways.automatic.list', compact('pageTitle', 'gateways'));
     }
 
