@@ -7,7 +7,6 @@ use App\Models\Deposit;
 use App\Models\Gateway;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Gateway\PaymentController;
-use App\Services\BictorysRefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -119,7 +118,11 @@ class DepositController extends Controller
 
     public function refund($id)
     {
-        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount', 'apiPayment'])->firstOrFail();
+        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount', 'apiPayment'])->first();
+        if (!$deposit) {
+            $notify[] = ['error', 'Payment not found for refund'];
+            return back()->withNotify($notify);
+        }
 
         if ($deposit->status == Status::PAYMENT_REFUNDED) {
             $notify[] = ['error', 'This payment is already refunded'];
@@ -140,30 +143,30 @@ class DepositController extends Controller
         }
 
         if ($isBictorysGateway) {
-            $providerRefund = app(BictorysRefundService::class)->refundDeposit($deposit, 'Refunded by admin');
-            if (!($providerRefund['success'] ?? false)) {
-                Log::warning('Admin refund blocked: Bictorys provider refund failed', [
-                    'deposit_id' => $deposit->id,
-                    'trx' => $deposit->trx,
-                    'gateway_alias' => $deposit->gateway->alias ?? null,
-                    'provider_result' => $providerRefund,
-                ]);
-                $notify[] = ['error', $providerRefund['message'] ?? 'Bictorys refund failed'];
-                return back()->withNotify($notify);
-            }
-
+            // Bictorys refunds are now handled manually on provider side.
+            // We only update local balances/status so admin can process provider refund separately.
             $detail = is_array($deposit->detail) ? $deposit->detail : (array) $deposit->detail;
-            data_set($detail, 'bictorys.refund.endpoint', $providerRefund['endpoint'] ?? null);
-            data_set($detail, 'bictorys.refund.reference', $providerRefund['refund_reference'] ?? null);
-            data_set($detail, 'bictorys.refund.response', $providerRefund['response'] ?? []);
+            data_set($detail, 'bictorys.refund.mode', 'manual');
+            data_set($detail, 'bictorys.refund.provider_sync', 'manual_required');
             data_set($detail, 'bictorys.refund.refunded_at', now()->toIso8601String());
             $deposit->detail = $detail;
             $deposit->save();
+
+            Log::info('Admin refund processed in manual Bictorys mode', [
+                'deposit_id' => $deposit->id,
+                'trx' => $deposit->trx,
+                'gateway_alias' => $deposit->gateway->alias ?? null,
+            ]);
         }
 
         $refunded = PaymentController::refundUserData($deposit, 'Refunded by admin');
         if (!$refunded) {
             $notify[] = ['error', 'Local refund update failed'];
+            return back()->withNotify($notify);
+        }
+
+        if ($isBictorysGateway) {
+            $notify[] = ['success', 'Refund recorded locally. Please process the Bictorys provider refund manually.'];
             return back()->withNotify($notify);
         }
 
