@@ -155,7 +155,7 @@ Route::middleware('admin')->group(function () {
         Route::get('details/{id}', 'details')->name('details');
         Route::post('reject', 'reject')->name('reject');
         Route::post('approve/{id}', 'approve')->name('approve');
-        Route::post('refund/{id}', 'refund')->name('refund');
+        Route::match(['get', 'post'], 'refund/{id}', 'refund')->name('refund');
 
     });
 
