@@ -60,6 +60,7 @@ class UserController extends Controller
         }
 
         $latestDeposits = Deposit::where('user_id', $user->id)
+            ->where('status', Status::PAYMENT_SUCCESS)
             ->with('apiPayment')
             ->orderBy('id', 'desc')
             ->take(10);
