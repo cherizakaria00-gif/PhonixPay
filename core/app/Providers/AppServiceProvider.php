@@ -31,17 +31,20 @@ class AppServiceProvider extends ServiceProvider
     {
         if (!cache()->get('SystemInstalled')) {
             $envFilePath = base_path('.env');
-            if (!file_exists($envFilePath)) {
-                header('Location: install');
-                exit;
+            $envExamplePath = base_path('.env.example');
+
+            if (!file_exists($envFilePath) || trim((string) file_get_contents($envFilePath)) === '') {
+                // For GitHub source ZIP deployments: bootstrap from .env.example instead of
+                // forcing installer/activation page.
+                if (file_exists($envExamplePath) && is_readable($envExamplePath)) {
+                    @copy($envExamplePath, $envFilePath);
+                } else {
+                    header('Location: install');
+                    exit;
+                }
             }
-            $envContents = file_get_contents($envFilePath);
-            if (empty($envContents)) {
-                header('Location: install');
-                exit;
-            } else {
-                cache()->put('SystemInstalled', true);
-            }
+
+            cache()->put('SystemInstalled', true);
         }
 
 
