@@ -1,9 +1,5 @@
 @extends($activeTemplate.'layouts.app')
 
-@php
-    $login = @getContent('login_register.content', true)->data_values;
-@endphp
-
 @push('style-lib')
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 @endpush
@@ -74,6 +70,33 @@
             border: 1px solid var(--input-border);
             color: var(--input-fg);
         }
+        .new-auth .mobile-input-group {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: stretch;
+        }
+        .new-auth .mobile-code-select {
+            flex: 0 0 130px;
+            width: 130px;
+            max-width: 130px;
+            min-width: 110px;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .new-auth .mobile-number-input {
+            flex: 1 1 auto;
+            width: 1%;
+            min-width: 0;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+        @media (max-width: 575px) {
+            .new-auth .mobile-code-select {
+                flex-basis: 104px;
+                width: 104px;
+                min-width: 104px;
+            }
+        }
         .new-auth .text--danger,
         .new-auth .text-danger {
             color: #fca5a5 !important;
@@ -91,28 +114,8 @@
         <i class="fas fa-times"></i>
     </a>
 
-    <div class="relative z-10 min-h-screen flex flex-col lg:flex-row">
-        <div class="hidden lg:flex lg:w-1/2 items-center justify-center px-12 py-12">
-            <div class="max-w-md">
-                <div class="flex items-center gap-3 mb-6">
-                    <img src="{{ siteLogo() }}" alt="@lang('Logo')" class="h-10">
-                </div>
-                <h1 class="text-4xl font-bold tracking-tight text-white mb-4">
-                    @lang('Complete Your Profile')
-                </h1>
-                <p class="text-slate-300 text-lg">
-                    @lang('Finalize your details to unlock your merchant dashboard and start accepting payments.')
-                </p>
-                <div class="mt-10">
-                    <div class="relative bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-2xl">
-                        <img src="{{ getImage('assets/images/frontend/login_register/' .@$login->image, '615x620') }}" alt="" class="rounded-xl w-full h-auto">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
-            <div class="w-full max-w-xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+    <div class="relative z-10 min-h-screen flex items-center justify-center px-6 py-12">
+        <div class="w-full max-w-2xl bg-slate-900/70 border border-slate-800 rounded-2xl p-8 shadow-2xl">
                 <h2 class="text-2xl font-bold text-white mb-2">{{ __($pageTitle) }}</h2>
                 <p class="text-slate-400 mb-6">@lang('Fill in the required details to complete your profile.')</p>
 
@@ -131,17 +134,29 @@
                             <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Country')</label>
                             <select name="country" class="form--control select2" required>
                                 @foreach ($countries as $key => $country)
-                                    <option data-mobile_code="{{ $country->dial_code }}" value="{{ $country->country }}" data-code="{{ $key }}">{{ __($country->country) }}</option>
+                                    <option
+                                        data-mobile_code="{{ $country->dial_code }}"
+                                        value="{{ $country->country }}"
+                                        data-code="{{ $key }}"
+                                        @selected((string) old('country_code', $defaultCountryCode ?? '') === (string) $key)
+                                    >
+                                        {{ __($country->country) }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Mobile')</label>
-                            <div class="input-group">
-                                <span class="input-group-text mobile-code border-end-0"></span>
-                                <input type="hidden" name="mobile_code">
-                                <input type="hidden" name="country_code">
-                                <input type="number" name="mobile" value="{{ old('mobile') }}" class="form--control form-control checkUser" required>
+                            <div class="input-group mobile-input-group">
+                                <select name="mobile_code" class="form--control mobile-code-select" required>
+                                    @foreach($dialCodeOptions as $dialCode)
+                                        <option value="{{ $dialCode }}" @selected((string) old('mobile_code', $defaultMobileCode ?? '') === (string) $dialCode)>
+                                            +{{ $dialCode }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <input type="hidden" name="country_code" value="{{ old('country_code', $defaultCountryCode ?? '') }}">
+                                <input type="number" name="mobile" value="{{ old('mobile') }}" class="form--control form-control checkUser mobile-number-input" required>
                             </div>
                             <small class="text-danger mobileExist"></small>
                         </div>
@@ -169,11 +184,16 @@
                         </div>
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">@lang('Website URL / Domain')</label>
+                        <input type="text" class="form-control form--control" name="website_url" value="{{ old('website_url') }}" placeholder="https://www.example.com" required>
+                        <small class="text-slate-400 d-block mt-2">@lang('This domain will be used for WooCommerce license generation and locked after activation.')</small>
+                    </div>
+
                     <button type="submit" class="w-full rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors">
                         @lang('Submit')
                     </button>
                 </form>
-            </div>
         </div>
     </div>
 </div>
@@ -191,25 +211,36 @@
     <script>
         "use strict";
         (function($) {
-
-            @if($mobileCode)
-                $(`option[data-code={{ $mobileCode }}]`).attr('selected','');
-            @endif
+            const $country = $('select[name=country]');
+            const $mobileCode = $('select[name=mobile_code]');
+            const $countryCode = $('input[name=country_code]');
 
             $('.select2').select2();
 
-            $('select[name=country]').on('change',function() {
-                $('input[name=mobile_code]').val($('select[name=country] :selected').data('mobile_code'));
-                $('input[name=country_code]').val($('select[name=country] :selected').data('code'));
-                $('.mobile-code').text('+' + $('select[name=country] :selected').data('mobile_code'));
-                var value = $('[name=mobile]').val();
-                var name = 'mobile';
-                checkUser(value,name);
+            const syncCountryMeta = (syncDialCode = true) => {
+                const $selected = $country.find(':selected');
+                const selectedCountryCode = ($selected.data('code') || '').toString();
+                const selectedDialCode = ($selected.data('mobile_code') || '').toString();
+
+                $countryCode.val(selectedCountryCode);
+
+                if (syncDialCode && selectedDialCode) {
+                    $mobileCode.val(selectedDialCode);
+                }
+            };
+
+            syncCountryMeta(!$mobileCode.val());
+
+            $country.on('change', function() {
+                syncCountryMeta(true);
+                const value = $('[name=mobile]').val();
+                checkUser(value, 'mobile');
             });
 
-            $('input[name=mobile_code]').val($('select[name=country] :selected').data('mobile_code'));
-            $('input[name=country_code]').val($('select[name=country] :selected').data('code'));
-            $('.mobile-code').text('+' + $('select[name=country] :selected').data('mobile_code'));
+            $mobileCode.on('change', function() {
+                const value = $('[name=mobile]').val();
+                checkUser(value, 'mobile');
+            });
 
 
             $('.checkUser').on('focusout', function(e) {
@@ -226,7 +257,7 @@
                     var mobile = `${value}`;
                     var data = {
                         mobile: mobile,
-                        mobile_code:$('.mobile-code').text().substr(1),
+                        mobile_code: $mobileCode.val(),
                         _token: token
                     }
                 }

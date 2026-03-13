@@ -11,10 +11,6 @@
                 <strong class="payment-gateway-preview__value">{{ $summaryValue ?? $gatewayName }}</strong>
             </div>
             <div class="payment-gateway-preview__row">
-                <span>@lang('Reference')</span>
-                <strong>{{ $reference }}</strong>
-            </div>
-            <div class="payment-gateway-preview__row">
                 <span>@lang('Amount')</span>
                 <strong class="payment-gateway-preview__amount">{{ $amountText }}</strong>
             </div>

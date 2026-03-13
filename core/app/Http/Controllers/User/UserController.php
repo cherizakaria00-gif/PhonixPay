@@ -14,8 +14,10 @@ use App\Models\GatewayCurrency;
 use App\Models\NotificationLog;
 use App\Models\Plan;
 use App\Models\PlanChangeRequest;
+use App\Models\PluginLicense;
 use App\Models\Transaction;
 use App\Models\Withdrawal;
+use App\Services\PluginLicenseService;
 use App\Services\PlanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -169,9 +171,14 @@ class UserController extends Controller
             $gateway->select('code', 'name');
         }])->get('method_code');
 
+        $filters = ['method_currency', 'gateway:method_code'];
+        if (Schema::hasColumn('deposits', 'integration_source_type')) {
+            $filters[] = 'integration_source_type';
+        }
+
         $deposits = Deposit::where('user_id', $user->id)->when($scope, function($query) use ($scope){
                 $query->$scope();
-            })->searchable(['trx'])->filter(['method_currency', 'gateway:method_code'])->dateFilter()
+            })->searchable(['trx'])->filter($filters)->dateFilter()
         ->with(['gateway', 'apiPayment', 'stripeAccount'])->orderBy('id','desc');
 
         if($request->export_type){
@@ -292,7 +299,7 @@ class UserController extends Controller
 
     }
 
-    public function userData()
+    public function userData(Request $request)
     {
         $user = auth()->user();
 
@@ -300,15 +307,80 @@ class UserController extends Controller
             return to_route('user.home');
         }
 
-        $pageTitle  = 'Complete Your Profile';
-        $info       = json_decode(json_encode(getIpInfo()), true);
-        $mobileCode = @implode(',', $info['code']);
-        $countries  = json_decode(file_get_contents(resource_path('views/partials/country.json')));
+        $pageTitle = 'Complete Your Profile';
+        $countryData = (array) json_decode(file_get_contents(resource_path('views/partials/country.json')), true);
+        $countries = json_decode(file_get_contents(resource_path('views/partials/country.json')));
 
-        return view('Template::user.user_data', compact('pageTitle', 'user', 'countries', 'mobileCode'));
+        $defaultCountryCode = strtoupper((string) old('country_code', $user->country_code ?? ''));
+        if (!$defaultCountryCode) {
+            $defaultCountryCode = $this->resolveProfileCountryCode($request, $countryData);
+        }
+
+        if (!array_key_exists($defaultCountryCode, $countryData)) {
+            $defaultCountryCode = 'US';
+        }
+
+        $defaultMobileCode = (string) old(
+            'mobile_code',
+            data_get($countryData, $defaultCountryCode . '.dial_code')
+        );
+
+        $dialCodeOptions = collect($countryData)
+            ->pluck('dial_code')
+            ->filter()
+            ->map(fn ($code) => (string) $code)
+            ->unique()
+            ->sortBy(fn ($code) => (int) $code)
+            ->values();
+
+        return view('Template::user.user_data', compact(
+            'pageTitle',
+            'user',
+            'countries',
+            'defaultCountryCode',
+            'defaultMobileCode',
+            'dialCodeOptions'
+        ));
     }
 
-    public function userDataSubmit(Request $request)
+    private function resolveProfileCountryCode(Request $request, array $countryData): ?string
+    {
+        $headerCandidates = [
+            $request->header('CF-IPCountry'),
+            $request->server('HTTP_CF_IPCOUNTRY'),
+            $request->header('X-AppEngine-Country'),
+            $request->header('X-Country-Code'),
+        ];
+
+        foreach ($headerCandidates as $candidate) {
+            $countryCode = strtoupper(trim((string) $candidate));
+            if (
+                preg_match('/^[A-Z]{2}$/', $countryCode)
+                && $countryCode !== 'XX'
+                && array_key_exists($countryCode, $countryData)
+            ) {
+                return $countryCode;
+            }
+        }
+
+        try {
+            $ipInfo = getIpInfo();
+            $countryCode = strtoupper(trim((string) data_get($ipInfo, 'code')));
+
+            if (
+                preg_match('/^[A-Z]{2}$/', $countryCode)
+                && array_key_exists($countryCode, $countryData)
+            ) {
+                return $countryCode;
+            }
+        } catch (\Throwable $exception) {
+            return null;
+        }
+
+        return null;
+    }
+
+    public function userDataSubmit(Request $request, PluginLicenseService $licenseService)
     {
 
         $user = auth()->user();
@@ -328,6 +400,7 @@ class UserController extends Controller
             'mobile_code'  => 'required|in:' . $mobileCodes,
             'username'     => 'required|unique:users|min:6',
             'mobile'       => ['required','regex:/^([0-9]*)$/',Rule::unique('users')->where('dial_code',$request->mobile_code)],
+            'website_url'  => 'required|string|max:255',
         ]);
 
 
@@ -347,7 +420,15 @@ class UserController extends Controller
         $user->state = $request->state;
         $user->zip = $request->zip;
         $user->country_name = @$request->country;
+        $normalizedDomain = $licenseService->normalizeDomain((string) $request->website_url);
+        if (!$normalizedDomain) {
+            $notify[] = ['error', 'Please enter a valid website URL or domain'];
+            return back()->withNotify($notify)->withInput($request->all());
+        }
+
         $user->dial_code = $request->mobile_code;
+        $user->website_url = trim((string) $request->website_url);
+        $user->website_domain = $normalizedDomain;
 
         $user->profile_complete = Status::YES;
         $user->save();
@@ -501,7 +582,7 @@ class UserController extends Controller
         return view('Template::user.calculate_charge', compact('gatewayCurrency', 'pageTitle', 'user'));
     }
 
-    public function apiKey(){   
+    public function apiKey(PluginLicenseService $licenseService){   
 
         $pageTitle = "Api Key";     
         $user = auth()->user();
@@ -510,7 +591,16 @@ class UserController extends Controller
             $this->makeApiKey();
         }
 
-        return view('Template::user.api.key',compact('pageTitle', 'user'));
+        $licenseService->ensureAutoLicenseForMerchant($user);
+
+        $licenses = PluginLicense::query()
+            ->where('merchant_id', $user->id)
+            ->with('latestValidation')
+            ->latest('id')
+            ->paginate(getPaginate());
+        $currentLicense = $licenseService->merchantCurrentLicense($user);
+
+        return view('Template::user.api.key',compact('pageTitle', 'user', 'licenses', 'currentLicense'));
     }
 
     private function makeApiKey(){

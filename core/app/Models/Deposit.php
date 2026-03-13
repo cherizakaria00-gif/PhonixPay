@@ -60,6 +60,11 @@ class Deposit extends Model
         return $this->belongsTo(Payout::class);
     }
 
+    public function aiIntegration()
+    {
+        return $this->belongsTo(AiIntegration::class, 'ai_integration_id');
+    }
+
     public function referrer()
     {
         return $this->belongsTo(User::class, 'referrer_user_id');
@@ -92,6 +97,9 @@ class Deposit extends Model
             }
             elseif($this->status == Status::PAYMENT_REJECT){
                 $html = '<span><span class="badge badge--danger">'.trans('Rejected').'</span><br>'.diffForHumans($this->updated_at).'</span>';
+            }
+            elseif($this->status == Status::PAYMENT_CANCEL){
+                $html = '<span><span class="badge badge--warning">'.trans('Expired').'</span><br>'.diffForHumans($this->updated_at).'</span>';
             }else{
                 $html = '<span class="badge badge--dark">'.trans('Initiated').'</span>';
             }

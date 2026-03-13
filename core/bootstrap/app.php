@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 Route::middleware(['web','maintenance'])->prefix('merchant')->group(base_path('routes/user.php'));
                 Route::middleware(['web','maintenance'])->group(base_path('routes/web.php'));
+                Route::middleware(['api','maintenance'])->prefix('api')->group(base_path('routes/api.php'));
 
             });
         }
@@ -60,6 +61,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\LanguageMiddleware::class,
             \App\Http\Middleware\ActiveTemplateMiddleware::class,
             AutoRunCron::class,
+        ]);
+
+        $middleware->group('api', [
+            'throttle:api',
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
         $middleware->alias([
@@ -86,7 +92,18 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(
-            except: ['user/deposit','ipn*','payment/initiate','test/payment/initiate','payment-link/ipn*']
+            except: [
+                'user/deposit',
+                'ipn*',
+                'payment/initiate',
+                'test/payment/initiate',
+                'payment-link/ipn*',
+                'api/webhooks/bictorys',
+                'api/plugin-license/*',
+                'webhook-endpoint',
+                'api/webhook-endpoint',
+                'bictorys/webhook',
+            ]
         );
     })
     ->withExceptions(function (Exceptions $exceptions) {
@@ -98,12 +115,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->respond(function (Response $response) {
             if ($response->getStatusCode() === 401) {
                 if (request()->is('api/*')) {
-                    $notify[] = 'Unauthorized request';
                     return response()->json([
-                        'remark' => 'unauthenticated',
-                        'status' => 'error',
-                        'message' => ['error' => $notify]
-                    ]);
+                        'message' => 'Unauthenticated.',
+                    ], 401);
                 }
             }
 

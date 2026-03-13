@@ -6,15 +6,19 @@ use App\Constants\Status;
 use App\Http\Controllers\Controller;
 use App\Lib\FormProcessor;
 use App\Models\AdminNotification;
+use App\Models\AiIntegration;
 use App\Models\Deposit;
 use App\Models\GatewayCurrency;
 use App\Models\PaymentLink;
+use App\Models\PlanChangeRequest;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\CurrencyConversionService;
 use App\Services\PlanService;
 use App\Services\RewardService;
 use App\Traits\ApiPaymentHelpers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class PaymentController extends Controller
@@ -63,6 +67,7 @@ class PaymentController extends Controller
         }
 
         $paymentLink = null;
+        $isPlanSubscriptionLink = false;
 
         $fullName = trim((string) $request->input('customer_full_name'));
         $firstName = $request->input('customer_first_name');
@@ -112,7 +117,11 @@ class PaymentController extends Controller
             }
 
             $paymentLink->markExpiredIfNeeded();
-            if ($paymentLink->status != PaymentLink::STATUS_ACTIVE) {
+            $isReusableLink = $paymentLink->allowsMultiplePayments();
+            $isUsableStatus = $paymentLink->status == PaymentLink::STATUS_ACTIVE
+                || ($isReusableLink && $paymentLink->status == PaymentLink::STATUS_PAID);
+
+            if (!$isUsableStatus) {
                 $notify[] = ['error', 'This payment link is not available'];
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -134,7 +143,9 @@ class PaymentController extends Controller
             }
             $apiPayment->save();
 
-            if (Schema::hasTable('plans') && !app(PlanService::class)->isFeatureEnabled($apiPayment->user, 'payment_links')) {
+            $isPlanSubscriptionLink = $paymentLink->isPlanSubscription();
+
+            if (!$isPlanSubscriptionLink && Schema::hasTable('plans') && !app(PlanService::class)->isFeatureEnabled($apiPayment->user, 'payment_links')) {
                 $message = 'Payment Links are not enabled for this merchant plan. Please upgrade the plan.';
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -152,7 +163,7 @@ class PaymentController extends Controller
         $user = $apiPayment->user;
         /** @var PlanService $planService */
         $planService = app(PlanService::class);
-        $checkUserPayment = $this->checkUserPayment($user);
+        $checkUserPayment = $this->checkUserPayment($user, $isPlanSubscriptionLink);
 			
         if(@$checkUserPayment['status'] == 'error'){
             foreach(@$checkUserPayment['message'] as $message){
@@ -180,7 +191,19 @@ class PaymentController extends Controller
             return back()->withNotify($notify);
         }
  
-        if (($gate->min_amount * $gate->rate) > $amount || ($gate->max_amount * $gate->rate) < $amount) {
+        $requestedCurrencyCode = strtoupper((string) $apiPayment->currency);
+        $gatewayCurrencyCode = strtoupper((string) $gate->currency);
+        $baseCurrencyCode = strtoupper((string) gs('cur_text'));
+
+        $configuredRate = (float) $gate->rate;
+        $effectiveRate = $this->resolveEffectiveGatewayRate(
+            $gate,
+            $configuredRate,
+            $baseCurrencyCode,
+            $gatewayCurrencyCode
+        );
+
+        if (($gate->min_amount * $effectiveRate) > $amount || ($gate->max_amount * $effectiveRate) < $amount) {
             $notify[] = ['error', 'Please follow payment limit'];
             if ($request->expectsJson()) {
                 return response()->json([
@@ -189,17 +212,6 @@ class PaymentController extends Controller
                 ], 422);
             }
             return back()->withNotify($notify);
-        }
-
-        $configuredRate = (float) $gate->rate;
-        $effectiveRate = $configuredRate > 0 ? $configuredRate : 1.0;
-
-        // API checkout amount is already expressed in requested currency.
-        // If gateway currency matches requested currency, force 1:1 rate to avoid scaling bugs.
-        $requestedCurrencyCode = strtoupper((string) $apiPayment->currency);
-        $gatewayCurrencyCode = strtoupper((string) $gate->currency);
-        if ($requestedCurrencyCode !== '' && $gatewayCurrencyCode !== '' && $requestedCurrencyCode === $gatewayCurrencyCode) {
-            $effectiveRate = 1.0;
         }
 
         $amountBase = $amount / $effectiveRate;
@@ -236,6 +248,30 @@ class PaymentController extends Controller
         $data->btc_wallet = "";
         if ($paymentLink) {
             $data->payment_link_id = $paymentLink->id;
+            if (Schema::hasColumn('deposits', 'integration_source_type')) {
+                $data->integration_source_type = 'payment_link';
+            }
+            if (Schema::hasColumn('deposits', 'ai_integration_id')) {
+                $data->ai_integration_id = AiIntegration::query()
+                    ->where('merchant_id', $user->id)
+                    ->where('selected_option', AiIntegration::OPTION_PAYMENT_LINK)
+                    ->where('payment_link_id', $paymentLink->id)
+                    ->value('id');
+            }
+        } elseif (Schema::hasColumn('deposits', 'integration_source_type')) {
+            $identifier = strtolower((string) $apiPayment->identifier);
+            if (str_starts_with($identifier, 'ai_api')) {
+                $data->integration_source_type = 'api_keys';
+            } elseif (str_starts_with($identifier, 'ai_sdk') || str_starts_with($identifier, 'ai_plugin')) {
+                $data->integration_source_type = 'plugin_sdk';
+            }
+
+            if ($data->integration_source_type && Schema::hasColumn('deposits', 'ai_integration_id')) {
+                $data->ai_integration_id = AiIntegration::query()
+                    ->where('merchant_id', $user->id)
+                    ->where('selected_option', $data->integration_source_type === 'api_keys' ? AiIntegration::OPTION_API_KEYS : AiIntegration::OPTION_PLUGIN_SDK)
+                    ->value('id');
+            }
         }
         $data->trx = getTrx();
         $data->success_url = $apiPayment->success_url;
@@ -358,6 +394,142 @@ class PaymentController extends Controller
         return to_route('deposit.confirm');
     }
 
+    protected function resolveEffectiveGatewayRate(
+        GatewayCurrency $gate,
+        float $configuredRate,
+        string $baseCurrencyCode,
+        string $gatewayCurrencyCode
+    ): float {
+        $baseCurrencyCode = strtoupper(trim($baseCurrencyCode));
+        $gatewayCurrencyCode = strtoupper(trim($gatewayCurrencyCode));
+
+        if ($baseCurrencyCode !== '' && $gatewayCurrencyCode !== '' && $baseCurrencyCode === $gatewayCurrencyCode) {
+            return 1.0;
+        }
+
+        $manualRate = app(CurrencyConversionService::class)->getCrossRate($baseCurrencyCode, $gatewayCurrencyCode);
+        if ($manualRate !== null && $manualRate > 0) {
+            return $manualRate;
+        }
+
+        $resolvedRate = $configuredRate > 0 ? $configuredRate : 0.0;
+        $derivedRate = $this->resolveBictorysRateFallback($gate, $baseCurrencyCode, $gatewayCurrencyCode);
+
+        if ($derivedRate !== null) {
+            $isDefaultPlaceholderRate = $resolvedRate <= 0 || (abs($resolvedRate - 1.0) < 0.000001 && $baseCurrencyCode !== $gatewayCurrencyCode);
+            if ($isDefaultPlaceholderRate) {
+                return $derivedRate;
+            }
+        }
+
+        if ($resolvedRate > 0) {
+            return $resolvedRate;
+        }
+
+        if ($derivedRate !== null) {
+            return $derivedRate;
+        }
+
+        return 1.0;
+    }
+
+    protected function resolveBictorysRateFallback(
+        GatewayCurrency $gate,
+        string $baseCurrencyCode,
+        string $gatewayCurrencyCode
+    ): ?float {
+        $aliases = [
+            strtolower(trim((string) ($gate->gateway_alias ?? ''))),
+            strtolower(trim((string) data_get($gate, 'method.alias'))),
+        ];
+
+        if (!in_array('bictoryscheckout', $aliases, true) && !in_array('bictorysdirect', $aliases, true)) {
+            return null;
+        }
+
+        $gatewayParams = array_merge(
+            $this->flattenGatewayParameters((string) data_get($gate, 'method.gateway_parameters')),
+            $this->flattenGatewayParameters((string) ($gate->gateway_parameter ?? ''))
+        );
+
+        $baseToXofRate = $this->resolveCurrencyToXofRate($baseCurrencyCode, $gatewayParams);
+        $gatewayToXofRate = $this->resolveCurrencyToXofRate($gatewayCurrencyCode, $gatewayParams);
+
+        if ($baseToXofRate === null || $gatewayToXofRate === null || $gatewayToXofRate <= 0) {
+            return null;
+        }
+
+        $derivedRate = $baseToXofRate / $gatewayToXofRate;
+        return $derivedRate > 0 ? $derivedRate : null;
+    }
+
+    protected function flattenGatewayParameters(string $parameters): array
+    {
+        if ($parameters === '') {
+            return [];
+        }
+
+        $decoded = json_decode($parameters, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $flat = [];
+        foreach ($decoded as $key => $value) {
+            if (is_array($value) && array_key_exists('value', $value)) {
+                $flat[$key] = $value['value'];
+            } else {
+                $flat[$key] = $value;
+            }
+        }
+
+        return $flat;
+    }
+
+    protected function resolveCurrencyToXofRate(string $currencyCode, array $gatewayParams): ?float
+    {
+        $currencyCode = strtoupper(trim($currencyCode));
+        if ($currencyCode === '') {
+            return null;
+        }
+
+        if ($currencyCode === 'XOF') {
+            return 1.0;
+        }
+
+        $paramKey = strtolower($currencyCode) . '_xof_rate';
+        $rawRate = $gatewayParams[$paramKey] ?? null;
+
+        // EUR has a fixed peg to XOF, keep this fallback when the gateway setting is missing.
+        if ($currencyCode === 'EUR' && ($rawRate === null || $rawRate === '')) {
+            $rawRate = 655.957;
+        }
+
+        return $this->toPositiveFloat($rawRate);
+    }
+
+    protected function toPositiveFloat($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+            $value = str_replace(',', '.', $value);
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $normalized = (float) $value;
+        return $normalized > 0 ? $normalized : null;
+    }
+
 
     public function appDepositConfirm($hash)
     {
@@ -411,8 +583,38 @@ class PaymentController extends Controller
 
 
     public static function userDataUpdate($deposit)
-    {          
-        if ($deposit->status == Status::PAYMENT_INITIATE || $deposit->status == Status::PAYMENT_PENDING) {
+    {
+        $depositId = $deposit instanceof Deposit ? (int) $deposit->id : (int) $deposit;
+        if ($depositId <= 0) {
+            return;
+        }
+
+        $lockKey = 'flujipay_deposit_finalize_lock_' . $depositId;
+        if (!Cache::add($lockKey, now()->timestamp, 15)) {
+            return;
+        }
+
+        try {
+            $deposit = Deposit::find($depositId);
+            if (!$deposit) {
+                return;
+            }
+
+            $canFinalize = in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true);
+
+            // Some PSP flows can emit a transient failed event followed by success for the same charge.
+            // Allow promotion from REJECT -> SUCCESS only when the payment credit was never applied.
+            if (!$canFinalize && (int) $deposit->status === Status::PAYMENT_REJECT) {
+                $alreadyCredited = Transaction::where('trx', $deposit->trx)
+                    ->where('remark', 'payment')
+                    ->exists();
+
+                if (!$alreadyCredited) {
+                    $canFinalize = true;
+                }
+            }
+
+            if ($canFinalize) {
             /** @var PlanService $planService */
             $planService = app(PlanService::class);
             $user = User::find($deposit->user_id);
@@ -435,24 +637,95 @@ class PaymentController extends Controller
 
             $deposit->save();
 
-            $user->balance += $deposit->amount;
-            $user->save();
-
             $apiPayment = $deposit->apiPayment;
             if ($apiPayment) {
                 $apiPayment->status = Status::PAYMENT_SUCCESS;
                 $apiPayment->save();
             }
 
+            $paymentLink = null;
+            $isPlanSubscriptionPayment = false;
+            $targetPlan = null;
+
             if ($deposit->payment_link_id) {
-                $paymentLink = PaymentLink::find($deposit->payment_link_id);
-                if ($paymentLink && $paymentLink->status != PaymentLink::STATUS_PAID) {
-                    $paymentLink->status = PaymentLink::STATUS_PAID;
+                $paymentLink = PaymentLink::with('plan')->find($deposit->payment_link_id);
+                if ($paymentLink) {
                     $paymentLink->deposit_id = $deposit->id;
                     $paymentLink->paid_at = now();
+
+                    // Reusable links stay active after each successful payment.
+                    if (!$paymentLink->allowsMultiplePayments()) {
+                        $paymentLink->status = PaymentLink::STATUS_PAID;
+                    } elseif ($paymentLink->status == PaymentLink::STATUS_PAID) {
+                        $paymentLink->status = PaymentLink::STATUS_ACTIVE;
+                    }
+
                     $paymentLink->save();
                 }
+
+                if ($paymentLink && $paymentLink->isPlanSubscription() && $paymentLink->plan && $paymentLink->plan->is_active) {
+                    $targetPlan = $paymentLink->plan;
+                    $isPlanSubscriptionPayment = true;
+                }
             }
+
+            if ($isPlanSubscriptionPayment && $targetPlan) {
+                $fromPlanName = optional($user->plan)->name;
+
+                if (Schema::hasTable('plan_change_requests')) {
+                    PlanChangeRequest::query()
+                        ->where('user_id', $user->id)
+                        ->where('status', 'pending')
+                        ->where('to_plan_id', $targetPlan->id)
+                        ->update([
+                            'status' => 'approved',
+                            'note' => 'Approved automatically after successful subscription checkout payment',
+                            'updated_at' => now(),
+                        ]);
+
+                    PlanChangeRequest::query()
+                        ->where('user_id', $user->id)
+                        ->where('status', 'pending')
+                        ->where('to_plan_id', '!=', $targetPlan->id)
+                        ->update([
+                            'status' => 'rejected',
+                            'note' => 'Rejected automatically because another plan payment was completed',
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                $planService->assignPlan($user, $targetPlan, false);
+                $user->plan_custom_overrides = null;
+                $user->plan_status = 'active';
+                $user->save();
+
+                $adminNotification = new AdminNotification();
+                $adminNotification->user_id = $user->id;
+                $adminNotification->title = 'Plan payment successful: ' . $targetPlan->name;
+                $adminNotification->click_url = urlPath('admin.users.detail', $user->id);
+                $adminNotification->save();
+
+                if ($apiPayment) {
+                    self::outerIpn($apiPayment);
+                }
+
+                notify($user, 'DEFAULT', [
+                    'subject' => 'Plan activated successfully',
+                    'message' => 'Your payment was successful. The ' . $targetPlan->name . ' plan is now active for 1 month.',
+                ], ['email', 'push']);
+
+                $planService->sendPlanUpgradeNotification(
+                    $user->fresh(),
+                    $targetPlan->name,
+                    $fromPlanName,
+                    $user->plan_renews_at
+                );
+
+                return;
+            }
+
+            $user->balance += $deposit->amount;
+            $user->save();
 
             $transaction = new Transaction();
             $transaction->user_id = $deposit->user_id;
@@ -524,6 +797,9 @@ class PaymentController extends Controller
             ], $planService->getNotificationChannels($user));
 
             app(RewardService::class)->handleSuccessfulDeposit($deposit);
+        }
+        } finally {
+            Cache::forget($lockKey);
         }
     }
 

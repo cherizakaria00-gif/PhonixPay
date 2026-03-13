@@ -8,6 +8,7 @@ use App\Models\Gateway;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Gateway\PaymentController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class DepositController extends Controller
 {
@@ -78,6 +79,10 @@ class DepositController extends Controller
             }
         }
 
+        if ($request->source_type) {
+            $deposits = $deposits->where('integration_source_type', $request->source_type);
+        }
+
         if (!$summary) {
             if($request->export_type){
                 return $deposits->export();
@@ -113,7 +118,11 @@ class DepositController extends Controller
 
     public function refund($id)
     {
-        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount', 'apiPayment'])->firstOrFail();
+        $deposit = Deposit::where('id', $id)->with(['user', 'gateway', 'stripeAccount', 'apiPayment'])->first();
+        if (!$deposit) {
+            $notify[] = ['error', 'Payment not found for refund'];
+            return back()->withNotify($notify);
+        }
 
         if ($deposit->status == Status::PAYMENT_REFUNDED) {
             $notify[] = ['error', 'This payment is already refunded'];
@@ -125,10 +134,29 @@ class DepositController extends Controller
             return back()->withNotify($notify);
         }
 
-        $isStripeGateway = stripos($deposit->gateway->alias, 'stripe') !== false || stripos($deposit->gateway->name, 'stripe') !== false;
-        if (!$isStripeGateway) {
-            $notify[] = ['error', 'Refund is only available for Stripe payments'];
+        $isStripeGateway = $this->isStripeGateway($deposit);
+        $isBictorysGateway = $this->isBictorysGateway($deposit);
+
+        if (!$isStripeGateway && !$isBictorysGateway) {
+            $notify[] = ['error', 'Refund is available only for Stripe and Bictorys payments'];
             return back()->withNotify($notify);
+        }
+
+        if ($isBictorysGateway) {
+            // Bictorys refunds are now handled manually on provider side.
+            // We only update local balances/status so admin can process provider refund separately.
+            $detail = is_array($deposit->detail) ? $deposit->detail : (array) $deposit->detail;
+            data_set($detail, 'bictorys.refund.mode', 'manual');
+            data_set($detail, 'bictorys.refund.provider_sync', 'manual_required');
+            data_set($detail, 'bictorys.refund.refunded_at', now()->toIso8601String());
+            $deposit->detail = $detail;
+            $deposit->save();
+
+            Log::info('Admin refund processed in manual Bictorys mode', [
+                'deposit_id' => $deposit->id,
+                'trx' => $deposit->trx,
+                'gateway_alias' => $deposit->gateway->alias ?? null,
+            ]);
         }
 
         $refunded = PaymentController::refundUserData($deposit, 'Refunded by admin');
@@ -137,8 +165,29 @@ class DepositController extends Controller
             return back()->withNotify($notify);
         }
 
+        if ($isBictorysGateway) {
+            $notify[] = ['success', 'Refund recorded locally. Please process the Bictorys provider refund manually.'];
+            return back()->withNotify($notify);
+        }
+
         $notify[] = ['success', 'Refund recorded successfully'];
         return back()->withNotify($notify);
+    }
+
+    protected function isStripeGateway(Deposit $deposit): bool
+    {
+        $alias = strtolower((string) ($deposit->gateway->alias ?? ''));
+        $name = strtolower((string) ($deposit->gateway->name ?? ''));
+
+        return str_contains($alias, 'stripe') || str_contains($name, 'stripe');
+    }
+
+    protected function isBictorysGateway(Deposit $deposit): bool
+    {
+        $alias = strtolower((string) ($deposit->gateway->alias ?? ''));
+        $name = strtolower((string) ($deposit->gateway->name ?? ''));
+
+        return str_contains($alias, 'bictorys') || str_contains($name, 'bictorys');
     }
 
 

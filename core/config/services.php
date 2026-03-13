@@ -31,4 +31,13 @@ return [
         ],
     ],
 
+    'bictorys' => [
+        'webhook_secret' => env('BICTORYS_WEBHOOK_SECRET'),
+        'webhook_require_signature' => env('BICTORYS_WEBHOOK_REQUIRE_SIGNATURE', false),
+        'webhook_require_https' => env('BICTORYS_WEBHOOK_REQUIRE_HTTPS', false),
+        'webhook_queue' => env('BICTORYS_WEBHOOK_QUEUE', 'webhooks'),
+        'pending_expire_minutes' => env('BICTORYS_PENDING_EXPIRE_MINUTES', 180),
+        'pending_expire_lookback_hours' => env('BICTORYS_PENDING_EXPIRE_LOOKBACK_HOURS', 720),
+    ],
+
 ];

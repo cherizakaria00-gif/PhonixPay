@@ -196,4 +196,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(RewardLedger::class)->orderByDesc('id');
     }
+
+    public function pluginLicenses()
+    {
+        return $this->hasMany(PluginLicense::class, 'merchant_id')->orderByDesc('id');
+    }
+
+    public function aiIntegration()
+    {
+        return $this->hasOne(AiIntegration::class, 'merchant_id');
+    }
+
+    public function aiIntegrationEvents()
+    {
+        return $this->hasMany(AiIntegrationEvent::class, 'merchant_id')->orderByDesc('id');
+    }
 }

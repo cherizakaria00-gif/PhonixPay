@@ -157,7 +157,7 @@ trait ApiPaymentHelpers{
         ];
     }
 
-    public function checkUserPayment($user){
+    public function checkUserPayment($user, bool $skipPlanLimit = false){
         
         $message = 'Something went wrong with this merchant account';
 
@@ -187,6 +187,8 @@ trait ApiPaymentHelpers{
         }
 
         if (
+            !$skipPlanLimit
+            &&
             class_exists(PlanService::class)
             && Schema::hasTable('plans')
             && Schema::hasColumn('users', 'monthly_tx_count')
@@ -230,4 +232,3 @@ trait ApiPaymentHelpers{
 
     }
 }
-

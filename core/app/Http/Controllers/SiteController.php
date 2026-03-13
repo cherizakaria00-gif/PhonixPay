@@ -18,6 +18,7 @@ use App\Services\SpamProtectionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
@@ -269,31 +270,115 @@ class SiteController extends Controller
         return view('Template::api_documentation', compact('pageTitle', 'allCurrency'));
     }
 
-    public function successPaymentRedirect(Request $request, $depositId)
+    public function successPaymentRedirect($depositId)
     {
         $deposit = Deposit::where('id', $depositId)->orderBy('id', 'desc')->firstOrFail();
 
+        // Webhook-first flow:
+        // redirect signals never finalize payment state.
+        // Final status is written only by PSP webhook processing.
         if ($deposit->status == Status::PAYMENT_SUCCESS) {
-            return redirect($deposit->success_url ?? route('home'));
+            $successUrl = $this->appendUrlQuery((string) ($deposit->success_url ?? route('home')), 'status', 'success');
+            return redirect($successUrl);
         }
+
+        $this->finalizeBictorysOnSuccessRedirect($request, $deposit);
+        $deposit->refresh();
 
         if ($deposit->gateway && $deposit->gateway->alias === 'StripePaymentLink') {
             $this->confirmStripePaymentLink($deposit);
         }
 
-        if ($deposit->gateway && $deposit->gateway->alias === 'BictorysCheckout') {
-            $this->confirmBictorysCheckout($deposit, $request);
-        }
-
-        if ($deposit->gateway && $deposit->gateway->alias === 'BictorysDirect') {
-            $this->confirmBictorysDirect($deposit, $request);
-        }
-
         if ($deposit->status == Status::PAYMENT_REJECT) {
-            return redirect($deposit->failed_url ?? route('home'));
+            $failedUrl = $this->appendUrlQuery((string) ($deposit->failed_url ?? route('home')), 'status', 'cancel');
+            return redirect($failedUrl);
         }
 
-        return redirect($deposit->success_url ?? route('home'));
+        if ($deposit->status == Status::PAYMENT_SUCCESS) {
+            $successUrl = $this->appendUrlQuery((string) ($deposit->success_url ?? route('home')), 'status', 'success');
+            return redirect($successUrl);
+        }
+
+        $pendingUrl = (string) ($deposit->success_url ?: ($deposit->failed_url ?: route('home')));
+        $pendingUrl = $this->appendUrlQuery($pendingUrl, 'status', 'pending');
+        return redirect($pendingUrl);
+    }
+
+    private function finalizeBictorysOnSuccessRedirect(Request $request, Deposit $deposit): void
+    {
+        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING, Status::PAYMENT_REJECT], true)) {
+            return;
+        }
+
+        if (!$this->isBictorysGateway($deposit)) {
+            return;
+        }
+
+        $token = trim((string) ($request->query('vtoken', '')));
+        if (!$this->hasValidBictorysVerificationToken($deposit, $token)) {
+            return;
+        }
+
+        if ($this->hasFailureSignalInSuccessRedirect($request)) {
+            return;
+        }
+
+        PaymentController::userDataUpdate((int) $deposit->id);
+
+        Log::info('Bictorys fallback finalization applied from success redirect', [
+            'deposit_id' => (int) $deposit->id,
+            'trx' => (string) $deposit->trx,
+        ]);
+    }
+
+    private function isBictorysGateway(Deposit $deposit): bool
+    {
+        $alias = (string) ($deposit->gateway->alias ?? '');
+        return in_array($alias, ['BictorysCheckout', 'BictorysDirect'], true);
+    }
+
+    private function hasValidBictorysVerificationToken(Deposit $deposit, string $token): bool
+    {
+        if ($token === '') {
+            return false;
+        }
+
+        $expected = hash_hmac('sha256', $deposit->id . '|' . $deposit->trx, (string) config('app.key'));
+        return hash_equals($expected, $token);
+    }
+
+    private function hasFailureSignalInSuccessRedirect(Request $request): bool
+    {
+        $candidates = [
+            $request->query('status'),
+            $request->query('payment_status'),
+            $request->query('paymentStatus'),
+            $request->query('state'),
+            $request->query('result'),
+            $request->query('success'),
+            $request->query('isSuccess'),
+            $request->query('is_success'),
+            $request->query('paid'),
+            $request->query('isPaid'),
+            $request->query('is_paid'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!is_scalar($candidate)) {
+                continue;
+            }
+
+            $normalized = strtolower(trim((string) $candidate));
+            if ($normalized === '') {
+                continue;
+            }
+
+            if (in_array($normalized, ['0', 'false', 'no', 'fail', 'failed', 'error', 'rejected', 'cancel', 'cancelled', 'canceled', 'expired', 'void', 'unpaid'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function cancelPaymentRedirect($depositId)
@@ -306,6 +391,37 @@ class SiteController extends Controller
         }
 
         return redirect($deposit->failed_url ?? route('home'));
+    }
+
+    private function appendUrlQuery(string $url, string $key, string $value): string
+    {
+        if ($url === '') {
+            return $url;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false) {
+            return $url;
+        }
+
+        $query = [];
+        if (!empty($parts['query'])) {
+            parse_str($parts['query'], $query);
+        }
+        $query[$key] = $value;
+
+        $queryString = http_build_query($query);
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $path = $parts['path'] ?? '';
+        $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
+
+        if ($scheme && $host) {
+            return $scheme . '://' . $host . $port . $path . ($queryString ? '?' . $queryString : '') . $fragment;
+        }
+
+        return $path . ($queryString ? '?' . $queryString : '') . $fragment;
     }
 
     private function confirmStripePaymentLink(Deposit $deposit): void
@@ -367,135 +483,4 @@ class SiteController extends Controller
         }
     }
 
-    private function confirmBictorysCheckout(Deposit $deposit, Request $request): void
-    {
-        if ($deposit->status != Status::PAYMENT_INITIATE) {
-            return;
-        }
-
-        $status = $this->extractBictorysStatus($request);
-        $successFlag = $this->extractBooleanFlag($request->input('success'));
-
-        if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
-            $deposit->status = Status::PAYMENT_REJECT;
-            $deposit->save();
-            return;
-        }
-
-        $isSuccess = $successFlag === true
-            || $this->isBictorysSuccessStatus($status)
-            || $this->hasValidBictorysVerificationToken($deposit, $request);
-
-        if (!$isSuccess) {
-            return;
-        }
-
-        $reference = $request->input('paymentReference')
-            ?? $request->input('payment_reference')
-            ?? $request->input('reference');
-
-        if (!$deposit->btc_wallet && $reference) {
-            $deposit->btc_wallet = $reference;
-            $deposit->save();
-        }
-
-        PaymentController::userDataUpdate($deposit);
-    }
-
-    private function confirmBictorysDirect(Deposit $deposit, Request $request): void
-    {
-        if ($deposit->status != Status::PAYMENT_INITIATE) {
-            return;
-        }
-
-        $status = $this->extractBictorysStatus($request);
-        $successFlag = $this->extractBooleanFlag($request->input('success'));
-
-        if ($successFlag === false || $this->isBictorysFailureStatus($status)) {
-            $deposit->status = Status::PAYMENT_REJECT;
-            $deposit->save();
-            return;
-        }
-
-        $isSuccess = $successFlag === true
-            || $this->isBictorysSuccessStatus($status)
-            || $this->hasValidBictorysVerificationToken($deposit, $request);
-
-        if (!$isSuccess) {
-            return;
-        }
-
-        $reference = $request->input('paymentReference')
-            ?? $request->input('payment_reference')
-            ?? $request->input('reference');
-
-        if (!$deposit->btc_wallet && $reference) {
-            $deposit->btc_wallet = $reference;
-            $deposit->save();
-        }
-
-        PaymentController::userDataUpdate($deposit);
-    }
-
-    private function hasValidBictorysVerificationToken(Deposit $deposit, Request $request): bool
-    {
-        $token = trim((string) $request->input('vtoken', ''));
-        if ($token === '') {
-            return false;
-        }
-
-        $expected = hash_hmac(
-            'sha256',
-            $deposit->id . '|' . $deposit->trx,
-            (string) config('app.key')
-        );
-
-        return hash_equals($expected, $token);
-    }
-
-    private function extractBictorysStatus(Request $request): string
-    {
-        $status = $request->input('status')
-            ?? $request->input('paymentStatus')
-            ?? $request->input('payment_status')
-            ?? '';
-
-        return strtolower(trim((string) $status));
-    }
-
-    private function extractBooleanFlag($value): ?bool
-    {
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        if (is_numeric($value)) {
-            return ((int) $value) === 1;
-        }
-
-        if (!is_scalar($value)) {
-            return null;
-        }
-
-        $normalized = strtolower(trim((string) $value));
-        if (in_array($normalized, ['1', 'true', 'yes', 'ok'], true)) {
-            return true;
-        }
-
-        if (in_array($normalized, ['0', 'false', 'no', 'failed', 'failure', 'error'], true)) {
-            return false;
-        }
-
-        return null;
-    }
-
-    private function isBictorysSuccessStatus(string $status): bool
-    {
-        return in_array($status, ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved'], true);
-    }
-
-    private function isBictorysFailureStatus(string $status): bool
-    {
-        return in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired'], true);
-    }
 }

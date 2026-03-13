@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\PluginLicenseApiController;
+use App\Http\Controllers\Webhook\BictorysWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/clear', function(){
@@ -24,6 +26,22 @@ Route::controller('PaymentLinkController')->group(function () {
     Route::get('payment-link/redirect/{code}', 'redirect')->name('payment.link.redirect');
 });
 
+Route::any('api/webhooks/bictorys', BictorysWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('webhooks.bictorys');
+
+Route::prefix('api/plugin-license')->controller(PluginLicenseApiController::class)->group(function () {
+    Route::post('generate', 'generate')->middleware('throttle:30,1');
+    Route::post('validate', 'validateLicense')->middleware('throttle:120,1');
+    Route::post('revoke', 'revoke')->middleware('throttle:30,1');
+    Route::post('regenerate', 'regenerate')->middleware('throttle:30,1');
+    Route::post('details', 'details')->middleware('throttle:60,1');
+});
+
+// Backward-compatible aliases for legacy PSP webhook configurations.
+Route::any('webhook-endpoint', BictorysWebhookController::class)->middleware('throttle:120,1');
+Route::any('api/webhook-endpoint', BictorysWebhookController::class)->middleware('throttle:120,1');
+Route::any('bictorys/webhook', BictorysWebhookController::class)->middleware('throttle:120,1');
 // User Support Ticket
 Route::controller('TicketController')->prefix('ticket')->name('ticket.')->group(function () {
     Route::get('/', 'supportTicket')->name('index');

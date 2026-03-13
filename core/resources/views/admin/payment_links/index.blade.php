@@ -12,6 +12,8 @@
                             <th>@lang('Merchant')</th>
                             <th>@lang('Amount')</th>
                             <th>@lang('Description')</th>
+                            <th>@lang('Mode')</th>
+                            <th>@lang('Sales')</th>
                             <th>@lang('Expires')</th>
                             <th>@lang('Status')</th>
                             <th>@lang('Action')</th>
@@ -42,11 +44,13 @@
                                 </td>
                                 <td>{{ showAmount($link->amount, currencyFormat:false) }} {{ __($link->currency) }}</td>
                                 <td>{{ $link->description ?: __('N/A') }}</td>
+                                <td>{{ $link->allowsMultiplePayments() ? __('Multi-use') : __('One-time') }}</td>
+                                <td>{{ (int) ($link->deposits_count ?? 0) }}</td>
                                 <td>
                                     @if($link->expires_at)
                                         {{ showDateTime($link->expires_at) }}
                                     @else
-                                        <span class="text-muted">—</span>
+                                        <span class="text-muted">@lang('Never')</span>
                                     @endif
                                 </td>
                                 <td>@php echo $link->statusBadge; @endphp</td>

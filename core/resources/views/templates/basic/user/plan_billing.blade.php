@@ -48,7 +48,7 @@
                         </div>
                         <div class="col-lg-4">
                             <div class="alert alert-info mb-0">
-                                @lang('Choose a plan below. Paid plans are activated immediately after successful payment from your balance and run on a monthly cycle.')
+                                @lang('Choose a plan below. For paid plans, a secure payment link is generated. After successful payment, your plan is activated automatically for 1 month.')
                             </div>
                         </div>
                     </div>
@@ -100,7 +100,7 @@
                                                 @csrf
                                                 <input type="hidden" name="plan_id" value="{{ $plan->id }}">
                                                 <button type="submit" class="btn btn--base w-100">
-                                                    {{ $isStarter ? __('Switch to Free') : __('Pay & Upgrade to ') . $plan->name }}
+                                                    {{ $isStarter ? __('Switch to Free') : __('Pay via Link & Activate ') . $plan->name }}
                                                 </button>
                                             </form>
                                         @else

@@ -6,7 +6,9 @@ use App\Constants\Status;
 use App\Http\Controllers\Controller;
 use App\Lib\CurlRequest;
 use App\Models\AdminNotification;
+use App\Models\CurrencyConversionRate;
 use App\Models\Deposit;
+use App\Models\GatewayCurrency;
 use App\Models\Plan;
 use App\Models\PlanChangeRequest;
 use App\Models\Transaction;
@@ -53,7 +55,17 @@ class AdminController extends Controller
         $deposit['total_deposit_pending']       = Deposit::pending()->count();
         $deposit['total_deposit_rejected']      = Deposit::rejected()->count();
         $deposit['total_deposit_refunded']      = Deposit::refunded()->count();
-        $deposit['total_deposit_charge']        = Deposit::successful()->sum('charge');
+        $depositChargeFromDeposits = (float) Deposit::successful()
+            ->selectRaw('COALESCE(SUM(charge),0) + COALESCE(SUM(payment_charge),0) as total_charge')
+            ->value('total_charge');
+
+        $depositChargeFromTransactions = (float) Transaction::query()
+            ->whereIn('remark', ['gateway_charge', 'payment_charge'])
+            ->sum('amount');
+
+        $deposit['total_deposit_charge'] = $depositChargeFromDeposits > 0
+            ? $depositChargeFromDeposits
+            : $depositChargeFromTransactions;
 
         $withdrawals['total_withdraw_amount']   = Withdrawal::approved()->sum('amount');
         $withdrawals['total_withdraw_pending']  = Withdrawal::pending()->count();
@@ -81,7 +93,215 @@ class AdminController extends Controller
                 ->sum('plans.price_monthly_cents') / 100;
         }
 
-        return view('admin.dashboard', compact('pageTitle', 'widget', 'chart','deposit','withdrawals', 'subscription'));
+        $baseCurrency = strtoupper((string) gs('cur_text'));
+        $conversionCurrencies = $this->conversionCurrencyOptions($baseCurrency);
+        $hasConversionTable = Schema::hasTable('currency_conversion_rates');
+        $gatewayRates = GatewayCurrency::query()
+            ->get(['currency', 'rate'])
+            ->groupBy(function ($row) {
+                return strtoupper(trim((string) $row->currency));
+            })
+            ->map(function ($rows) {
+                return (float) $rows->max('rate');
+            });
+        $storedRates = collect();
+        if ($hasConversionTable) {
+            $storedRates = CurrencyConversionRate::query()
+                ->where('base_currency', $baseCurrency)
+                ->orderBy('quote_currency')
+                ->get()
+                ->keyBy('quote_currency');
+        }
+
+        $conversionCurrencies = collect($conversionCurrencies)
+            ->merge($storedRates->keys())
+            ->unique()
+            ->values()
+            ->all();
+
+        $conversionRates = collect($conversionCurrencies)->mapWithKeys(function ($currency) use ($storedRates, $gatewayRates) {
+            $row = $storedRates->get($currency);
+            $fallbackRate = $this->toPositiveFloat($gatewayRates->get($currency));
+            $resolvedRate = $row ? (float) $row->rate : $fallbackRate;
+            return [
+                $currency => [
+                    'rate' => $resolvedRate ? round($resolvedRate, 8) : null,
+                    'is_active' => $row ? (bool) $row->is_active : true,
+                ],
+            ];
+        })->all();
+
+        $totalRevenueXof = [
+            'amount' => null,
+            'rate' => null,
+            'base_currency' => $baseCurrency,
+            'target_currency' => 'XOF',
+        ];
+
+        if ($baseCurrency === 'XOF') {
+            $totalRevenueXof['rate'] = 1.0;
+            $totalRevenueXof['amount'] = round((float) $deposit['total_deposit_amount'], 2);
+        } else {
+            $xofRate = $this->toPositiveFloat(data_get($conversionRates, 'XOF.rate'));
+            $xofRateIsActive = (bool) data_get($conversionRates, 'XOF.is_active', false);
+
+            if ($xofRate !== null && $xofRateIsActive) {
+                $totalRevenueXof['rate'] = $xofRate;
+                $totalRevenueXof['amount'] = round((float) $deposit['total_deposit_amount'] * $xofRate, 2);
+            }
+        }
+
+        return view('admin.dashboard', compact(
+            'pageTitle',
+            'widget',
+            'chart',
+            'deposit',
+            'withdrawals',
+            'subscription',
+            'baseCurrency',
+            'hasConversionTable',
+            'conversionCurrencies',
+            'conversionRates',
+            'totalRevenueXof'
+        ));
+    }
+
+    public function updateCurrencyConversion(Request $request)
+    {
+        $hasRatesTable = Schema::hasTable('currency_conversion_rates');
+
+        $normalizedRates = collect($request->input('rates', []))
+            ->map(function ($row) {
+                if (!is_array($row)) {
+                    return $row;
+                }
+
+                if (array_key_exists('rate', $row) && trim((string) $row['rate']) === '') {
+                    $row['rate'] = null;
+                }
+
+                return $row;
+            })
+            ->all();
+
+        $request->merge(['rates' => $normalizedRates]);
+
+        $request->validate([
+            'rates' => 'required|array|min:1',
+            'rates.*.quote_currency' => 'required|string|max:10',
+            'rates.*.rate' => 'nullable|numeric|gt:0',
+            'rates.*.is_active' => 'nullable|in:0,1',
+        ]);
+
+        $baseCurrency = strtoupper((string) gs('cur_text'));
+        $existingRates = $hasRatesTable
+            ? CurrencyConversionRate::query()
+                ->where('base_currency', $baseCurrency)
+                ->get()
+                ->keyBy('quote_currency')
+            : collect();
+        $upsertPayload = [];
+
+        foreach ($request->input('rates', []) as $row) {
+            $quoteCurrency = strtoupper(trim((string) data_get($row, 'quote_currency')));
+            $rate = $this->toPositiveFloat(data_get($row, 'rate'));
+            $isActive = (int) data_get($row, 'is_active', 0) === 1;
+
+            if ($quoteCurrency === '' || $quoteCurrency === $baseCurrency) {
+                continue;
+            }
+
+            $existingRow = $existingRates->get($quoteCurrency);
+            if ($rate === null) {
+                if (!$isActive && $existingRow) {
+                    $rate = (float) $existingRow->rate;
+                } else {
+                    continue;
+                }
+            }
+
+            $upsertPayload[] = [
+                'base_currency' => $baseCurrency,
+                'quote_currency' => $quoteCurrency,
+                'rate' => $rate,
+                'is_active' => $isActive,
+                'source' => 'manual',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (!$upsertPayload) {
+            $notify[] = ['error', 'Please provide at least one valid currency rate.'];
+            return back()->withNotify($notify);
+        }
+
+        if ($hasRatesTable) {
+            CurrencyConversionRate::query()->upsert(
+                $upsertPayload,
+                ['base_currency', 'quote_currency'],
+                ['rate', 'is_active', 'source', 'updated_at']
+            );
+        }
+
+        // Keep gateway currency rates aligned with central conversion settings.
+        foreach ($upsertPayload as $rateRow) {
+            if ((int) $rateRow['is_active'] !== 1) {
+                continue;
+            }
+
+            GatewayCurrency::query()
+                ->where('currency', $rateRow['quote_currency'])
+                ->update(['rate' => $rateRow['rate']]);
+        }
+
+        if ($hasRatesTable) {
+            $notify[] = ['success', 'Currency conversion rates updated successfully'];
+        } else {
+            $notify[] = ['success', 'Rates were saved to gateway currencies. Run migrations to enable central conversion table.'];
+        }
+        return back()->withNotify($notify);
+    }
+
+    private function conversionCurrencyOptions(string $baseCurrency): array
+    {
+        $baseCurrency = strtoupper(trim($baseCurrency));
+        $fallback = ['USD', 'EUR', 'XOF', 'CAD', 'GBP'];
+
+        $gatewayCurrencies = GatewayCurrency::query()
+            ->distinct()
+            ->pluck('currency')
+            ->filter()
+            ->map(fn ($currency) => strtoupper((string) $currency))
+            ->all();
+
+        return collect(array_merge($fallback, $gatewayCurrencies))
+            ->filter(fn ($currency) => $currency !== '' && $currency !== $baseCurrency)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function toPositiveFloat($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+            $value = str_replace(',', '.', $value);
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $normalized = (float) $value;
+        return $normalized > 0 ? $normalized : null;
     }
 
 

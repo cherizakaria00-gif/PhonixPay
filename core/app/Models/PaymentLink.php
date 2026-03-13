@@ -10,6 +10,9 @@ class PaymentLink extends Model
 {
     use HasFactory;
 
+    const TYPE_STANDARD = 'standard';
+    const TYPE_PLAN_SUBSCRIPTION = 'plan_subscription';
+
     const STATUS_ACTIVE = 0;
     const STATUS_PAID = 1;
     const STATUS_EXPIRED = 2;
@@ -20,6 +23,8 @@ class PaymentLink extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'paid_at' => 'datetime',
+        'plan_id' => 'integer',
+        'is_reusable' => 'boolean',
     ];
 
     public function user()
@@ -30,6 +35,26 @@ class PaymentLink extends Model
     public function deposit()
     {
         return $this->belongsTo(Deposit::class);
+    }
+
+    public function deposits()
+    {
+        return $this->hasMany(Deposit::class);
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
+    public function isPlanSubscription(): bool
+    {
+        return (string) $this->link_type === self::TYPE_PLAN_SUBSCRIPTION && !empty($this->plan_id);
+    }
+
+    public function allowsMultiplePayments(): bool
+    {
+        return (bool) ($this->is_reusable ?? false);
     }
 
     public function isExpired(): bool

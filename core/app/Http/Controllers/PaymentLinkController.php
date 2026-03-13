@@ -16,7 +16,7 @@ class PaymentLinkController extends Controller
         $paymentLink = PaymentLink::where('code', $code)->with('user')->firstOrFail();
         $paymentLink->markExpiredIfNeeded();
 
-        if ($paymentLink->status == PaymentLink::STATUS_PAID) {
+        if ($paymentLink->status == PaymentLink::STATUS_PAID && !$paymentLink->allowsMultiplePayments()) {
             $pageTitle = 'Payment Link';
             $message = 'This payment link has already been paid.';
             return view('Template::payment.payment_link_status', compact('pageTitle', 'message'));
@@ -29,7 +29,7 @@ class PaymentLinkController extends Controller
         }
 
         $user = $paymentLink->user;
-        $checkUserPayment = $this->checkUserPayment($user);
+        $checkUserPayment = $this->checkUserPayment($user, $paymentLink->isPlanSubscription());
         if (@$checkUserPayment['status'] == 'error') {
             $pageTitle = 'Payment Link';
             $message = $checkUserPayment['message'][0] ?? 'This payment link is not available.';

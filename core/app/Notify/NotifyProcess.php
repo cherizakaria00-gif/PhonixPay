@@ -160,6 +160,7 @@ class NotifyProcess{
 		$body = $this->body;
 		$user = $this->user;
 		$globalTemplate = $this->globalTemplate;
+        $plainNotification = !empty($this->shortCodes['__plain_notification']);
 
         //finding the notification template
 		$template = NotificationTemplate::where('act', $this->templateName)->where($this->statusField, Status::ENABLE)->first();
@@ -168,10 +169,18 @@ class NotifyProcess{
         //Getting the notification message from database if use and template exist
         //If not exist, get the message which have sent via method
 		if ($user && $template) {
-		    $message = $this->replaceShortCode($user->fullname,$user->username,gs($globalTemplate),$template->$body);
-		    if (empty($message)) {
-		        $message = $template->$body;
-		    }
+            // For admin broadcast/update notifications, send only the custom message body.
+            if ($plainNotification) {
+                $message = $this->shortCodes['message'] ?? '';
+                if ($message === '') {
+                    $message = $template->$body ?? '';
+                }
+            } else {
+		        $message = $this->replaceShortCode($user->fullname,$user->username,gs($globalTemplate),$template->$body);
+		        if (empty($message)) {
+		            $message = $template->$body;
+		        }
+            }
 		}else{
 			$message = $this->replaceShortCode($this->receiverName,$this->toAddress,gs($globalTemplate),$this->message);
 		}

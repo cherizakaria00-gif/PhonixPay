@@ -67,6 +67,16 @@
                 </div>
             </div>
 
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="col-form-label">@lang('Website URL / Domain')</label>
+                    <input type="text" class="form--control" value="{{ $user->website_domain ?: $user->website_url ?: __('Not set') }}" readonly disabled>
+                    <small class="text-muted d-block mt-1">
+                        @lang('If you want to change this URL, please contact support.')
+                    </small>
+                </div>
+            </div>
+
             <div class="col-12 mt-2">
                 <div class="form-group mb-0">
                     <button type="submit" class="btn profile-modern-submit-btn">@lang('Update')</button>

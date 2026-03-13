@@ -28,6 +28,7 @@
                             <th>@lang('Amount')</th>
                             <th>@lang('Conversion')</th>
                             <th>@lang('Status')</th>
+                            <th>@lang('Source')</th>
                             <th>@lang('Action')</th>
                         </tr>
                         </thead>
@@ -46,6 +47,8 @@
                                 <td>
                                     @php
                                         $isStripeGateway = $gateway && (stripos($gatewayAlias ?? '', 'stripe') !== false || stripos($gatewayName ?? '', 'stripe') !== false);
+                                        $isBictorysGateway = $gateway && (stripos($gatewayAlias ?? '', 'bictorys') !== false || stripos($gatewayName ?? '', 'bictorys') !== false);
+                                        $isRefundableGateway = $isStripeGateway || $isBictorysGateway;
                                     @endphp
                                     @if($isStripeGateway)
                                         <span class="fw-bold">
@@ -111,11 +114,14 @@
                                     @php echo $deposit->statusBadge @endphp
                                 </td>
                                 <td>
+                                    {{ $deposit->integration_source_type ?: __('N/A') }}
+                                </td>
+                                <td>
                                     <a href="{{ route('admin.deposit.details', $deposit->id) }}"
                                        class="btn btn-sm btn-outline--primary ms-1">
                                         <i class="la la-desktop"></i> @lang('Details')
                                     </a>
-                                    @if($isStripeGateway && $deposit->status == \App\Constants\Status::PAYMENT_SUCCESS)
+                                    @if($isRefundableGateway && $deposit->status == \App\Constants\Status::PAYMENT_SUCCESS)
                                         <button class="btn btn-sm btn-outline--danger ms-1 confirmationBtn"
                                                 data-question="@lang('Are you sure to refund this payment?')"
                                                 data-action="{{ route('admin.deposit.refund', $deposit->id) }}">

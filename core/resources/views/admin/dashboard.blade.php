@@ -14,6 +14,11 @@
                 <div class="pf-admin-stat-body">
                     <p class="pf-admin-stat-label">@lang('Total Revenue')</p>
                     <h3 class="pf-admin-stat-value">{{ showAmount($deposit['total_deposit_amount']) }}</h3>
+                    @if(!is_null($totalRevenueXof['amount']))
+                        <p class="pf-admin-stat-subvalue">
+                            ~= {{ number_format((float) $totalRevenueXof['amount'], 2) }} CFA (XOF)
+                        </p>
+                    @endif
                     <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Updated this month')</span>
                 </div>
             </a>
@@ -47,16 +52,73 @@
                     <span class="pf-admin-stat-change pf-admin-stat-change--negative">@lang('Needs attention')</span>
                 </div>
             </a>
-            <a href="{{ route('admin.rewards.index') }}" class="pf-admin-stat-card">
+            <a href="{{ route('admin.deposit.successful') }}" class="pf-admin-stat-card">
                 <div class="pf-admin-stat-icon">
-                    <i class="las la-gift"></i>
+                    <i class="las la-percentage"></i>
                 </div>
                 <div class="pf-admin-stat-body">
-                    <p class="pf-admin-stat-label">@lang('Rewards Program')</p>
-                    <h3 class="pf-admin-stat-value">@lang('Referrals')</h3>
-                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('Manage rewards')</span>
+                    <p class="pf-admin-stat-label">@lang('Total Charge')</p>
+                    <h3 class="pf-admin-stat-value">{{ showAmount($deposit['total_deposit_charge']) }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('From successful payments')</span>
                 </div>
             </a>
+        </div>
+
+        <div class="pf-admin-panel pf-admin-panel--currency">
+            <div class="pf-admin-panel-header">
+                <div>
+                    <h5 class="pf-admin-panel-title mb-1">@lang('Currency Conversion')</h5>
+                    <small class="text-muted">@lang('Base Currency'): {{ $baseCurrency }}</small>
+                    @if(empty($hasConversionTable))
+                        <div class="pf-admin-conversion-hint">
+                            @lang('Central conversion table is not migrated yet. Saving rates updates gateway conversion fallback.')
+                        </div>
+                    @endif
+                </div>
+            </div>
+            <form action="{{ route('admin.dashboard.currency.update') }}" method="POST">
+                @csrf
+                <div class="pf-admin-currency-grid">
+                    @foreach($conversionRates as $currency => $rateData)
+                        <div class="pf-admin-currency-card">
+                            <label class="pf-admin-currency-label">1 {{ $baseCurrency }} =</label>
+                            <div class="input-group mb-2">
+                                <input type="hidden" name="rates[{{ $loop->index }}][quote_currency]" value="{{ $currency }}">
+                                <input
+                                    type="number"
+                                    step="any"
+                                    min="0.00000001"
+                                    class="form-control"
+                                    name="rates[{{ $loop->index }}][rate]"
+                                    value="{{ $rateData['rate'] }}"
+                                    placeholder="0.00"
+                                >
+                                <span class="input-group-text">{{ $currency }}</span>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input type="hidden" name="rates[{{ $loop->index }}][is_active]" value="0">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    role="switch"
+                                    id="rate-active-{{ $loop->index }}"
+                                    name="rates[{{ $loop->index }}][is_active]"
+                                    value="1"
+                                    @checked($rateData['is_active'])
+                                >
+                                <label class="form-check-label" for="rate-active-{{ $loop->index }}">
+                                    @lang('Active')
+                                </label>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn--primary btn-sm">
+                        <i class="las la-save"></i> @lang('Save Conversion Rates')
+                    </button>
+                </div>
+            </form>
         </div>
 
         @if(!empty($subscription['enabled']))
@@ -387,6 +449,14 @@
             font-weight: 500;
         }
 
+        .pf-admin-stat-subvalue {
+            margin: -2px 0 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            line-height: 1.25;
+        }
+
         .pf-admin-stat-change--positive {
             color: #16a34a;
         }
@@ -405,6 +475,13 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 14px;
+        }
+
+        .pf-admin-conversion-hint {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #b45309;
+            font-weight: 500;
         }
 
         .pf-admin-subscription-item {
@@ -447,6 +524,33 @@
             border-radius: 18px;
             padding: 20px;
             box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        }
+
+        .pf-admin-panel--currency {
+            margin-bottom: 18px;
+        }
+
+        .pf-admin-currency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .pf-admin-currency-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px;
+            background: #f8fafc;
+        }
+
+        .pf-admin-currency-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
 
         .pf-admin-panel--compact {

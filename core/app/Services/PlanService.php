@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Deposit;
 use App\Models\NotificationLog;
+use App\Models\PaymentLink;
 use App\Models\Plan;
 use App\Models\Payout;
 use App\Models\Transaction;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Schema;
 
 class PlanService
 {
+    private static ?bool $hasLegacyMerchantFeeColumns = null;
+
     public function getEffectivePlan(User $user): array
     {
         $plan = $user->plan;
@@ -48,6 +51,8 @@ class PlanService
         if (is_array($overrides) && !empty($overrides)) {
             $effective = $this->applyOverrides($effective, $overrides);
         }
+
+        $effective = $this->applyLegacyMerchantFeeOverrides($user, $effective);
 
         return $effective;
     }
@@ -98,12 +103,26 @@ class PlanService
     {
         $plan = $this->getEffectivePlan($user);
 
-        $fee = round(($amount * ((float) $plan['fee_percent'] / 100)) + (float) $plan['fee_fixed'], 8);
+        // Merchant-level fee config always wins for payment transactions.
+        $percentFee = $this->toNullableNumber($user->payment_percent_charge ?? null);
+        $fixedFee = $this->toNullableNumber($user->payment_fixed_charge ?? null);
+
+        if ($percentFee === null) {
+            $percentFee = (float) ($plan['fee_percent'] ?? 0);
+        }
+        if ($fixedFee === null) {
+            $fixedFee = (float) ($plan['fee_fixed'] ?? 0);
+        }
+
+        $percentFee = max(0, min(100, (float) $percentFee));
+        $fixedFee = max(0, (float) $fixedFee);
+
+        $fee = round(($amount * ($percentFee / 100)) + $fixedFee, 8);
         $net = round(max(0, $amount - $fee), 8);
 
         return [
-            'fee_percent' => (float) $plan['fee_percent'],
-            'fee_fixed' => (float) $plan['fee_fixed'],
+            'fee_percent' => $percentFee,
+            'fee_fixed' => $fixedFee,
             'fee_amount' => $fee,
             'net_amount' => $net,
         ];
@@ -196,10 +215,27 @@ class PlanService
 
         $monthStart = Carbon::now()->utc()->startOfMonth();
         $monthEnd = Carbon::now()->utc()->endOfMonth();
-        $count = Deposit::where('user_id', $user->id)
+        $monthlyDeposits = Deposit::where('user_id', $user->id)
             ->successful()
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->count();
+            ->whereBetween('created_at', [$monthStart, $monthEnd]);
+
+        if (
+            Schema::hasTable('payment_links')
+            && Schema::hasColumn('deposits', 'payment_link_id')
+            && Schema::hasColumn('payment_links', 'link_type')
+        ) {
+            $monthlyDeposits->where(function ($query) {
+                $query->whereNull('payment_link_id')
+                    ->orWhereNotExists(function ($subQuery) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('payment_links')
+                            ->whereColumn('payment_links.id', 'deposits.payment_link_id')
+                            ->where('payment_links.link_type', PaymentLink::TYPE_PLAN_SUBSCRIPTION);
+                    });
+            });
+        }
+
+        $count = $monthlyDeposits->count();
 
         $user->monthly_tx_count = $count;
         $user->save();
@@ -489,5 +525,58 @@ class PlanService
             'notification_channels' => ['push'],
             'features' => ['payment_links' => false],
         ];
+    }
+
+    private function applyLegacyMerchantFeeOverrides(User $user, array $effectivePlan): array
+    {
+        if (!$this->legacyMerchantFeeColumnsExist()) {
+            return $effectivePlan;
+        }
+
+        $customPercent = $this->toNullableNumber($user->payment_percent_charge ?? null);
+        $customFixed = $this->toNullableNumber($user->payment_fixed_charge ?? null);
+
+        if ($customPercent !== null) {
+            $effectivePlan['fee_percent'] = max(0, min(100, $customPercent));
+        }
+
+        if ($customFixed !== null) {
+            $effectivePlan['fee_fixed'] = max(0, $customFixed);
+        }
+
+        return $effectivePlan;
+    }
+
+    private function legacyMerchantFeeColumnsExist(): bool
+    {
+        if (self::$hasLegacyMerchantFeeColumns !== null) {
+            return self::$hasLegacyMerchantFeeColumns;
+        }
+
+        self::$hasLegacyMerchantFeeColumns =
+            Schema::hasColumn('users', 'payment_percent_charge')
+            && Schema::hasColumn('users', 'payment_fixed_charge');
+
+        return self::$hasLegacyMerchantFeeColumns;
+    }
+
+    private function toNullableNumber($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim(str_replace(',', '.', $value));
+            if ($value === '') {
+                return null;
+            }
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
     }
 }

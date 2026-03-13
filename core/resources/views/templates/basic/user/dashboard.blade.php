@@ -76,6 +76,9 @@
                                 }
                                 $customerEmail = $customer->email ?? null;
                                 $customerPhone = $customer->mobile ?? ($customer->phone ?? null);
+                                $paidCurrency = strtoupper((string) ($deposit->method_currency ?? ''));
+                                $baseCurrency = strtoupper((string) gs('cur_text'));
+                                $showPaidAmount = $paidCurrency !== '' && $paidCurrency !== $baseCurrency;
                             @endphp
                             <tr>
                                 <td>{{ $customerName ?: __('N/A') }}</td>
@@ -83,9 +86,14 @@
                                 <td>{{ $customerPhone ?: __('N/A') }}</td>
                                 <td class="text-end {{ $deposit->status == Status::PAYMENT_REJECT ? 'amount-negative' : 'amount-positive' }}">
                                     {{ showAmount($deposit->amount) }}
+                                    @if ($showPaidAmount)
+                                        <small class="d-block text-muted amount-original">
+                                            @lang('Paid'): {{ showAmount((float) $deposit->gateway_amount, currencyFormat: false) }} {{ $paidCurrency }}
+                                        </small>
+                                    @endif
                                 </td>
                                 <td><span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
-                                <td>{{ showDateTime($deposit->created_at, 'M d, Y') }}</td>
+                                <td>{{ showDateTime($deposit->created_at, 'M d, Y h:i A') }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -321,7 +329,7 @@
 
     .dashboard-activity-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+        grid-template-columns: 1fr;
         gap: 18px;
         margin-bottom: 22px;
     }
@@ -454,6 +462,12 @@
         font-weight: 600;
     }
 
+    .amount-original {
+        font-size: 11px;
+        margin-top: 2px;
+        font-weight: 500;
+    }
+
     .activity-list {
         display: flex;
         flex-direction: column;
@@ -506,12 +520,6 @@
     .activity-time {
         font-size: 11px;
         color: #9ca3af;
-    }
-
-    @media (max-width: 1199px) {
-        .dashboard-activity-grid {
-            grid-template-columns: 1fr;
-        }
     }
 
     .dashboard-panel--chart {

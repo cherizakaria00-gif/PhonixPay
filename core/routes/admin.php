@@ -30,6 +30,7 @@ Route::namespace('Auth')->group(function () {
 Route::middleware('admin')->group(function () {
     Route::controller('AdminController')->group(function(){
         Route::get('dashboard', 'dashboard')->name('dashboard');
+        Route::post('dashboard/currency-conversion', 'updateCurrencyConversion')->name('dashboard.currency.update');
         Route::get('chart/deposit-withdraw', 'depositAndWithdrawReport')->name('chart.deposit.withdraw');
         Route::get('chart/transaction', 'transactionReport')->name('chart.transaction');
         Route::get('profile', 'profile')->name('profile');
@@ -154,12 +155,27 @@ Route::middleware('admin')->group(function () {
         Route::get('details/{id}', 'details')->name('details');
         Route::post('reject', 'reject')->name('reject');
         Route::post('approve/{id}', 'approve')->name('approve');
-        Route::post('refund/{id}', 'refund')->name('refund');
+        Route::match(['get', 'post'], 'refund/{id}', 'refund')->name('refund');
 
     });
 
     // Payment Links
     Route::controller('PaymentLinkController')->prefix('payment-links')->name('payment.links.')->group(function () {
+        Route::get('/', 'index')->name('index');
+    });
+
+    // Plugin Licenses
+    Route::controller('PluginLicenseController')->prefix('plugin-licenses')->name('plugin.licenses.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/{id}', 'show')->name('show');
+        Route::post('revoke/{id}', 'revoke')->name('revoke');
+        Route::post('regenerate/{id}', 'regenerate')->name('regenerate');
+        Route::post('update-domain/{id}', 'updateDomain')->name('update.domain');
+        Route::post('delete/{id}', 'delete')->name('delete');
+    });
+
+    Route::controller('AiIntegrationController')->prefix('ai-integrations')->name('ai.integrations.')->group(function () {
         Route::get('/', 'index')->name('index');
     });
 

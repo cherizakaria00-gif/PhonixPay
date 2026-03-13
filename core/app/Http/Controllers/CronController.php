@@ -10,13 +10,16 @@ use App\Models\CronJob;
 use App\Models\CronJobLog;
 use App\Models\Deposit;
 use App\Models\Holiday;
+use App\Models\PaymentLink;
 use App\Models\Payout;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Withdrawal;
 use App\Models\WithdrawSetting;
+use App\Services\BictorysDepositSyncService;
 use App\Services\PlanService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class CronController extends Controller
@@ -103,6 +106,22 @@ class CronController extends Controller
                     $eligibleDepositsQuery = Deposit::where('user_id', $user->id)
                         ->successful()
                         ->whereNull('payout_id');
+
+                    if (
+                        Schema::hasTable('payment_links')
+                        && Schema::hasColumn('deposits', 'payment_link_id')
+                        && Schema::hasColumn('payment_links', 'link_type')
+                    ) {
+                        $eligibleDepositsQuery->where(function ($query) {
+                            $query->whereNull('payment_link_id')
+                                ->orWhereNotExists(function ($subQuery) {
+                                    $subQuery->select(DB::raw(1))
+                                        ->from('payment_links')
+                                        ->whereColumn('payment_links.id', 'deposits.payment_link_id')
+                                        ->where('payment_links.link_type', PaymentLink::TYPE_PLAN_SUBSCRIPTION);
+                                });
+                        });
+                    }
 
                     if (Schema::hasColumn('deposits', 'payout_eligible_at')) {
                         $eligibleDepositsQuery->where(function ($query) use ($now) {
@@ -264,5 +283,20 @@ class CronController extends Controller
         $this->daily();
         $this->weekly(); 
         $this->monthly();
+    }
+
+    public function bictorysStatusSync()
+    {
+        // Webhook-first mode:
+        // - no PSP status polling
+        // - no external verification calls
+        // - only local expiration of stale pending records
+        app(BictorysDepositSyncService::class)->syncPendingDeposits([
+            'expire_pending' => true,
+            'replay_logs' => false,
+            'lookback_hours' => (int) config('services.bictorys.pending_expire_lookback_hours', 720),
+            'max_pending_per_gateway' => 500,
+            'expire_after_minutes' => (int) config('services.bictorys.pending_expire_minutes', 180),
+        ]);
     }
 }
