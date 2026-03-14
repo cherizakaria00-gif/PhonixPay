@@ -73,6 +73,7 @@ body.merchant-theme-light .s-logo {
     border-bottom: 1px solid var(--stripe-border-soft);
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
 body.merchant-theme-light .brand-link {
@@ -81,6 +82,7 @@ body.merchant-theme-light .brand-link {
     gap: 10px;
     text-decoration: none;
     max-width: 100%;
+    justify-content: center;
 }
 
 body.merchant-theme-light .brand-logo-img {
