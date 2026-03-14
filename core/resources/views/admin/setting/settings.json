@@ -34,6 +34,13 @@
         "icon": "la la-bank",
         "route_name": "admin.withdraw.method.index"
     },
+    "payment_gateways": {
+        "keyword": ["payment gateway", "automatic gateway", "gateway methods", "gateway settings", "payment methods", "bictorys", "stripe", "crypto gateway", "gateway configuration"],
+        "title": "Payment Gateways",
+        "subtitle": "Manage automatic payment gateways, currencies, and gateway configurations.",
+        "icon": "las la-credit-card",
+        "route_name": "admin.gateway.automatic.index"
+    },
     "seo_configuration": {
         "keyword": ["SEO", "meta title", "meta description", "meta keywords","optimization", "meta tags", "SEO configuration"],
         "title": "SEO Configuration",
