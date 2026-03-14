@@ -7,8 +7,11 @@
     <button class="sidebar-close-btn" type="button"><i class="las la-times"></i></button>
 
     <div class="s-logo">
+        @php
+            $merchantLogoVersion = @filemtime(public_path(resolveLogoAssetPath('logo_dark.png'))) ?: time();
+        @endphp
         <a href="{{ route('home') }}" class="brand-link">
-            <img src="{{ siteLogo('dark') }}" alt="@lang('Logo')" class="brand-logo-img">
+            <img src="{{ siteLogo('dark') }}?v={{ $merchantLogoVersion }}" alt="@lang('Logo')" class="brand-logo-img">
         </a>
     </div>
 
