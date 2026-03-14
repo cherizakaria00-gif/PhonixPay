@@ -8,6 +8,8 @@ use App\Models\NotificationTemplate;
 use App\Notify\Sms;
 use App\Rules\FileTypeValidate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationController extends Controller
 {
@@ -74,9 +76,83 @@ class NotificationController extends Controller
     }
 
     public function templates(){
+        $this->ensureDepositCompleteTemplate();
         $pageTitle = 'Notification Templates';
         $templates = NotificationTemplate::orderBy('name')->get();
         return view('admin.notification.template.index',compact('pageTitle','templates'));
+    }
+
+    private function ensureDepositCompleteTemplate(): void
+    {
+        try {
+            if (!Schema::hasTable('notification_templates')) {
+                return;
+            }
+
+            $exists = NotificationTemplate::where('act', 'DEPOSIT_COMPLETE')->exists();
+            if ($exists) {
+                return;
+            }
+
+            $columns = Schema::getColumnListing('notification_templates');
+            $payload = [];
+
+            $defaults = [
+                'name' => 'Deposit Complete',
+                'act' => 'DEPOSIT_COMPLETE',
+                'subject' => 'Payment received successfully',
+                'email_body' => 'A payment has been received successfully.' . PHP_EOL
+                    . 'Gateway: {{method_name}}' . PHP_EOL
+                    . 'Amount: {{amount}} {{method_currency}}' . PHP_EOL
+                    . 'Charge: {{charge}}' . PHP_EOL
+                    . 'Payment charge: {{payment_charge}}' . PHP_EOL
+                    . 'Rate: {{rate}}' . PHP_EOL
+                    . 'Reference: {{trx}}' . PHP_EOL
+                    . 'Current balance: {{post_balance}}',
+                'sms_body' => 'Payment received. Ref {{trx}}, amount {{amount}} {{method_currency}}.',
+                'push_title' => 'Payment received',
+                'push_body' => 'Payment {{amount}} {{method_currency}} received. Ref {{trx}}.',
+                'shortcodes' => json_encode([
+                    'method_name' => 'Payment method name',
+                    'method_currency' => 'Method currency',
+                    'method_amount' => 'Method amount',
+                    'amount' => 'Amount in system currency',
+                    'charge' => 'Gateway charge',
+                    'payment_charge' => 'Payment charge',
+                    'rate' => 'Exchange rate',
+                    'trx' => 'Transaction reference',
+                    'post_balance' => 'Current account balance',
+                ]),
+                'email_status' => Status::ENABLE,
+                'sms_status' => Status::DISABLE,
+                'push_status' => Status::ENABLE,
+            ];
+
+            foreach ($defaults as $column => $value) {
+                if (in_array($column, $columns, true)) {
+                    $payload[$column] = $value;
+                }
+            }
+
+            if (in_array('created_at', $columns, true)) {
+                $payload['created_at'] = now();
+            }
+            if (in_array('updated_at', $columns, true)) {
+                $payload['updated_at'] = now();
+            }
+
+            if (!empty($payload)) {
+                $template = new NotificationTemplate();
+                foreach ($payload as $key => $value) {
+                    $template->{$key} = $value;
+                }
+                $template->save();
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Unable to ensure DEPOSIT_COMPLETE notification template', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function templateEdit($type,$id)

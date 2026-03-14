@@ -784,6 +784,11 @@ class PaymentController extends Controller
                 self::outerIpn($apiPayment);
             }
 
+            $depositNotificationChannels = $planService->getNotificationChannels($user);
+            if (!in_array('email', $depositNotificationChannels, true)) {
+                $depositNotificationChannels[] = 'email';
+            }
+
             notify($user, 'DEPOSIT_COMPLETE', [
                 'method_name' => $deposit->gatewayCurrency()->name,
                 'method_currency' => $deposit->method_currency,
@@ -794,7 +799,7 @@ class PaymentController extends Controller
                 'rate' => showAmount($deposit->rate, currencyFormat:false),
                 'trx' => $deposit->trx,
                 'post_balance' => showAmount($user->balance, currencyFormat:false)
-            ], $planService->getNotificationChannels($user));
+            ], $depositNotificationChannels);
 
             app(RewardService::class)->handleSuccessfulDeposit($deposit);
         }
