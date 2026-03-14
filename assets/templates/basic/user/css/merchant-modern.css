@@ -80,29 +80,15 @@ body.merchant-theme-light .brand-link {
     align-items: center;
     gap: 10px;
     text-decoration: none;
+    max-width: 100%;
 }
 
-body.merchant-theme-light .brand-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--stripe-primary);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: lowercase;
-}
-
-body.merchant-theme-light .brand-text {
-    color: var(--stripe-text);
-    font-size: 36px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    transform: scale(0.55);
-    transform-origin: left center;
+body.merchant-theme-light .brand-logo-img {
+    display: block;
+    height: 34px;
+    width: auto;
+    max-width: 185px;
+    object-fit: contain;
 }
 
 body.merchant-theme-light .s-nav {

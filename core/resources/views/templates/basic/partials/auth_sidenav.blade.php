@@ -8,8 +8,7 @@
 
     <div class="s-logo">
         <a href="{{ route('home') }}" class="brand-link">
-            <span class="brand-icon">f</span>
-            <span class="brand-text">flujiPay</span>
+            <img src="{{ siteLogo('dark') }}" alt="@lang('Logo')" class="brand-logo-img">
         </a>
     </div>
 
