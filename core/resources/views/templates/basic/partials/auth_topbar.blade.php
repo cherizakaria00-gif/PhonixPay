@@ -31,7 +31,11 @@
 @endphp
 
 <div class="dashboard-top-nav topbar">
-    <div class="topbar-left"></div>
+    <div class="topbar-left">
+        <button class="sidebar-open-btn" type="button" aria-label="@lang('Open menu')">
+            <i class="las la-bars"></i>
+        </button>
+    </div>
 
     <div class="topbar-right">
         @if($showHeaderBalance)
