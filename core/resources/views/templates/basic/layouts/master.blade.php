@@ -26,6 +26,11 @@
         $userMainCssVersion = @filemtime(public_path($userMainCssPath)) ?: time();
     @endphp
     <link rel="stylesheet" href="{{ asset($userMainCssPath) }}?v={{ $userMainCssVersion }}">
+    @php
+        $merchantModernCssPath = $activeTemplateTrue . 'user/css/merchant-modern.css';
+        $merchantModernCssVersion = @filemtime(public_path($merchantModernCssPath)) ?: time();
+    @endphp
+    <link rel="stylesheet" href="{{ asset($merchantModernCssPath) }}?v={{ $merchantModernCssVersion }}">
 
     @stack('style')
 
@@ -42,18 +47,19 @@
         </script>
     @endif
 </head>
-<body>
+<body class="merchant-theme-light">
 
-    <div class="merchant-dashboard">
+    <div class="app merchant-dashboard">
         @include($activeTemplate.'partials.auth_sidenav')
-        @include($activeTemplate.'partials.auth_topbar')
-
-        <div class="merchant-dashboard__body mt-5">
-            <div class="dashboard-container">
-                @if(@$setting)
-                    @include($activeTemplate.'partials.setting_tab')
-                @endif
-                @yield('content')
+        <div class="main">
+            @include($activeTemplate.'partials.auth_topbar')
+            <div class="content merchant-dashboard__body">
+                <div class="dashboard-container">
+                    @if(@$setting)
+                        @include($activeTemplate.'partials.setting_tab')
+                    @endif
+                    @yield('content')
+                </div>
             </div>
         </div>
     </div>
@@ -131,5 +137,6 @@
 
         })(jQuery)
     </script>
+
 </body>
 </html>

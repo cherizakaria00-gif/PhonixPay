@@ -19,6 +19,7 @@ use App\Models\Transaction;
 use App\Models\Withdrawal;
 use App\Services\PluginLicenseService;
 use App\Services\PlanService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
@@ -31,6 +32,13 @@ class UserController extends Controller
     {
         $pageTitle = 'Dashboard'; 
         $user = auth()->user();
+        $selectedRangeDays = (int) $request->input('range', 7);
+        if (!in_array($selectedRangeDays, [7, 14, 30], true)) {
+            $selectedRangeDays = 7;
+        }
+
+        $compareEnabled = (bool) $request->boolean('compare', true);
+        $granularity = 'daily';
 
         $planSummary = null;
         $availablePlans = collect();
@@ -65,6 +73,97 @@ class UserController extends Controller
             ->orderBy('id', 'desc')
             ->take(10);
         $latestTrx = Transaction::where('user_id', $user->id)->orderBy('id','desc')->take(10);
+
+        $todayRevenue = (float) Deposit::where('user_id', $user->id)
+            ->where('status', Status::PAYMENT_SUCCESS)
+            ->whereDate('created_at', Carbon::today())
+            ->sum('amount');
+
+        $yesterdayRevenue = (float) Deposit::where('user_id', $user->id)
+            ->where('status', Status::PAYMENT_SUCCESS)
+            ->whereDate('created_at', Carbon::yesterday())
+            ->sum('amount');
+
+        $rangeStart = Carbon::now()->subDays($selectedRangeDays - 1)->startOfDay();
+        $rangeEnd = Carbon::now()->endOfDay();
+        $previousRangeStart = (clone $rangeStart)->subDays($selectedRangeDays);
+        $previousRangeEnd = (clone $rangeEnd)->subDays($selectedRangeDays);
+
+        $monthGross = (float) Deposit::where('user_id', $user->id)
+            ->where('status', Status::PAYMENT_SUCCESS)
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->sum('amount');
+
+        $previousMonthGross = (float) Deposit::where('user_id', $user->id)
+            ->where('status', Status::PAYMENT_SUCCESS)
+            ->whereBetween('created_at', [$previousRangeStart, $previousRangeEnd])
+            ->sum('amount');
+
+        $dailyChart = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) use ($user) {
+            $date = Carbon::today()->subDays($offset);
+            return [
+                'label' => $date->format('M d'),
+                'amount' => (float) Deposit::where('user_id', $user->id)
+                    ->where('status', Status::PAYMENT_SUCCESS)
+                    ->whereDate('created_at', $date)
+                    ->sum('amount'),
+            ];
+        })->values();
+
+        $paymentLinkSeries = collect();
+        $pluginDirectSeries = collect();
+        $paymentLinkTotal = 0.0;
+        $pluginDirectTotal = 0.0;
+
+        if (Schema::hasColumn('deposits', 'integration_source_type')) {
+            $paymentLinkSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) use ($user) {
+                $date = Carbon::today()->subDays($offset);
+                return [
+                    'label' => $date->format('M d'),
+                    'amount' => (float) Deposit::where('user_id', $user->id)
+                        ->where('status', Status::PAYMENT_SUCCESS)
+                        ->where('integration_source_type', 'payment_link')
+                        ->whereDate('created_at', $date)
+                        ->sum('amount'),
+                ];
+            })->values();
+
+            $pluginDirectSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) use ($user) {
+                $date = Carbon::today()->subDays($offset);
+                return [
+                    'label' => $date->format('M d'),
+                    'amount' => (float) Deposit::where('user_id', $user->id)
+                        ->where('status', Status::PAYMENT_SUCCESS)
+                        ->whereIn('integration_source_type', ['plugin_sdk', 'plugin', 'woocommerce'])
+                        ->whereDate('created_at', $date)
+                        ->sum('amount'),
+                ];
+            })->values();
+
+            $paymentLinkTotal = (float) Deposit::where('user_id', $user->id)
+                ->where('status', Status::PAYMENT_SUCCESS)
+                ->where('integration_source_type', 'payment_link')
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+                ->sum('amount');
+
+            $pluginDirectTotal = (float) Deposit::where('user_id', $user->id)
+                ->where('status', Status::PAYMENT_SUCCESS)
+                ->whereIn('integration_source_type', ['plugin_sdk', 'plugin', 'woocommerce'])
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+                ->sum('amount');
+        } else {
+            $paymentLinkSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) {
+                return ['label' => Carbon::today()->subDays($offset)->format('M d'), 'amount' => 0.0];
+            })->values();
+
+            $pluginDirectSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) {
+                return ['label' => Carbon::today()->subDays($offset)->format('M d'), 'amount' => 0.0];
+            })->values();
+        }
+
+        $payoutAvailable = max(0, (float) ($user->balance ?? 0) * 0.7);
+        $monthNet = max(0, $monthGross * 0.95);
+        $previousMonthNet = max(0, $previousMonthGross * 0.95);
      
         if($request->export_type){
             return $latestDeposits->export();
@@ -76,6 +175,21 @@ class UserController extends Controller
             'user',
             'latestTrx',
             'latestDeposits',
+            'todayRevenue',
+            'yesterdayRevenue',
+            'monthGross',
+            'previousMonthGross',
+            'monthNet',
+            'previousMonthNet',
+            'dailyChart',
+            'paymentLinkSeries',
+            'pluginDirectSeries',
+            'paymentLinkTotal',
+            'pluginDirectTotal',
+            'selectedRangeDays',
+            'compareEnabled',
+            'granularity',
+            'payoutAvailable',
             'planSummary',
             'availablePlans',
             'pendingPlanRequest'

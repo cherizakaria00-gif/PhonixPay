@@ -3,141 +3,117 @@
     $isAccountRestricted = auth()->user()->kv != Status::KYC_VERIFIED;
 @endphp
 
-<div class="d-sidebar h-100 rounded">
-    <button class="sidebar-close-btn bg--base text-white"><i class="las la-times"></i></button>
-    <div class="d-sidebar__thumb">
-        <a href="{{route('home')}}"><img src="{{ siteLogo() }}" alt=""></a>
-    </div>
-    <div class="sidebar-menu-wrapper" id="sidebar-menu-wrapper">
-        <ul class="sidebar-menu">
+<aside class="sidebar d-sidebar">
+    <button class="sidebar-close-btn" type="button"><i class="las la-times"></i></button>
 
+    <div class="s-logo">
+        <a href="{{ route('home') }}" class="brand-link">
+            <span class="brand-icon">f</span>
+            <span class="brand-text">flujiPay</span>
+        </a>
+    </div>
+
+    <nav class="s-nav sidebar-menu-wrapper" id="sidebar-menu-wrapper">
+        <ul class="sidebar-menu">
             <li class="sidebar-menu__item {{ menuActive('user.home') }}">
-                <a href="{{ route('user.home') }}" class="sidebar-menu__link">
-                    <i class="las la-home"></i>
-                    @lang('Dashboard')
+                <a href="{{ route('user.home') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-th-large n-ic"></i><span>@lang('Dashboard')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive('user.deposit.history') }}">
-                <a href="{{ route('user.deposit.history') }}" class="sidebar-menu__link">
-                    <i class="las la-history"></i>
-                    @lang('Payment History')
+                <a href="{{ route('user.deposit.history') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-file-alt n-ic"></i><span>@lang('Payment History')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive('user.payment.links*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
                 <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.payment.links.index') }}"
-                   class="sidebar-menu__link {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
                    @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
-                    <i class="las la-link"></i>
-                    @lang('Payment Links')
+                    <i class="las la-credit-card n-ic"></i><span>@lang('Payment Links')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive('user.rewards*') }}">
-                <a href="{{ route('user.rewards.index') }}" class="sidebar-menu__link">
-                    <i class="las la-gift"></i>
-                    @lang('Rewards')
+                <a href="{{ route('user.rewards.index') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-gift n-ic"></i><span>@lang('Rewards')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive(['user.withdraws', 'user.withdraw.method']) }}">
-                <a href="{{ route('user.withdraws') }}" class="sidebar-menu__link">
-                    <i class="las la-money-bill-wave-alt"></i>
-                    @lang('Withdraws')
+                <a href="{{ route('user.withdraws') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-arrow-down n-ic"></i><span>@lang('Withdraws')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive('user.transactions') }}">
-                <a href="{{ route('user.transactions') }}" class="sidebar-menu__link">
-                    <i class="las la-exchange-alt"></i>
-                    @lang('Transactions')
+                <a href="{{ route('user.transactions') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-wallet n-ic"></i><span>@lang('Transactions')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive('ticket.*') }}">
-                <a href="{{ route('ticket.index') }}" class="sidebar-menu__link">
-                    <i class="las la-headset"></i>
-                    @lang('Get Support')
+                <a href="{{ route('ticket.index') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-life-ring n-ic"></i><span>@lang('Get Support')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive('user.api.key') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
                 <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.api.key') }}"
-                   class="sidebar-menu__link {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
                    @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
-                    <i class="las la-code"></i>
-                    @lang('Developers')
+                    <i class="las la-code n-ic"></i><span>@lang('Developers')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive('user.plan.billing') }}">
-                <a href="{{ route('user.plan.billing') }}" class="sidebar-menu__link">
-                    <i class="las la-crown"></i>
-                    @lang('Plan & Billing')
+                <a href="{{ route('user.plan.billing') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-credit-card n-ic"></i><span>@lang('Plan & Billing')</span>
                 </a>
             </li>
 
             <li class="sidebar-menu__item {{ menuActive(['user.profile.setting', 'user.change.password', 'user.twofactor']) }}">
-                <a href="{{ route('user.profile.setting') }}" class="sidebar-menu__link">
-                    <i class="las la-cogs"></i>
-                    @lang('Setting')
+                <a href="{{ route('user.profile.setting') }}" class="sidebar-menu__link nav-item">
+                    <i class="las la-cog n-ic"></i><span>@lang('Setting')</span>
                 </a>
             </li>
+        </ul>
+    </nav>
 
-        </ul><!-- sidebar-menu end -->
-    </div>
-    <div class="sidebar-footer-action">
-        <a href="{{ route('user.logout') }}" class="sidebar-menu__link sidebar-menu__link--logout">
-            <i class="las la-sign-out-alt"></i>
-            @lang('Logout')
+    <div class="sidebar-footer-action s-logout">
+        <a href="{{ route('user.logout') }}" class="sidebar-menu__link sidebar-menu__link--logout nav-item">
+            <i class="las la-sign-out-alt n-ic"></i><span>@lang('Logout')</span>
         </a>
     </div>
-</div>
+</aside>
 
 @push('script')
-    <script>
+<script>
+    (function($) {
         'use strict';
-        (function($) {
-            const sidebar = document.querySelector('.d-sidebar');
-            const sidebarOpenBtn = document.querySelector('.sidebar-open-btn');
-            const sidebarCloseBtn = document.querySelector('.sidebar-close-btn');
 
-            sidebarOpenBtn.addEventListener('click', function() {
+        const sidebar = document.querySelector('.d-sidebar');
+        const openBtn = document.querySelector('.sidebar-open-btn');
+        const closeBtn = document.querySelector('.sidebar-close-btn');
+
+        if (openBtn && sidebar) {
+            openBtn.addEventListener('click', function() {
                 sidebar.classList.add('active');
             });
-            sidebarCloseBtn.addEventListener('click', function() {
+        }
+
+        if (closeBtn && sidebar) {
+            closeBtn.addEventListener('click', function() {
                 sidebar.classList.remove('active');
             });
+        }
 
-
-            $(function() {
-                $('#sidebar-menu-wrapper').slimScroll({
-                    height: '93vh'
-                });
+        if ($('#sidebar-menu-wrapper').length) {
+            $('#sidebar-menu-wrapper').slimScroll({
+                height: 'calc(100vh - 156px)'
             });
-
-            $('.sidebar-dropdown > a').on('click', function() {
-                if ($(this).parent().find('.sidebar-submenu').length) {
-                    if ($(this).parent().find('.sidebar-submenu').first().is(':visible')) {
-                        $(this).find('.side-menu__sub-icon').removeClass('transform rotate-180');
-                        $(this).removeClass('side-menu--open');
-                        $(this).parent().find('.sidebar-submenu').first().slideUp({
-                            done: function done() {
-                                $(this).removeClass('sidebar-submenu__open');
-                            }
-                        });
-                    } else {
-                        $(this).find('.side-menu__sub-icon').addClass('transform rotate-180');
-                        $(this).addClass('side-menu--open');
-                        $(this).parent().find('.sidebar-submenu').first().slideDown({
-                            done: function done() {
-                                $(this).addClass('sidebar-submenu__open');
-                            }
-                        });
-                    }
-                }
-            });
-        })(jQuery);
-    </script>
+        }
+    })(jQuery);
+</script>
 @endpush

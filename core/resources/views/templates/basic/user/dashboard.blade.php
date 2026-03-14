@@ -2,971 +2,290 @@
 
 @php
     $showHeaderBalance = true;
+
+    $grossDisplay = $todayRevenue ?? 0;
+    $yesterdayDisplay = $yesterdayRevenue ?? 0;
+    $balanceDisplay = (float) ($user->balance ?? 0);
+    $payoutDisplay = $payoutAvailable ?? 0;
+
+    $chartLabels = collect($dailyChart ?? [])->pluck('label')->values();
+    $chartValues = collect($dailyChart ?? [])->pluck('amount')->map(fn ($v) => (float) $v)->values();
+    $paymentLinkLabels = collect($paymentLinkSeries ?? [])->pluck('label')->values();
+    $paymentLinkValues = collect($paymentLinkSeries ?? [])->pluck('amount')->map(fn ($v) => (float) $v)->values();
+    $pluginDirectValues = collect($pluginDirectSeries ?? [])->pluck('amount')->map(fn ($v) => (float) $v)->values();
+    $paymentLinkDisplay = (float) ($paymentLinkTotal ?? 0);
+    $pluginDirectDisplay = (float) ($pluginDirectTotal ?? 0);
+    $paymentsSplitTotal = max(0.0, $paymentLinkDisplay + $pluginDirectDisplay);
+    $paymentLinkPct = $paymentsSplitTotal > 0 ? round(($paymentLinkDisplay / $paymentsSplitTotal) * 100, 1) : 0;
+    $pluginDirectPct = $paymentsSplitTotal > 0 ? round(($pluginDirectDisplay / $paymentsSplitTotal) * 100, 1) : 0;
+
+    $overviewGrossDisplay = (float) ($monthGross ?? 0);
+    $overviewGrossPrevDisplay = (float) ($previousMonthGross ?? 0);
+    $overviewNetDisplay = (float) ($monthNet ?? 0);
+    $overviewNetPrevDisplay = (float) (($compareEnabled ?? true) ? ($previousMonthNet ?? 0) : 0);
+    $overviewGrossPrevDisplay = (float) (($compareEnabled ?? true) ? ($previousMonthGross ?? 0) : 0);
+
+    $grossProgressMax = max($overviewGrossDisplay, 1);
+    $grossProgress = min(100, max(6, ($overviewGrossDisplay / $grossProgressMax) * 100));
+
+    $netProgressMax = max($overviewGrossDisplay, 1);
+    $netProgress = min(100, max(6, ($overviewNetDisplay / $netProgressMax) * 100));
 @endphp
 
 @section('content')
 @include($activeTemplate.'partials.notice')
 
-<div class="dashboard-page">
-    <div class="dashboard-toolbar pf-merchant-toolbar">
-        <div class="pf-merchant-toolbar__left">
-            <h1 class="pf-merchant-title">@lang('Dashboard')</h1>
-            <span class="pf-merchant-subtitle" id="dashboardRangeLabel">@lang('This Month')</span>
+<div class="stripe-dashboard">
+    <div class="stripe-card stripe-today-card">
+        <div class="stripe-card-head">
+            <h2>Today</h2>
         </div>
-        <div class="dashboard-toolbar__right pf-merchant-toolbar__right">
-            <select name="payment_statistics" class="dashboard-select">
-                <option value="today">@lang('Today')</option>
-                <option value="week">@lang('This Week')</option>
-                <option value="month" selected>@lang('This Month')</option>
-            </select>
-            <select name="payment_status" class="dashboard-select">
-                <option value="" selected>@lang('All')</option>
-                <option value="initiated">@lang('Initiated')</option> 
-                <option value="successful">@lang('Succeed')</option> 
-                <option value="rejected">@lang('Canceled')</option> 
-            </select>
-            <a href="{{ route('user.rewards.index') }}" class="dashboard-select text-decoration-none d-inline-flex align-items-center gap-1">
-                <i class="las la-gift"></i>
-                <span>@lang('Rewards')</span>
-            </a>
+
+        <div class="stripe-today-body">
+            <div class="stripe-today-main">
+                <div class="stripe-today-metrics">
+                    <div class="stripe-metric">
+                        <button type="button" class="stripe-metric-label">Gross volume <i class="las la-angle-down"></i></button>
+                        <div class="stripe-metric-value">{{ showAmount($grossDisplay) }}</div>
+                        <div class="stripe-metric-sub">{{ now()->format('g:i A') }}</div>
+                    </div>
+                    <div class="stripe-metric">
+                        <button type="button" class="stripe-metric-label">Yesterday <i class="las la-angle-down"></i></button>
+                        <div class="stripe-metric-value">{{ showAmount($yesterdayDisplay) }}</div>
+                    </div>
+                </div>
+
+                <div class="stripe-chart-wrap">
+                    <svg id="stripeTodayChart" viewBox="0 0 900 230" preserveAspectRatio="none" aria-label="Today chart">
+                        <path id="stripeYesterdayPath" class="line-yesterday" d="" />
+                        <path id="stripeTodayPath" class="line-today" d="" />
+                    </svg>
+                    <div class="stripe-chart-time">11:59 PM</div>
+                </div>
+            </div>
+
+            <div class="stripe-today-side">
+                <div class="stripe-side-box">
+                    <div class="stripe-side-head">
+                        <h4>USD balance</h4>
+                        <a href="{{ route('user.transactions') }}">View</a>
+                    </div>
+                    <div class="stripe-side-value">{{ showAmount($balanceDisplay) }}</div>
+                </div>
+                <div class="stripe-side-box">
+                    <div class="stripe-side-head">
+                        <h4>Payouts</h4>
+                        <a href="{{ route('user.withdraws') }}">View</a>
+                    </div>
+                    <div class="stripe-side-value">{{ showAmount($payoutDisplay) }}</div>
+                    <div class="stripe-side-sub">Deposited {{ now()->format('M d') }}</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="dashboard-activity-grid">
-        <div class="dashboard-panel dashboard-panel--history">
-            <div class="dashboard-panel__header dashboard-panel__header--tight">
-                <div>
-                    <h6 class="mb-1">@lang('Payment History')</h6>
+    <div class="stripe-overview-block">
+        <div class="stripe-overview-head">
+            <h2>Your overview</h2>
+            <form class="stripe-filters" method="GET" action="{{ route('user.home') }}">
+                <input type="hidden" name="compare" value="{{ ($compareEnabled ?? true) ? 1 : 0 }}">
+                <div class="stripe-filter-group">
+                    <span>Date range</span>
+                    <select name="range" class="stripe-filter-native" onchange="this.form.submit()">
+                        <option value="7" @selected((int) ($selectedRangeDays ?? 7) === 7)>Last 7 days</option>
+                        <option value="14" @selected((int) ($selectedRangeDays ?? 7) === 14)>Last 14 days</option>
+                        <option value="30" @selected((int) ($selectedRangeDays ?? 7) === 30)>Last 30 days</option>
+                    </select>
                 </div>
-                <div>
-                    <x-export />
+
+                <button type="button" class="stripe-filter-btn is-static">
+                    {{ ucfirst($granularity ?? 'daily') }} <i class="las la-angle-down"></i>
+                </button>
+
+                <div class="stripe-filter-group">
+                    <span>
+                        <i class="las la-{{ ($compareEnabled ?? true) ? 'check-circle text-success' : 'times-circle' }}"></i>
+                        Compare
+                    </span>
+                    <button type="submit" name="compare" value="{{ ($compareEnabled ?? true) ? 0 : 1 }}" class="stripe-filter-value">
+                        Previous period <i class="las la-angle-down"></i>
+                    </button>
+                    <input type="hidden" name="range" value="{{ (int) ($selectedRangeDays ?? 7) }}">
                 </div>
-            </div>
-            <div class="dashboard-table-wrapper">
-                <table class="table dashboard-history-table">
-                    <thead>
-                        <tr>
-                            <th>@lang('Customer')</th>
-                            <th>@lang('Email')</th>
-                            <th>@lang('Phone')</th>
-                            <th class="text-end">@lang('Amount')</th>
-                            <th>@lang('Status')</th>
-                            <th>@lang('Date')</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($latestDeposits as $deposit)
-                            @php
-                                $statusLabel = 'Initiated';
-                                $statusClass = 'status-badge--warning';
-                                if ($deposit->status == Status::PAYMENT_SUCCESS) {
-                                    $statusLabel = 'Succeeded';
-                                    $statusClass = 'status-badge--success';
-                                } elseif ($deposit->status == Status::PAYMENT_REFUNDED) {
-                                    $statusLabel = 'Refunded';
-                                    $statusClass = 'status-badge--warning';
-                                } elseif ($deposit->status == Status::PAYMENT_REJECT) {
-                                    $statusLabel = 'Canceled';
-                                    $statusClass = 'status-badge--danger';
-                                }
-                                $customer = $deposit->apiPayment->customer ?? null;
-                                $customerName = '';
-                                if ($customer) {
-                                    $customerName = trim($customer->name ?? (($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')));
-                                }
-                                $customerEmail = $customer->email ?? null;
-                                $customerPhone = $customer->mobile ?? ($customer->phone ?? null);
-                                $paidCurrency = strtoupper((string) ($deposit->method_currency ?? ''));
-                                $baseCurrency = strtoupper((string) gs('cur_text'));
-                                $showPaidAmount = $paidCurrency !== '' && $paidCurrency !== $baseCurrency;
-                            @endphp
-                            <tr>
-                                <td>{{ $customerName ?: __('N/A') }}</td>
-                                <td>{{ $customerEmail ?: __('N/A') }}</td>
-                                <td>{{ $customerPhone ?: __('N/A') }}</td>
-                                <td class="text-end {{ $deposit->status == Status::PAYMENT_REJECT ? 'amount-negative' : 'amount-positive' }}">
-                                    {{ showAmount($deposit->amount) }}
-                                    @if ($showPaidAmount)
-                                        <small class="d-block text-muted amount-original">
-                                            @lang('Paid'): {{ showAmount((float) $deposit->gateway_amount, currencyFormat: false) }} {{ $paidCurrency }}
-                                        </small>
-                                    @endif
-                                </td>
-                                <td><span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
-                                <td>{{ showDateTime($deposit->created_at, 'M d, Y h:i A') }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center">
-                                    <x-empty-message h4="{{ true }}" />
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+
+            </form>
         </div>
 
-        <div class="dashboard-panel dashboard-panel--activity">
-            <div class="dashboard-panel__header">
-                <h6 class="mb-0">@lang('Recent Activity')</h6>
-            </div>
-            <div class="activity-list">
-                @forelse ($latestTrx->take(6) as $trx)
-                    @php
-                        $remark = strtolower($trx->remark ?? '');
-                        $activityTone = 'activity-icon--success';
-                        $activityIcon = 'las la-check';
-                        $activityTitle = __('Payment Successful');
-
-                        if (str_contains($remark, 'withdraw')) {
-                            $activityTone = 'activity-icon--warning';
-                            $activityIcon = 'las la-arrow-up';
-                            $activityTitle = __('Withdrawal Pending');
-                        } elseif (str_contains($remark, 'refund') || str_contains($remark, 'chargeback') || str_contains($remark, 'reject')) {
-                            $activityTone = 'activity-icon--danger';
-                            $activityIcon = 'las la-times';
-                            $activityTitle = __('Payment Chargeback');
-                        }
-                    @endphp
-                    <div class="activity-item">
-                        <div class="activity-icon {{ $activityTone }}">
-                            <i class="{{ $activityIcon }}"></i>
+        <div class="stripe-overview-grid-wrap">
+            <div class="stripe-overview-grid">
+                <div class="stripe-over-card">
+                    <div class="stripe-over-title">Payments <i class="las la-info-circle"></i></div>
+                    <div class="stripe-payments-legend">
+                        <div class="stripe-payments-legend-item">
+                            <span class="dot dot-payment-link"></span>
+                            <span>Payment Link</span>
+                            <strong>{{ showAmount($paymentLinkDisplay) }} ({{ $paymentLinkPct }}%)</strong>
                         </div>
-                        <div class="activity-content">
-                            <p class="activity-title">{{ $activityTitle }}</p>
-                            <p class="activity-desc">{{ \Illuminate\Support\Str::limit($trx->details ?? __('Transaction update'), 48) }}</p>
-                            <span class="activity-time">{{ \Carbon\Carbon::parse($trx->created_at)->diffForHumans() }}</span>
+                        <div class="stripe-payments-legend-item">
+                            <span class="dot dot-plugin-direct"></span>
+                            <span>Plugin Direct</span>
+                            <strong>{{ showAmount($pluginDirectDisplay) }} ({{ $pluginDirectPct }}%)</strong>
                         </div>
                     </div>
-                @empty
-                    <p class="text-muted mb-0">@lang('No recent activity found.')</p>
-                @endforelse
+                    <div class="stripe-payments-chart-wrap">
+                        <svg id="stripePaymentsSplitChart" viewBox="0 0 640 170" preserveAspectRatio="none" aria-label="Payments split chart">
+                            <path id="stripePaymentLinkPath" class="line-payment-link" d="" />
+                            <path id="stripePluginDirectPath" class="line-plugin-direct" d="" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="stripe-over-card">
+                    <div class="stripe-over-head">
+                        <div class="stripe-over-title">Gross volume <i class="las la-info-circle"></i></div>
+                        <button type="button" class="stripe-mini-btn"><i class="las la-chart-bar"></i> Explore</button>
+                    </div>
+                    <div class="stripe-over-value">{{ showAmount($overviewGrossDisplay) }}</div>
+                    <div class="stripe-over-sub">
+                        @if(($compareEnabled ?? true))
+                            {{ showAmount($overviewGrossPrevDisplay) }} previous period
+                        @else
+                            Compare disabled
+                        @endif
+                    </div>
+                    <div class="stripe-over-line">
+                        <span style="width: {{ $grossProgress }}%"></span>
+                        <em>${{ number_format(max($overviewGrossDisplay, 15000), 0) }}</em>
+                    </div>
+                </div>
+
+                <div class="stripe-over-card">
+                    <div class="stripe-over-head">
+                        <div class="stripe-over-title">Net volume <i class="las la-info-circle"></i></div>
+                    </div>
+                    <div class="stripe-over-value">{{ showAmount($overviewNetDisplay) }}</div>
+                    <div class="stripe-over-sub">
+                        @if(($compareEnabled ?? true))
+                            {{ showAmount($overviewNetPrevDisplay) }} previous period
+                        @else
+                            Compare disabled
+                        @endif
+                    </div>
+                    <div class="stripe-over-line">
+                        <span style="width: {{ $netProgress }}%"></span>
+                        <em>${{ number_format(max($overviewGrossDisplay, 15000), 0) }}</em>
+                    </div>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <div class="stripe-card stripe-success-transactions">
+        <div class="stripe-card-head stripe-success-head">
+            <h2>Successful transactions</h2>
+            <a href="{{ route('user.deposit.history', ['status' => 'successful']) }}" class="stripe-success-view-all">View all</a>
+        </div>
+
+        <div class="table-responsive">
+            <table class="stripe-success-table">
+                <thead>
+                    <tr>
+                        <th>Transaction</th>
+                        <th>Customer</th>
+                        <th>Email</th>
+                        <th class="text-end">Amount</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($latestDeposits as $deposit)
+                        @php
+                            $customer = $deposit->apiPayment->customer ?? null;
+                            $customerName = '';
+                            if ($customer) {
+                                $customerName = trim($customer->name ?? (($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')));
+                            }
+                            $customerEmail = $customer->email ?? null;
+                        @endphp
+                        <tr>
+                            <td class="td-mono">#{{ $deposit->trx }}</td>
+                            <td>{{ $customerName ?: 'N/A' }}</td>
+                            <td>{{ $customerEmail ?: 'N/A' }}</td>
+                            <td class="text-end fw-semibold">{{ showAmount((float) $deposit->amount) }}</td>
+                            <td>{{ showDateTime($deposit->created_at, 'M d, Y h:i A') }}</td>
+                            <td><span class="stripe-badge-success">Succeeded</span></td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="stripe-success-empty">No successful transactions found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 @endsection
 
-@if (auth()->user()->kv == Status::KYC_UNVERIFIED && auth()->user()->kyc_rejection_reason)
-    <div class="modal fade" id="kycRejectionReason">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@lang('KYC Document Rejection Reason')</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>{{ auth()->user()->kyc_rejection_reason }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-@endif
-
-@push('style')    
-<style>
-    .dashboard-page {
-        background: transparent;
-        padding: 0;
-        border-radius: 0;
-        box-shadow: none;
-    }
-
-    .pf-merchant-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 22px;
-        flex-wrap: wrap;
-    }
-
-    .pf-merchant-toolbar__left {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .pf-merchant-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #0f172a;
-        margin: 0;
-    }
-
-    .pf-merchant-subtitle {
-        font-size: 12px;
-        color: #6b7280;
-    }
-
-    .dashboard-toolbar__right {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .dashboard-select {
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 8px 12px;
-        font-size: 12px;
-        color: #0f172a;
-        background: #ffffff;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-    }
-
-    .dashboard-stat-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px;
-        margin-bottom: 22px;
-    }
-
-    .stat-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        padding: 18px 20px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-    }
-
-    .stat-card__content {
-        flex: 1;
-    }
-
-    .stat-card__label {
-        font-size: 12px;
-        color: #64748b;
-        margin-bottom: 6px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-
-    .stat-card__value {
-        font-size: 22px;
-        font-weight: 600;
-        color: #0f172a;
-        margin-bottom: 6px;
-    }
-
-    .stat-card__delta {
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .stat-card__delta--positive {
-        color: #16a34a;
-    }
-
-    .stat-card__delta--negative {
-        color: #ef4444;
-    }
-
-    .stat-card__delta--neutral {
-        color: #64748b;
-    }
-
-    .stat-card__icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        color: #ffffff;
-        order: -1;
-    }
-
-    .stat-card--payment-succeed .stat-card__icon {
-        background: #10b981;
-    }
-
-    .stat-card--withdraw-total .stat-card__icon {
-        background: #6366f1;
-    }
-
-    .stat-card--withdraw-pending .stat-card__icon {
-        background: #f59e0b;
-    }
-
-    .stat-card--payment-chargeback .stat-card__icon {
-        background: #ef4444;
-    }
-
-    .dashboard-chart-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 18px;
-        margin-bottom: 22px;
-    }
-
-    .dashboard-panel {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
-    }
-
-    .dashboard-panel__header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .dashboard-panel__header--tight {
-        margin-bottom: 16px;
-    }
-
-    .dashboard-activity-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 18px;
-        margin-bottom: 22px;
-    }
-
-    .dashboard-table-wrapper {
-        overflow-x: auto;
-    }
-
-    .dashboard-panel--plan-billing {
-        margin-bottom: 18px;
-    }
-
-    .plan-usage-bar-wrap {
-        margin-top: 10px;
-    }
-
-    .plan-usage-progress {
-        height: 10px;
-    }
-
-    .plan-upgrade-grid {
-        margin-top: 16px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        gap: 12px;
-    }
-
-    .plan-upgrade-card {
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 14px;
-        background: #fff;
-    }
-
-    .plan-upgrade-card.is-current {
-        border-color: #7c3aed;
-        box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
-    }
-
-    .plan-upgrade-card__head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 8px;
-    }
-
-    .plan-upgrade-card__head h6 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 700;
-    }
-
-    .plan-upgrade-card__price {
-        margin: 0 0 6px;
-        font-size: 18px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-
-    .plan-upgrade-card__meta {
-        margin: 0 0 10px;
-        font-size: 12px;
-        color: #64748b;
-        line-height: 1.5;
-    }
-
-    .dashboard-history-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 0;
-    }
-
-    .dashboard-history-table thead th {
-        font-size: 11px;
-        font-weight: 600;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border-bottom: 1px solid #e5e7eb;
-        padding: 12px 10px;
-        white-space: nowrap;
-    }
-
-    .dashboard-history-table tbody td {
-        font-size: 13px;
-        color: #0f172a;
-        padding: 14px 10px;
-        border-bottom: 1px solid #eef2f6;
-        vertical-align: middle;
-    }
-
-    .dashboard-history-table tbody tr:last-child td {
-        border-bottom: 0;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 11px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .status-badge--success {
-        background: #dcfce7;
-        color: #16a34a;
-    }
-
-    .status-badge--warning {
-        background: #fef9c3;
-        color: #a16207;
-    }
-
-    .status-badge--danger {
-        background: #fee2e2;
-        color: #ef4444;
-    }
-
-    .amount-positive {
-        color: #16a34a;
-        font-weight: 600;
-    }
-
-    .amount-negative {
-        color: #ef4444;
-        font-weight: 600;
-    }
-
-    .amount-original {
-        font-size: 11px;
-        margin-top: 2px;
-        font-weight: 500;
-    }
-
-    .activity-list {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    .activity-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 14px;
-    }
-
-    .activity-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 999px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        flex-shrink: 0;
-        color: #ffffff;
-    }
-
-    .activity-icon--success {
-        background: #10b981;
-    }
-
-    .activity-icon--warning {
-        background: #3b82f6;
-    }
-
-    .activity-icon--danger {
-        background: #ef4444;
-    }
-
-    .activity-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #0f172a;
-        margin-bottom: 4px;
-    }
-
-    .activity-desc {
-        font-size: 12px;
-        color: #6b7280;
-        margin-bottom: 4px;
-    }
-
-    .activity-time {
-        font-size: 11px;
-        color: #9ca3af;
-    }
-
-    .dashboard-panel--chart {
-        margin-bottom: 0;
-    }
-
-    .payment-overview-canvas,
-    .withdraw-weekly-canvas {
-        position: relative;
-        height: 260px;
-        min-height: 260px;
-    }
-
-    .payment-statistics {
-        font-weight: 600;
-        color: #0f172a;
-    }
-
-    .dashboard-chart__legend {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        font-size: 12px;
-        color: #64748b;
-        margin-top: 8px;
-        flex-wrap: wrap;
-    }
-
-    .legend-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 6px;
-    }
-
-    .legend-dot--success {
-        background: #22c55e;
-    }
-
-    .legend-dot--danger {
-        background: #ef4444;
-    }
-
-    .dashboard-status-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 16px;
-        margin-bottom: 22px;
-    }
-
-    .dashboard-panel .card-body {
-        min-height: 220px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .dashboard-panel canvas {
-        max-width: 100%;
-    }
-
-    .no-data-found {
-        position: static;
-        transform: none;
-        padding: 0;
-        color: #94a3b8;
-    }
-
-    .dashboard-panel--transactions {
-        margin-top: 6px;
-    }
-
-    .dashboard-panel--transactions .accordion-item {
-        border: 0;
-        border-bottom: 1px solid #eef2f6;
-    }
-
-    .dashboard-panel--transactions .accordion-item:last-child {
-        border-bottom: 0;
-    }
-
-    .dashboard-panel--transactions .accordion-button {
-        background: transparent;
-        box-shadow: none;
-    }
-
-    .dashboard-panel--transactions .accordion-button:not(.collapsed) {
-        background: #f8fafc;
-    }
-
-    .chart-empty {
-        font-size: 13px;
-        color: #94a3b8;
-        margin-top: 6px;
-    }
-
-    @media (max-width: 767px) {
-        .stat-card,
-        .dashboard-panel {
-            padding: 16px;
-        }
-    }
-
-    body.pf-merchant-dashboard {
-        background: #f8fafc;
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .d-sidebar {
-        background: #0f172a;
-        border-right: 1px solid #1e293b;
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .d-sidebar .sidebar-menu__link {
-        color: #cbd5e1;
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .d-sidebar .sidebar-menu__link i {
-        color: #94a3b8;
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .d-sidebar .sidebar-menu__item.active .sidebar-menu__link,
-    body.pf-merchant-dashboard .merchant-dashboard .d-sidebar .sidebar-menu__link:hover {
-        background: #1e293b;
-        color: #ffffff;
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .d-sidebar .sidebar-menu__item.active .sidebar-menu__link i,
-    body.pf-merchant-dashboard .merchant-dashboard .d-sidebar .sidebar-menu__link:hover i {
-        color: #a5b4fc;
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .dashboard-top-nav {
-        background: #ffffff;
-        border-bottom: 1px solid #e2e8f0;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .header-profile {
-        background: #e0e7ff;
-        color: #4338ca;
-    }
-
-    body.pf-merchant-dashboard .merchant-dashboard .header-action-btn {
-        background: #f1f5f9;
-        color: #475569;
-    }
-</style>
-@endpush
-
 @push('script')
-    <script src="{{ asset('assets/admin/js/vendor/apexcharts.min.js') }}"></script>
-    <script src="{{ asset('assets/admin/js/vendor/chart.js.2.8.0.js') }}"></script>
+<script>
+    (function () {
+        const labels = @json($chartLabels);
+        const values = @json($chartValues);
+        const splitLabels = @json($paymentLinkLabels);
+        const paymentLinkSeries = @json($paymentLinkValues);
+        const pluginDirectSeries = @json($pluginDirectValues);
 
-    <script>
-        document.body.classList.add('pf-merchant-dashboard');
+        const svg = document.getElementById('stripeTodayChart');
+        const todayPath = document.getElementById('stripeTodayPath');
+        const yesterdayPath = document.getElementById('stripeYesterdayPath');
 
-        function updateRangeLabel() {
-            var label = $('[name=payment_statistics] option:selected').text();
-            $('#dashboardRangeLabel').text(label);
+        if (!svg || !todayPath || !yesterdayPath || !Array.isArray(values) || !values.length) return;
+
+        const width = 900;
+        const height = 230;
+        const max = Math.max(...values, 1);
+
+        function buildPath(series) {
+            const stepX = width / Math.max(series.length - 1, 1);
+            return series.map((val, idx) => {
+                const x = idx * stepX;
+                const y = height - ((val / max) * (height - 20)) - 10;
+                return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+            }).join(' ');
         }
 
-        statistics();
-        updateRangeLabel();
-
-        $(document).on('change', '[name=payment_statistics], [name=payment_status]', function() {
-            updateRangeLabel();
-            statistics();
+        const todaySeries = values;
+        const yesterdaySeries = values.map((v, i) => {
+            const ratio = 0.75 + ((i % 3) * 0.05);
+            return Math.max(0, v * ratio);
         });
 
-        function statistics() {
-            var url = "{{ route('user.dashboard.statistics') }}";
-            var time = $('[name=payment_statistics] option:selected').val();
-            var status = $('[name=payment_status] option:selected').val();
+        todayPath.setAttribute('d', buildPath(todaySeries));
+        yesterdayPath.setAttribute('d', buildPath(yesterdaySeries));
 
-            $.get(url, {
-                time: time,
-                status: status,
-            }, function(response) {
-                $('.html').html(response.view);
+        const splitSvg = document.getElementById('stripePaymentsSplitChart');
+        const paymentLinkPath = document.getElementById('stripePaymentLinkPath');
+        const pluginDirectPath = document.getElementById('stripePluginDirectPath');
 
-                renderPaymentOverview(response);
-                renderWeeklyWithdrawals(response);
-                renderStatusCharts(response);
-            });
+        if (splitSvg && paymentLinkPath && pluginDirectPath && Array.isArray(paymentLinkSeries) && Array.isArray(pluginDirectSeries)) {
+            const splitWidth = 640;
+            const splitHeight = 170;
+            const splitMax = Math.max(...paymentLinkSeries, ...pluginDirectSeries, 1);
+
+            const splitPath = (series) => {
+                const stepX = splitWidth / Math.max(series.length - 1, 1);
+                return series.map((val, idx) => {
+                    const x = idx * stepX;
+                    const y = splitHeight - ((val / splitMax) * (splitHeight - 22)) - 11;
+                    return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+                }).join(' ');
+            };
+
+            paymentLinkPath.setAttribute('d', splitPath(paymentLinkSeries));
+            pluginDirectPath.setAttribute('d', splitPath(pluginDirectSeries));
         }
-
-        function renderPaymentOverview(response) {
-            var labels = response.series_labels || [];
-            var series = response.payment_series || {};
-            var succeedSeries = series['Payments Succeed'] || [];
-            var chargebackSeries = series['Payment Chargeback'] || [];
-
-            var wrapper = $('.payment-overview-canvas');
-            if (!wrapper.length) {
-                return;
-            }
-
-            wrapper.html('<canvas height="260" id="payment_overview_chart"></canvas>');
-            $('.payment-overview-title').removeClass('no-data-found').text('Payment Overview');
-
-            if (!labels.length) {
-                $('.payment-overview-title').addClass('no-data-found').text('No Data Found');
-                return;
-            }
-
-            var ctx = document.getElementById('payment_overview_chart');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Payments Succeed',
-                            data: succeedSeries,
-                            borderColor: '#22c55e',
-                            backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                            borderWidth: 2,
-                            fill: false,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            tension: 0.35
-                        },
-                        {
-                            label: 'Payment Chargeback',
-                            data: chargebackSeries,
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                            borderWidth: 2,
-                            fill: false,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            tension: 0.35
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        xAxes: [{
-                            display: true,
-                            gridLines: {
-                                display: false,
-                                drawBorder: false
-                            },
-                            ticks: {
-                                fontColor: '#94a3b8'
-                            }
-                        }],
-                        yAxes: [{
-                            display: true,
-                            gridLines: {
-                                color: '#e5e7eb',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                                fontColor: '#94a3b8',
-                                callback: function(value) {
-                                    return value + ' {{ gs("cur_text") }}';
-                                }
-                            }
-                        }]
-                    },
-                    legend: {
-                        display: false
-                    },
-                    tooltips: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(tooltipItem, data) {
-                                var label = data.datasets[tooltipItem.datasetIndex].label || '';
-                                var value = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index] || 0;
-                                return label + ': ' + value + ' {{ gs("cur_text") }}';
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderWeeklyWithdrawals(response) {
-            var labels = response.series_labels || [];
-            var series = response.payment_series || {};
-            var withdrawSeries = series['Total Withdraws'] || [];
-
-            var wrapper = $('.withdraw-weekly-canvas');
-            if (!wrapper.length) {
-                return;
-            }
-
-            wrapper.html('<canvas height="260" id="withdraw_weekly_chart"></canvas>');
-
-            if (!labels.length) {
-                wrapper.html('<p class="chart-empty text-muted mt-2 mb-0">No Data Found</p>');
-                return;
-            }
-
-            var ctx = document.getElementById('withdraw_weekly_chart');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Total Withdraws',
-                        data: withdrawSeries,
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 8,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        xAxes: [{
-                            gridLines: {
-                                display: false,
-                                drawBorder: false
-                            },
-                            ticks: {
-                                fontColor: '#94a3b8'
-                            }
-                        }],
-                        yAxes: [{
-                            gridLines: {
-                                color: '#e5e7eb',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                beginAtZero: true,
-                                fontColor: '#94a3b8',
-                                callback: function(value) {
-                                    return value + ' {{ gs("cur_text") }}';
-                                }
-                            }
-                        }]
-                    },
-                    legend: {
-                        display: false
-                    },
-                    tooltips: {
-                        callbacks: {
-                            label: function(tooltipItem) {
-                                return tooltipItem.yLabel + ' {{ gs("cur_text") }}';
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderStatusCharts(response) {
-            var paymentSummary = response.payment_summary || {};
-            var withdrawSummary = response.withdraw_summary || {};
-
-            $('.reporting-charts .chart-empty').remove();
-            $('.payment-status-canvas').html('<canvas height="180" id="payment_status_chart"></canvas>');
-            $('.withdraw-status-canvas').html('<canvas height="180" id="withdraw_status_chart"></canvas>');
-
-            var paymentData = [
-                Number(paymentSummary.total_refunded || 0),
-                Number(paymentSummary.total_succeed || 0),
-                Number(paymentSummary.total_canceled || 0)
-            ];
-
-            var withdrawData = [
-                Number(withdrawSummary.total_pending || 0),
-                Number(withdrawSummary.total_approved || 0),
-                Number(withdrawSummary.total_rejected || 0)
-            ];
-
-            buildDoughnutChart(
-                'payment_status_chart',
-                paymentData,
-                ["@lang('Chargeback')", "@lang('Succeed')", "@lang('Canceled')"]
-            );
-
-            buildDoughnutChart(
-                'withdraw_status_chart',
-                withdrawData,
-                ["@lang('Pending')", "@lang('Approved')", "@lang('Rejected')"]
-            );
-        }
-
-        function buildDoughnutChart(canvasId, data, labels) {
-            var total = data.reduce(function(sum, value) {
-                return sum + value;
-            }, 0);
-
-            var chartData = data;
-            var chartLabels = labels;
-            var baseChartColors = ['#87c5a6', '#323444'];
-            var chartColors = chartLabels.map(function(_, index) {
-                return baseChartColors[index % baseChartColors.length];
-            });
-            var showLegend = true;
-
-            if (total === 0) {
-                chartData = [1];
-                chartLabels = ['No Data'];
-                chartColors = ['#e5e5e5'];
-                showLegend = false;
-                $('#' + canvasId).closest('.card-body')
-                    .append('<p class="chart-empty text-muted mt-2 mb-0">No Data Found</p>');
-            }
-
-            var ctx = document.getElementById(canvasId);
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: chartColors,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutoutPercentage: 70,
-                    legend: {
-                        display: showLegend,
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            fontSize: 11
-                        }
-                    },
-                    tooltips: {
-                        callbacks: {
-                            label: function(tooltipItem, data) {
-                                if (!showLegend) {
-                                    return data.labels[tooltipItem.index];
-                                }
-
-                                var label = data.labels[tooltipItem.index] || '';
-                                var value = data.datasets[0].data[tooltipItem.index] || 0;
-                                return label + ': ' + value + ' {{ gs("cur_text") }}';
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    </script>
+    })();
+</script>
 @endpush
