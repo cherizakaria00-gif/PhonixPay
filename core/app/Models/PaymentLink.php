@@ -27,6 +27,11 @@ class PaymentLink extends Model
         'is_reusable' => 'boolean',
     ];
 
+    public function displayTitle(): string
+    {
+        return (string) ($this->title ?: $this->description ?: 'Payment Link');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -39,7 +39,7 @@ class PaymentLinkController extends Controller
             ->whereNotNull('payment_link_id')
             ->with([
                 'apiPayment:id,deposit_id,customer',
-                'paymentLink:id,description,code',
+                'paymentLink:id,title,description,code',
             ])
             ->orderBy('id', 'desc')
             ->paginate(getPaginate(), ['*'], 'history_page');
@@ -68,6 +68,7 @@ class PaymentLinkController extends Controller
         $currencies = $this->availableCurrencies();
 
         $request->validate([
+            'title' => 'required|string|max:255',
             'amount' => 'required|numeric|gt:0',
             'currency' => 'required|string|in:' . implode(',', $currencies),
             'description' => 'required|string|max:255',
@@ -80,6 +81,7 @@ class PaymentLinkController extends Controller
         $paymentLink = new PaymentLink();
         $paymentLink->user_id = auth()->id();
         $paymentLink->code = $this->generateCode();
+        $paymentLink->title = $request->title;
         $paymentLink->amount = $request->amount;
         $paymentLink->currency = strtoupper($request->currency);
         $paymentLink->description = $request->description;
@@ -143,6 +145,7 @@ class PaymentLinkController extends Controller
         $currencies = $this->availableCurrencies($paymentLink->currency);
 
         $request->validate([
+            'title' => 'required|string|max:255',
             'amount' => 'required|numeric|gt:0',
             'currency' => 'required|string|in:' . implode(',', $currencies),
             'description' => 'required|string|max:255',
@@ -152,6 +155,7 @@ class PaymentLinkController extends Controller
             'expires_at' => 'required_without:no_expiry|nullable|date|after:now',
         ]);
 
+        $paymentLink->title = $request->title;
         $paymentLink->amount = $request->amount;
         $paymentLink->currency = strtoupper($request->currency);
         $paymentLink->description = $request->description;

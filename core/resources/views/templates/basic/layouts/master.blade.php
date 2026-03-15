@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title> {{ gs()->siteName(__($pageTitle)) }}</title> 
+    <title> {{ @$seoContents->meta_title ?: gs()->siteName(__($pageTitle)) }}</title> 
     @include('partials.seo')
 
     <link rel="stylesheet" href="{{ asset('assets/global/css/bootstrap.min.css') }}">

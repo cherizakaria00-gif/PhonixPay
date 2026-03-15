@@ -6,6 +6,7 @@ use App\Models\ApiPayment;
 use App\Models\PaymentLink;
 use App\Traits\ApiPaymentHelpers;
 use Illuminate\Http\Request;
+use stdClass;
 
 class PaymentLinkController extends Controller
 {
@@ -15,25 +16,33 @@ class PaymentLinkController extends Controller
     {
         $paymentLink = PaymentLink::where('code', $code)->with('user')->firstOrFail();
         $paymentLink->markExpiredIfNeeded();
+        $linkTitle = $paymentLink->displayTitle();
+        $linkDescription = (string) ($paymentLink->description ?: $linkTitle);
+        $seoContents = new stdClass();
+        $seoContents->description = $linkDescription;
+        $seoContents->keywords = [];
+        $seoContents->social_title = $linkTitle;
+        $seoContents->social_description = $linkDescription;
+        $seoContents->meta_title = $linkTitle;
 
         if ($paymentLink->status == PaymentLink::STATUS_PAID && !$paymentLink->allowsMultiplePayments()) {
-            $pageTitle = 'Payment Link';
+            $pageTitle = $linkTitle;
             $message = 'This payment link has already been paid.';
-            return view('Template::payment.payment_link_status', compact('pageTitle', 'message'));
+            return view('Template::payment.payment_link_status', compact('pageTitle', 'message', 'seoContents'));
         }
 
         if ($paymentLink->status == PaymentLink::STATUS_EXPIRED || $paymentLink->isExpired()) {
-            $pageTitle = 'Payment Link';
+            $pageTitle = $linkTitle;
             $message = 'This payment link has expired.';
-            return view('Template::payment.payment_link_status', compact('pageTitle', 'message'));
+            return view('Template::payment.payment_link_status', compact('pageTitle', 'message', 'seoContents'));
         }
 
         $user = $paymentLink->user;
         $checkUserPayment = $this->checkUserPayment($user, $paymentLink->isPlanSubscription());
         if (@$checkUserPayment['status'] == 'error') {
-            $pageTitle = 'Payment Link';
+            $pageTitle = $linkTitle;
             $message = $checkUserPayment['message'][0] ?? 'This payment link is not available.';
-            return view('Template::payment.payment_link_status', compact('pageTitle', 'message'));
+            return view('Template::payment.payment_link_status', compact('pageTitle', 'message', 'seoContents'));
         }
 
         $apiPayment = new ApiPayment();
@@ -61,15 +70,15 @@ class PaymentLinkController extends Controller
         $preferredMethodCode = $checkoutAutoSelection['preferred_method_code'];
 
         if (!$gatewayCurrency->count()) {
-            $pageTitle = 'Payment Link';
+            $pageTitle = $linkTitle;
             $message = 'No payment gateway is available for this payment.';
-            return view('Template::payment.payment_link_status', compact('pageTitle', 'message'));
+            return view('Template::payment.payment_link_status', compact('pageTitle', 'message', 'seoContents'));
         }
 
-        $pageTitle = 'Payment Link';
+        $pageTitle = $linkTitle;
         $showCustomerForm = true;
 
-        return view('Template::payment.deposit', compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'paymentLink', 'showCustomerForm', 'ipCountryCode', 'preferredMethodCode'));
+        return view('Template::payment.deposit', compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'paymentLink', 'showCustomerForm', 'ipCountryCode', 'preferredMethodCode', 'seoContents'));
     }
 
     public function ipn($code)

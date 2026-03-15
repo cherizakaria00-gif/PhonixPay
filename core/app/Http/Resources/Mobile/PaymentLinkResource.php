@@ -12,6 +12,7 @@ class PaymentLinkResource extends JsonResource
         return [
             'id' => (int) $this->id,
             'code' => (string) $this->code,
+            'title' => (string) ($this->title ?? $this->description ?? 'Payment Link'),
             'description' => (string) ($this->description ?? ''),
             'amount' => (float) $this->amount,
             'currency' => strtoupper((string) ($this->currency ?: 'USD')),

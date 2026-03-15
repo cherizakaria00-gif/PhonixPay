@@ -26,7 +26,7 @@
                     <div class="pf-link-card">
                         <div class="pf-link-card__top">
                             <div>
-                                <h5 class="pf-link-title mb-1">{{ $link->description ?: __('Payment Link') }}</h5>
+                                <h5 class="pf-link-title mb-1">{{ $link->displayTitle() }}</h5>
                                 <div class="pf-link-amount">
                                     {{ showAmount($link->amount, currencyFormat:false) }}
                                     <span>{{ __($link->currency) }}</span>
@@ -143,7 +143,7 @@
                                 @endphp
                                 <tr>
                                     <td>{{ $customerName ?: __('N/A') }}</td>
-                                    <td>{{ $deposit->paymentLink->description ?? $deposit->paymentLink->code ?? __('N/A') }}</td>
+                                    <td>{{ $deposit->paymentLink?->title ?? $deposit->paymentLink?->description ?? $deposit->paymentLink?->code ?? __('N/A') }}</td>
                                     <td class="text-end">
                                         <strong>{{ showAmount($deposit->amount) }}</strong>
                                         @if($showPaidAmount)
