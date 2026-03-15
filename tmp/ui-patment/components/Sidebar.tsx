@@ -17,9 +17,18 @@ interface SidebarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   onLogout: () => void;
+  isMobileOpen: boolean;
+  onCloseMobile: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogout }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  role,
+  currentPath,
+  onNavigate,
+  onLogout,
+  isMobileOpen,
+  onCloseMobile,
+}) => {
   const adminNav: NavItem[] = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Users & KYC', path: '/admin/users', icon: Users },
@@ -41,7 +50,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate,
   const items = role === UserRole.ADMIN ? adminNav : merchantNav;
 
   return (
-    <div className="flex flex-col w-64 bg-slate-900 h-screen text-white sticky top-0">
+    <>
+      <button
+        type="button"
+        className={`fixed inset-0 z-30 bg-slate-900/50 transition-opacity md:hidden ${
+          isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onCloseMobile}
+        aria-label="Close sidebar"
+      />
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-900 text-white shadow-xl transition-transform duration-200 md:static md:h-screen md:translate-x-0 md:shadow-none ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
       <div className="flex items-center justify-center h-16 border-b border-slate-700">
         <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
           PayFlow
@@ -56,7 +79,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate,
           return (
             <button
               key={item.path}
-              onClick={() => onNavigate(item.path)}
+              onClick={() => {
+                onNavigate(item.path);
+                onCloseMobile();
+              }}
               className={`w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                 isActive 
                   ? 'bg-slate-800 text-white' 
@@ -72,13 +98,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate,
 
       <div className="p-4 border-t border-slate-700">
         <button
-          onClick={onLogout}
+          onClick={() => {
+            onLogout();
+            onCloseMobile();
+          }}
           className="w-full flex items-center px-2 py-2 text-sm font-medium text-red-400 rounded-md hover:bg-slate-800 transition-colors"
         >
           <LogOut className="mr-3 h-5 w-5" />
           Sign Out
         </button>
       </div>
-    </div>
+      </aside>
+    </>
   );
 };

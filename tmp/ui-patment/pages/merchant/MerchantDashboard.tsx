@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { DollarSign, ArrowUpRight, Link, CreditCard } from 'lucide-react';
 
@@ -12,17 +12,31 @@ const data = [
   { name: 'Sun', sales: 750 },
 ];
 
+const MOBILE_BREAKPOINT = 640;
+
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  return isMobile;
+};
+
 const StatCard = ({ title, value, icon: Icon, color }: any) => (
-  <div className="bg-white overflow-hidden shadow rounded-lg p-5">
-    <div className="flex items-center">
+  <div className="bg-white overflow-hidden shadow rounded-lg p-4 sm:p-5">
+    <div className="flex items-center gap-3 sm:gap-0">
       <div className={`flex-shrink-0 rounded-md p-3 ${color}`}>
-        <Icon className="h-6 w-6 text-white" />
+        <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
       </div>
-      <div className="ml-5 w-0 flex-1">
+      <div className="sm:ml-5 w-0 flex-1">
         <dl>
           <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
           <dd>
-            <div className="text-lg font-medium text-gray-900">{value}</div>
+            <div className="text-base sm:text-lg font-medium text-gray-900">{value}</div>
           </dd>
         </dl>
       </div>
@@ -31,10 +45,12 @@ const StatCard = ({ title, value, icon: Icon, color }: any) => (
 );
 
 export const MerchantDashboard: React.FC = () => {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
         <span className="text-sm text-gray-500">Last 7 Days</span>
       </div>
       
@@ -45,21 +61,21 @@ export const MerchantDashboard: React.FC = () => {
         <StatCard title="Active Links" value="8" icon={Link} color="bg-blue-500" />
       </div>
 
-      <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Sales Performance</h3>
-        <div className="h-72">
+      <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900 mb-3 sm:mb-4">Sales Performance</h3>
+        <div className="h-64 sm:h-72 -ml-2 sm:ml-0">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 10, right: isMobile ? 8 : 16, left: isMobile ? -16 : 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="name" />
-              <YAxis />
+              <XAxis dataKey="name" tick={{ fontSize: isMobile ? 11 : 12 }} />
+              <YAxis hide={isMobile} tick={{ fontSize: 12 }} />
               <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip />
+              <Tooltip formatter={(value) => [`$${value}`, 'Sales']} />
               <Area type="monotone" dataKey="sales" stroke="#10b981" fillOpacity={1} fill="url(#colorSales)" />
             </AreaChart>
           </ResponsiveContainer>
