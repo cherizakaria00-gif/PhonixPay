@@ -12,6 +12,7 @@ use App\Models\Form;
 use App\Models\Gateway;
 use App\Models\GatewayCurrency;
 use App\Models\NotificationLog;
+use App\Models\PaymentLink;
 use App\Models\Plan;
 use App\Models\PlanChangeRequest;
 use App\Models\PluginLicense;
@@ -256,6 +257,143 @@ class UserController extends Controller
             'unread_count' => $unreadCount,
             'notifications'=> $notifications,
         ]);
+    }
+
+    public function gatewaySetupFee()
+    {
+        $user = auth()->user();
+
+        if (($user->setup_fee_status ?? 'unpaid') === 'approved') {
+            return to_route('user.home');
+        }
+
+        $paymentLink = $this->getOrCreateGatewaySetupFeeLink($user);
+
+        $walletAddress = trim((string) env('GATEWAY_SETUP_FEE_BINANCE_WALLET', ''));
+        $walletNetwork = trim((string) env('GATEWAY_SETUP_FEE_BINANCE_NETWORK', 'BEP20'));
+        $pageTitle = 'Gateway Setup Fee';
+        $countdownSeconds = max(0, now()->diffInSeconds($paymentLink->expires_at, false));
+        $reviewWindowHours = max(1, (int) env('GATEWAY_SETUP_FEE_REVIEW_HOURS', 24));
+        $reviewCountdownSeconds = null;
+
+        if (($user->setup_fee_status ?? 'unpaid') === 'pending_review' && $user->setup_fee_submitted_at) {
+            $reviewCountdownSeconds = max(
+                0,
+                now()->diffInSeconds($user->setup_fee_submitted_at->copy()->addHours($reviewWindowHours), false)
+            );
+        }
+
+        $qrCodeUrl = $walletAddress ? cryptoQR($walletAddress) : null;
+
+        return view('Template::user.gateway_setup_fee', compact(
+            'pageTitle',
+            'paymentLink',
+            'walletAddress',
+            'walletNetwork',
+            'countdownSeconds',
+            'reviewCountdownSeconds',
+            'reviewWindowHours',
+            'qrCodeUrl',
+            'user'
+        ));
+    }
+
+    public function confirmGatewaySetupFee(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+        ]);
+
+        $user = auth()->user();
+
+        if (($user->setup_fee_status ?? 'unpaid') === 'approved') {
+            return to_route('user.home');
+        }
+
+        if (($user->setup_fee_status ?? 'unpaid') === 'pending_review') {
+            $notify[] = ['info', 'Your setup fee payment is already waiting for admin review'];
+            return to_route('user.gateway.setup.fee')->withNotify($notify);
+        }
+
+        $paymentLink = PaymentLink::query()
+            ->where('user_id', $user->id)
+            ->where('code', $request->code)
+            ->where('description', 'Gateway setup fee')
+            ->firstOrFail();
+
+        if ($paymentLink->isExpired() || (int) $paymentLink->status !== PaymentLink::STATUS_ACTIVE) {
+            $notify[] = ['error', 'This setup fee payment session has expired. Please generate a new one.'];
+            return to_route('user.gateway.setup.fee')->withNotify($notify);
+        }
+
+        $user->setup_fee_status = 'pending_review';
+        $user->setup_fee_payment_link_id = $paymentLink->id;
+        $user->setup_fee_submitted_at = now();
+        $user->setup_fee_reviewed_at = null;
+        $user->setup_fee_rejection_reason = null;
+        $user->save();
+
+        $notify[] = ['success', 'Setup fee payment submitted for admin review. Stay on this page while we process it.'];
+        return to_route('user.gateway.setup.fee')->withNotify($notify);
+    }
+
+    protected function generatePaymentLinkCode(): string
+    {
+        do {
+            $code = Str::random(32);
+        } while (PaymentLink::where('code', $code)->exists());
+
+        return $code;
+    }
+
+    protected function getOrCreateGatewaySetupFeeLink($user): PaymentLink
+    {
+        $amount = $this->gatewaySetupFeeAmountForUser($user->id);
+
+        $paymentLink = PaymentLink::query()
+            ->where('user_id', $user->id)
+            ->where('amount', $amount)
+            ->where('currency', 'USDT')
+            ->where('description', 'Gateway setup fee')
+            ->where('redirect_url', route('user.home'))
+            ->latest('id')
+            ->first();
+
+        if ($paymentLink) {
+            $paymentLink->markExpiredIfNeeded();
+
+            if ((int) $paymentLink->status === PaymentLink::STATUS_ACTIVE && !$paymentLink->isExpired()) {
+                return $paymentLink;
+            }
+
+        }
+
+        $paymentLink = new PaymentLink();
+        $paymentLink->user_id = $user->id;
+        $paymentLink->code = $this->generatePaymentLinkCode();
+        $paymentLink->amount = $amount;
+        $paymentLink->currency = 'USDT';
+        $paymentLink->description = 'Gateway setup fee';
+        $paymentLink->redirect_url = route('user.home');
+        $paymentLink->expires_at = now()->addMinutes(30);
+        $paymentLink->status = PaymentLink::STATUS_ACTIVE;
+
+        if (Schema::hasColumn('payment_links', 'link_type')) {
+            $paymentLink->link_type = PaymentLink::TYPE_STANDARD;
+        }
+
+        if (Schema::hasColumn('payment_links', 'is_reusable')) {
+            $paymentLink->is_reusable = false;
+        }
+
+        $paymentLink->save();
+
+        return $paymentLink;
+    }
+
+    protected function gatewaySetupFeeAmountForUser(int $userId): float
+    {
+        return (float) env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000);
     }
 
     private function notificationPreview(?string $message): string

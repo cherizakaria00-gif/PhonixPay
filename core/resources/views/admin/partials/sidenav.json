@@ -116,6 +116,18 @@
             }
         ]
     },
+    "setup_fees": {
+        "title": "Setup Fees",
+        "icon": "las la-money-check-alt",
+        "menu_active": "admin.setup.fees*",
+        "submenu": [{
+                "keyword": ["setup fee", "gateway setup fee", "merchant setup payment", "payment validation"],
+                "title": "All Requests",
+                "route_name": "admin.setup.fees.index",
+                "menu_active": "admin.setup.fees.index"
+            }
+        ]
+    },
     "rewards_program": {
         "title": "Rewards",
         "icon": "las la-gift",

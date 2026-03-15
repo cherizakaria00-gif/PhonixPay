@@ -112,6 +112,12 @@ Route::middleware('admin')->group(function () {
         Route::post('levels/{id}', 'updateLevel')->name('levels.update');
     });
 
+    Route::controller('SetupFeeController')->prefix('setup-fees')->name('setup.fees.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('{id}/approve', 'approve')->name('approve');
+        Route::post('{id}/reject', 'reject')->name('reject');
+    });
+
     // Subscriber
     Route::controller('SubscriberController')->prefix('subscriber')->name('subscriber.')->group(function(){
         Route::get('/', 'index')->name('index');

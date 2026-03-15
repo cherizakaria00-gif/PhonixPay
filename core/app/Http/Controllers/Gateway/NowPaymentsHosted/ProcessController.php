@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Gateway\NowPaymentsHosted;
 
+use App\Constants\Status;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Gateway\PaymentController;
 use App\Lib\CurlRequest;
 use App\Models\Deposit;
 use App\Models\Gateway;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class ProcessController extends Controller {
@@ -70,28 +72,179 @@ class ProcessController extends Controller {
 
     }
 
-   public function ipn() {
-        if (isset($_SERVER['HTTP_X_NOWPAYMENTS_SIG']) && !empty($_SERVER['HTTP_X_NOWPAYMENTS_SIG'])) {
-            $recived_hmac = $_SERVER['HTTP_X_NOWPAYMENTS_SIG'];
-            $request_json = file_get_contents('php://input');
-            $request_data = json_decode($request_json, true);
-            ksort($request_data);
-            $sorted_request_json = json_encode($request_data, JSON_UNESCAPED_SLASHES);
-            if ($request_json !== false && !empty($request_json)) {
-                $gateway    = Gateway::where('alias', 'NowPaymentsHosted')->first();
-                $gatewayAcc = json_decode($gateway->gateway_parameters);
-                $hmac       = hash_hmac("sha512", $sorted_request_json, trim($gatewayAcc->secret_key->value));
-                if ($hmac == $recived_hmac) {
-                    if ($request_data['payment_status']=='confirmed' || $request_data['payment_status']=='finished') {
-                        if ($request_data['actually_paid'] == $request_data['pay_amount']) {
-                            $deposit = Deposit::where('status', 0)->where('trx', $request_data['order_id'])->first();
-                            if ($deposit) {
-                                PaymentController::userDataUpdate($deposit);
-                            }
-                        }
-                    }
-                }
+   public function ipn(Request $request) {
+        $signature = trim((string) $request->header('x-nowpayments-sig', ''));
+        $rawPayload = (string) $request->getContent();
+        $payload = json_decode($rawPayload, true);
+
+        if ($signature === '' || !is_array($payload)) {
+            Log::warning('NowPayments hosted IPN ignored: missing signature or invalid JSON', [
+                'signature_present' => $signature !== '',
+                'raw' => $rawPayload,
+            ]);
+            return response()->json(['ok' => true]);
+        }
+
+        $orderId = trim((string) ($payload['order_id'] ?? ''));
+        if ($orderId === '') {
+            Log::warning('NowPayments hosted IPN ignored: missing order_id', ['payload' => $payload]);
+            return response()->json(['ok' => true]);
+        }
+
+        $deposit = Deposit::where('trx', $orderId)->latest('id')->first();
+        if (!$deposit) {
+            Log::warning('NowPayments hosted IPN ignored: deposit not found', ['order_id' => $orderId]);
+            return response()->json(['ok' => true]);
+        }
+
+        $secret = $this->resolveSecretKey($deposit, 'NowPaymentsHosted');
+        if ($secret === '') {
+            Log::error('NowPayments hosted IPN ignored: secret key missing', ['deposit_id' => $deposit->id]);
+            return response()->json(['ok' => true]);
+        }
+
+        $computedHmac = hash_hmac('sha512', $this->preparePayloadForSignature($payload), $secret);
+        if (!hash_equals($computedHmac, $signature)) {
+            Log::warning('NowPayments hosted IPN signature mismatch', [
+                'deposit_id' => $deposit->id,
+                'order_id' => $orderId,
+            ]);
+            return response()->json(['ok' => true]);
+        }
+
+        $paymentStatus = strtolower(trim((string) ($payload['payment_status'] ?? '')));
+        $actuallyPaid = (float) ($payload['actually_paid'] ?? 0);
+        $expectedPayAmount = (float) ($payload['pay_amount'] ?? 0);
+
+        if ($this->isSuccessfulStatus($paymentStatus) && ($expectedPayAmount <= 0 || $actuallyPaid + 1e-8 >= $expectedPayAmount)) {
+            PaymentController::userDataUpdate((int) $deposit->id);
+            Log::info('NowPayments hosted IPN marked deposit as success', [
+                'deposit_id' => $deposit->id,
+                'trx' => $deposit->trx,
+                'payment_status' => $paymentStatus,
+                'actually_paid' => $actuallyPaid,
+                'pay_amount' => $expectedPayAmount,
+            ]);
+            return response()->json(['ok' => true]);
+        }
+
+        if ($this->isPendingStatus($paymentStatus)) {
+            $this->syncLocalStatus($deposit, Status::PAYMENT_PENDING, 'pending');
+            return response()->json(['ok' => true]);
+        }
+
+        if ($this->isExpiredStatus($paymentStatus)) {
+            $this->syncLocalStatus($deposit, Status::PAYMENT_CANCEL, 'expired');
+            return response()->json(['ok' => true]);
+        }
+
+        if ($this->isFailedStatus($paymentStatus)) {
+            $this->syncLocalStatus($deposit, Status::PAYMENT_REJECT, 'failed');
+            return response()->json(['ok' => true]);
+        }
+
+        Log::info('NowPayments hosted IPN received unhandled status', [
+            'deposit_id' => $deposit->id,
+            'trx' => $deposit->trx,
+            'payment_status' => $paymentStatus,
+        ]);
+        return response()->json(['ok' => true]);
+    }
+
+    private function resolveSecretKey(Deposit $deposit, string $gatewayAlias): string
+    {
+        $gatewayParams = json_decode((string) optional($deposit->gatewayCurrency())->gateway_parameter);
+        $fromGatewayCurrency = $this->extractParamValue($gatewayParams, 'secret_key');
+        if ($fromGatewayCurrency !== '') {
+            return $fromGatewayCurrency;
+        }
+
+        $gateway = Gateway::where('alias', $gatewayAlias)->first();
+        if (!$gateway) {
+            return '';
+        }
+
+        $gatewayAccount = json_decode((string) $gateway->gateway_parameters);
+        return $this->extractParamValue($gatewayAccount, 'secret_key');
+    }
+
+    private function extractParamValue($params, string $key): string
+    {
+        if (!is_object($params) || !isset($params->{$key})) {
+            return '';
+        }
+
+        $value = $params->{$key};
+        if (is_object($value) && isset($value->value)) {
+            return trim((string) $value->value);
+        }
+
+        return trim((string) $value);
+    }
+
+    private function preparePayloadForSignature(array $payload): string
+    {
+        $sorted = $payload;
+        $this->recursiveKsort($sorted);
+
+        return (string) json_encode($sorted, JSON_UNESCAPED_SLASHES);
+    }
+
+    private function recursiveKsort(array &$data): void
+    {
+        foreach ($data as &$value) {
+            if (is_array($value)) {
+                $this->recursiveKsort($value);
             }
         }
+        ksort($data);
+    }
+
+    private function isSuccessfulStatus(string $status): bool
+    {
+        return in_array($status, ['finished', 'confirmed'], true);
+    }
+
+    private function isPendingStatus(string $status): bool
+    {
+        return in_array($status, ['waiting', 'confirming', 'sending', 'partially_paid'], true);
+    }
+
+    private function isFailedStatus(string $status): bool
+    {
+        return in_array($status, ['failed', 'refunded'], true);
+    }
+
+    private function isExpiredStatus(string $status): bool
+    {
+        return in_array($status, ['expired'], true);
+    }
+
+    private function syncLocalStatus(Deposit $deposit, int $targetStatus, string $reason): void
+    {
+        $current = (int) $deposit->status;
+        if (!in_array($current, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+            return;
+        }
+
+        if ($current === $targetStatus) {
+            return;
+        }
+
+        $deposit->status = $targetStatus;
+        $deposit->save();
+
+        if ($deposit->apiPayment) {
+            $deposit->apiPayment->status = $targetStatus;
+            $deposit->apiPayment->save();
+        }
+
+        Log::info('NowPayments hosted IPN updated local status', [
+            'deposit_id' => $deposit->id,
+            'trx' => $deposit->trx,
+            'from' => $current,
+            'to' => $targetStatus,
+            'reason' => $reason,
+        ]);
     }
 }
