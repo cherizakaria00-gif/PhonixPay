@@ -14,12 +14,21 @@ class AutomaticGatewayController extends Controller
     public function index()
     {
         $pageTitle = 'Automatic Gateways';
-        // Show only gateways that are still configured in DB (have at least one enabled currency record).
-        // If a gateway is removed from gateway_currencies, it disappears from this admin list.
+        $visibleAliases = [
+            'BictorysCheckout',
+            'BictorysDirect',
+            'NowPaymentsCheckout',
+            'Stripe',
+            'StripeJs',
+            'StripeV3',
+            'StripePaymentLink',
+        ];
+
         $gateways = Gateway::automatic()
-            ->whereHas('currencies')
+            ->whereIn('alias', $visibleAliases)
             ->with('currencies')
             ->get();
+
         return view('admin.gateways.automatic.list', compact('pageTitle', 'gateways'));
     }
 

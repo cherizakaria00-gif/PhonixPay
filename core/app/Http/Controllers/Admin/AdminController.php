@@ -35,6 +35,9 @@ class AdminController extends Controller
         $widget['mobile_unverified_users'] = User::mobileUnverified()->count();
         $widget['total_transactions']      = Transaction::count();
         $widget['pending_kyc']             = User::kycPending()->count();
+        $widget['pending_setup_fees']      = Schema::hasColumn('users', 'setup_fee_status')
+            ? User::query()->where('setup_fee_status', 'pending_review')->count()
+            : 0;
 
 
         // user Browsing, Country, Operating Log

@@ -62,6 +62,16 @@
                     <span class="pf-admin-stat-change pf-admin-stat-change--positive">@lang('From successful payments')</span>
                 </div>
             </a>
+            <a href="{{ route('admin.setup.fees.index') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-money-check-alt"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Pending Setup Fees')</p>
+                    <h3 class="pf-admin-stat-value">{{ $widget['pending_setup_fees'] ?? 0 }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--negative">@lang('Needs validation')</span>
+                </div>
+            </a>
         </div>
 
         <div class="pf-admin-panel pf-admin-panel--currency">

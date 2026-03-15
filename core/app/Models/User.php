@@ -37,6 +37,9 @@ class User extends Authenticatable
         'plan_custom_overrides' => 'array',
         'monthly_tx_count' => 'integer',
         'plan_id' => 'integer',
+        'setup_fee_payment_link_id' => 'integer',
+        'setup_fee_submitted_at' => 'datetime',
+        'setup_fee_reviewed_at' => 'datetime',
         'discount_percent' => 'integer',
         'priority_support_enabled' => 'boolean',
     ];

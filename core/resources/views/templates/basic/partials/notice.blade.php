@@ -37,6 +37,7 @@
                 </small>
             </p>
         </div>
+
     @elseif($user->kv == Status::KYC_PENDING)
         <div class="alert border border--warning" role="alert">
             <div class="alert__icon d-flex align-items-center text--warning">
@@ -51,6 +52,38 @@
                 </small>
             </p>
         </div>
+
+        @if(($user->setup_fee_status ?? 'unpaid') === 'pending_review')
+            <div class="alert border border--warning mt-3" role="alert">
+                <div class="alert__icon d-flex align-items-center text--warning">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <p class="alert__message">
+                    <span class="fw-bold title">@lang('Setup Fee Under Review')</span>
+                    <br>
+                    <small class="content">
+                        @lang('Your setup fee payment has been submitted and is waiting for admin validation.')
+                    </small>
+                    <br>
+                    <a href="{{ route('user.gateway.setup.fee') }}" class="btn btn--base btn-sm mt-2">@lang('View Setup Fee')</a>
+                </p>
+            </div>
+        @elseif(($user->setup_fee_status ?? 'unpaid') !== 'approved')
+            <div class="alert border border--warning mt-3" role="alert">
+                <div class="alert__icon d-flex align-items-center text--warning">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <p class="alert__message">
+                    <span class="fw-bold title">@lang('Gateway Setup Fee')</span>
+                    <br>
+                    <small class="content">
+                        @lang('After your merchant verification is approved, you must pay your gateway setup fee to activate your account. The exact USDT amount is shown on the payment page.')
+                    </small>
+                    <br>
+                    <a href="{{ route('user.gateway.setup.fee') }}" class="btn btn--base btn-sm mt-2">@lang('Pay Setup Fee Now')</a>
+                </p>
+            </div>
+        @endif
     @endif 
 </div>
 

@@ -260,7 +260,10 @@ function getPaginate($paginate = null)
     if (!$paginate) {
         $paginate = gs('paginate_number');
     }
-    return $paginate;
+
+    $paginate = (int) $paginate;
+
+    return $paginate > 0 ? $paginate : 20;
 }
 
 function paginateLinks($data)
