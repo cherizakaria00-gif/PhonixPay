@@ -789,7 +789,7 @@ class PaymentController extends Controller
                 $depositNotificationChannels[] = 'email';
             }
 
-            notify($user, 'DEPOSIT_COMPLETE', [
+            notify($user, 'NEW_TRANSACTION', [
                 'method_name' => $deposit->gatewayCurrency()->name,
                 'method_currency' => $deposit->method_currency,
                 'method_amount' => showAmount($deposit->gateway_amount, currencyFormat:false),

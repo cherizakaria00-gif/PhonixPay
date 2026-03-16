@@ -142,6 +142,11 @@ class ManageUsersController extends Controller
             'payment_fixed_charge'=>showAmount($user->payment_fixed_charge, currencyFormat:false),
             'payment_percent_charge'=>showAmount($user->payment_percent_charge, currencyFormat:false)
         ]);
+
+        notify($user,'KYC_APPROVED',[
+            'payment_fixed_charge'=>showAmount($user->payment_fixed_charge, currencyFormat:false),
+            'payment_percent_charge'=>showAmount($user->payment_percent_charge, currencyFormat:false)
+        ]);
       
         $notify[] = ['success','Merchant request approved successfully'];
         return to_route('admin.users.kyc.pending')->withNotify($notify);
@@ -258,6 +263,12 @@ class ManageUsersController extends Controller
             }
         }
         $user->save();
+
+        notify($user, 'NEW_UPDATE', [
+            'update_title' => 'Your merchant profile was updated',
+            'update_message' => 'Your account settings were updated by administrator.',
+            'updated_at' => now()->format('Y-m-d H:i:s'),
+        ], ['email']);
 
         $notify[] = ['success', 'User details updated successfully'];
         return back()->withNotify($notify);
