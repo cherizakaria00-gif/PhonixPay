@@ -39,6 +39,7 @@ class User extends Authenticatable
         'monthly_tx_count' => 'integer',
         'plan_id' => 'integer',
         'setup_fee_payment_link_id' => 'integer',
+        'setup_fee_amount_usdt' => 'decimal:2',
         'setup_fee_submitted_at' => 'datetime',
         'setup_fee_reviewed_at' => 'datetime',
         'discount_percent' => 'integer',

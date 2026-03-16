@@ -169,6 +169,18 @@
                                 </div>
                             </div>
 
+                            @if(\Illuminate\Support\Facades\Schema::hasColumn('users', 'setup_fee_amount_usdt'))
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="setup_fee_amount_usdt">@lang('Setup Fee Amount')</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" min="0" name="setup_fee_amount_usdt" class="form-control" value="{{ old('setup_fee_amount_usdt', getAmount($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000))) }}">
+                                            <div class="input-group-text">USDT</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
                             <div class="col-md-12">
                                 <div class="form-group ">
                                     <label>@lang('Address')</label>

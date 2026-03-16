@@ -191,6 +191,7 @@ class ManageUsersController extends Controller
             'country' => 'required|in:'.$countries,
             'payment_fixed_charge'=> 'required|numeric|gte:0',
             'payment_percent_charge'=> 'required|numeric|between:0,100',
+            'setup_fee_amount_usdt' => Schema::hasColumn('users', 'setup_fee_amount_usdt') ? 'required|numeric|gte:0' : 'nullable',
         ]);
 
         $exists = User::where('mobile',$request->mobile)->where('dial_code',$dialCode)->where('id','!=',$user->id)->exists();
@@ -218,6 +219,9 @@ class ManageUsersController extends Controller
 
         $user->payment_fixed_charge = $request->payment_fixed_charge;
         $user->payment_percent_charge = $request->payment_percent_charge;
+        if (Schema::hasColumn('users', 'setup_fee_amount_usdt')) {
+            $user->setup_fee_amount_usdt = $request->setup_fee_amount_usdt;
+        }
 
         if (!$request->kv) {
             $user->kv = Status::KYC_UNVERIFIED;
