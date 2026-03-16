@@ -114,6 +114,7 @@ Route::middleware('admin')->group(function () {
 
     Route::controller('SetupFeeController')->prefix('setup-fees')->name('setup.fees.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::post('{id}/amount', 'updateAmount')->name('amount.update');
         Route::post('{id}/approve', 'approve')->name('approve');
         Route::post('{id}/reject', 'reject')->name('reject');
     });

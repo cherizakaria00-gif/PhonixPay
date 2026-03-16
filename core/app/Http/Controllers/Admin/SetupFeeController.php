@@ -19,20 +19,21 @@ class SetupFeeController extends Controller
             return view('admin.setup_fee.index', compact('pageTitle', 'users'))->withNotify($notify);
         }
 
-        $query = User::query()
-            ->whereNotNull('setup_fee_status')
-            ->whereIn('setup_fee_status', ['pending_review', 'approved', 'rejected']);
+        $query = User::query();
+        $search = trim((string) request('search'));
 
-        if (request('status')) {
-            $query->where('setup_fee_status', request('status'));
-        }
-
-        if (request('search')) {
-            $search = trim((string) request('search'));
+        if ($search !== '') {
             $query->where(function ($builder) use ($search) {
                 $builder->where('username', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
+        } else {
+            $query->whereNotNull('setup_fee_status')
+                ->whereIn('setup_fee_status', ['pending_review', 'approved', 'rejected']);
+        }
+
+        if (request('status')) {
+            $query->where('setup_fee_status', request('status'));
         }
 
         $users = $query->orderByRaw("CASE setup_fee_status WHEN 'pending_review' THEN 0 WHEN 'rejected' THEN 1 WHEN 'approved' THEN 2 ELSE 3 END")
@@ -40,6 +41,25 @@ class SetupFeeController extends Controller
             ->paginate(getPaginate());
 
         return view('admin.setup_fee.index', compact('pageTitle', 'users'));
+    }
+
+    public function updateAmount(Request $request, $id)
+    {
+        if (!Schema::hasColumn('users', 'setup_fee_amount_usdt')) {
+            $notify[] = ['error', 'Setup fee amount column is missing. Run migrations first.'];
+            return back()->withNotify($notify);
+        }
+
+        $request->validate([
+            'setup_fee_amount_usdt' => 'required|numeric|gte:0',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->setup_fee_amount_usdt = $request->setup_fee_amount_usdt;
+        $user->save();
+
+        $notify[] = ['success', 'Setup fee amount updated successfully'];
+        return back()->withNotify($notify);
     }
 
     public function approve($id)
