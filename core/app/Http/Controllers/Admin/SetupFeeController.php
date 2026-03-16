@@ -5,12 +5,20 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class SetupFeeController extends Controller
 {
     public function index()
     {
         $pageTitle = 'Setup Fee Payments';
+
+        if (!Schema::hasColumn('users', 'setup_fee_status')) {
+            $users = User::query()->whereRaw('1 = 0')->paginate(getPaginate());
+            $notify[] = ['warning', 'Setup fee columns are not available yet. Please run database migrations.'];
+            return view('admin.setup_fee.index', compact('pageTitle', 'users'))->withNotify($notify);
+        }
+
         $query = User::query()
             ->whereNotNull('setup_fee_status')
             ->whereIn('setup_fee_status', ['pending_review', 'approved', 'rejected']);
@@ -36,6 +44,11 @@ class SetupFeeController extends Controller
 
     public function approve($id)
     {
+        if (!Schema::hasColumn('users', 'setup_fee_status')) {
+            $notify[] = ['error', 'Setup fee columns are missing. Run migrations first.'];
+            return back()->withNotify($notify);
+        }
+
         $user = User::findOrFail($id);
         $user->setup_fee_status = 'approved';
         $user->setup_fee_reviewed_at = now();
@@ -48,6 +61,11 @@ class SetupFeeController extends Controller
 
     public function reject(Request $request, $id)
     {
+        if (!Schema::hasColumn('users', 'setup_fee_status')) {
+            $notify[] = ['error', 'Setup fee columns are missing. Run migrations first.'];
+            return back()->withNotify($notify);
+        }
+
         $request->validate([
             'reason' => 'required|string|max:1000',
         ]);
