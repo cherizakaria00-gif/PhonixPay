@@ -38,7 +38,10 @@
                             <div class="card-body">
                                 @if(isset($paymentLink))
                                     <div class="payment-link-summary mb-4">
-                                        <h5 class="mb-1">{{ __($paymentLink->description ?: 'Payment Link') }}</h5>
+                                        <h5 class="mb-1">{{ __($paymentLink->displayTitle()) }}</h5>
+                                        @if($paymentLink->description)
+                                            <p class="mb-1 text-muted">{{ __($paymentLink->description) }}</p>
+                                        @endif
                                         <p class="mb-0">@lang('Amount'):
                                             <strong>{{ showAmount($paymentLink->amount, currencyFormat:false) }} {{ __($paymentLink->currency) }}</strong>
                                         </p>

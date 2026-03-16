@@ -14,23 +14,23 @@ return new class extends Migration
 
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'setup_fee_status')) {
-                $table->string('setup_fee_status', 30)->default('unpaid')->after('website_domain');
+                $table->string('setup_fee_status', 30)->default('unpaid');
             }
 
             if (!Schema::hasColumn('users', 'setup_fee_payment_link_id')) {
-                $table->unsignedBigInteger('setup_fee_payment_link_id')->nullable()->after('setup_fee_status');
+                $table->unsignedBigInteger('setup_fee_payment_link_id')->nullable();
             }
 
             if (!Schema::hasColumn('users', 'setup_fee_submitted_at')) {
-                $table->dateTime('setup_fee_submitted_at')->nullable()->after('setup_fee_payment_link_id');
+                $table->dateTime('setup_fee_submitted_at')->nullable();
             }
 
             if (!Schema::hasColumn('users', 'setup_fee_reviewed_at')) {
-                $table->dateTime('setup_fee_reviewed_at')->nullable()->after('setup_fee_submitted_at');
+                $table->dateTime('setup_fee_reviewed_at')->nullable();
             }
 
             if (!Schema::hasColumn('users', 'setup_fee_rejection_reason')) {
-                $table->text('setup_fee_rejection_reason')->nullable()->after('setup_fee_reviewed_at');
+                $table->text('setup_fee_rejection_reason')->nullable();
             }
         });
     }

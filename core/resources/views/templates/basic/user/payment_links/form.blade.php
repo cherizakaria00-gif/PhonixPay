@@ -1,5 +1,10 @@
 @csrf
 <div class="form-group">
+    <label>@lang('Title')</label>
+    <input type="text" name="title" class="form--control"
+           value="{{ old('title', $paymentLink->title ?? '') }}" required>
+</div>
+<div class="form-group">
     <label>@lang('Currency')</label>
     <select name="currency" class="form--control form-select" required>
         @foreach($currencies as $currency)
