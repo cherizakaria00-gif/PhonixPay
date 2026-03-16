@@ -3,6 +3,7 @@
 namespace App\Lib;
 
 use App\Models\Form;
+use Illuminate\Validation\Rule;
 
 class FormProcessor
 {
@@ -79,13 +80,21 @@ class FormProcessor
         $rule = [];
 
         foreach($formData as $data){
+            $normalizedOptions = collect($data->options ?? [])
+                ->map(fn ($option) => trim((string) $option))
+                ->filter(fn ($option) => $option !== '')
+                ->values()
+                ->all();
+
             if ($data->is_required == 'required') {
                 $rule = array_merge($rule,['required']);
             }else{
                 $rule = array_merge($rule,['nullable']);
             }
-            if ($data->type == 'select' || $data->type == 'checkbox' || $data->type == 'radio'){
-                $rule = array_merge($rule,['in:'. implode(',',$data->options)]);
+            if ($data->type == 'select' || $data->type == 'radio'){
+                if (!empty($normalizedOptions)) {
+                    $rule[] = Rule::in($normalizedOptions);
+                }
             }
             if ($data->type == 'file') {
                 $rule = array_merge($rule,['mimes:'.$data->extensions]);
@@ -97,11 +106,19 @@ class FormProcessor
                 $rule = array_merge($rule,['url']);
             }
             if ($data->type == 'number') {
-                $rule = array_merge($rule,['integer']);
+                $fieldIdentity = strtolower(trim((string) ($data->name ?? $data->label ?? '')));
+                if (str_contains($fieldIdentity, 'phone') || str_contains($fieldIdentity, 'whatsapp')) {
+                    $rule = array_merge($rule,['string','regex:/^[0-9+\-\s()]+$/']);
+                } else {
+                    $rule = array_merge($rule,['numeric']);
+                }
             }
             if ($data->type == 'checkbox') {
                 $rule = array_merge($rule,['array']);
                 $validationRule[$data->label] = $rule;
+                if (!empty($normalizedOptions)) {
+                    $validationRule[$data->label . '.*'] = [Rule::in($normalizedOptions)];
+                }
             }else{
                 $validationRule[$data->label] = $rule;
             }

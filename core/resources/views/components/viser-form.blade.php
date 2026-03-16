@@ -46,11 +46,17 @@
                     @if($data->is_required == 'required') required @endif
                     >
                 @elseif($data->type == 'number')
-                    <input type="number"
+                    @php
+                        $isPhoneLikeField = str_contains(strtolower(trim((string) ($data->name ?? $data->label ?? ''))), 'phone')
+                            || str_contains(strtolower(trim((string) ($data->name ?? $data->label ?? ''))), 'whatsapp');
+                        $inputType = $isPhoneLikeField ? 'text' : 'number';
+                    @endphp
+                    <input type="{{ $inputType }}"
                     class="form-control form--control"
                     name="{{ $data->label }}"
                     value="{{ old($data->label) }}"
                     step="any"
+                    @if($isPhoneLikeField) inputmode="tel" pattern="[0-9+\-\s()]*" @endif
                     @if($data->is_required == 'required') required @endif
                     >
                 @elseif($data->type == 'textarea')
