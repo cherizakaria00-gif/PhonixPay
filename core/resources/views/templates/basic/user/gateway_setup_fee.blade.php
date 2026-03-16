@@ -29,13 +29,13 @@
                         @if(($user->setup_fee_status ?? 'unpaid') === 'pending_review')
                             <div class="alert alert--info mb-4" role="alert">
                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                    <span>@lang('Your setup fee payment is pending admin review. We will validate it and update your account soon.')</span>
+                                    <span>@lang('Your setup fee transaction is processing. Keep this status open until confirmation.')</span>
                                     @if(!is_null($reviewCountdownSeconds))
                                         <span class="fw-bold" id="setupFeeReviewCountdown">00:00:00</span>
                                     @endif
                                 </div>
                                 <small class="d-block mt-2 text-muted">
-                                    @lang('Estimated admin verification window: :hours hours', ['hours' => $reviewWindowHours])
+                                    @lang('Estimated transaction window: :hours hour(s)', ['hours' => 1])
                                 </small>
                             </div>
                         @elseif(($user->setup_fee_status ?? 'unpaid') === 'rejected')
@@ -50,18 +50,18 @@
 
                         @if(!$walletAddress)
                             <div class="alert alert--danger" role="alert">
-                                @lang('Binance wallet address is not configured yet. Please update GATEWAY_SETUP_FEE_BINANCE_WALLET in the environment file.')
+                                @lang('USDT TRC20 wallet address is not configured yet. Please update GATEWAY_SETUP_FEE_USDT_TRC20_WALLET in the environment file.')
                             </div>
                         @else
-                            <div class="row g-4 align-items-center">
-                                <div class="col-md-5 text-center">
-                                    <div class="border rounded-3 p-3 bg-white">
-                                        <img src="{{ $qrCodeUrl }}" alt="@lang('USDT wallet QR code')" class="img-fluid" style="max-width: 280px;">
+                            <div class="row g-4 align-items-start">
+                                <div class="col-lg-5 col-md-6 text-center">
+                                    <div class="setup-fee-qr-wrap border rounded-3 p-3 bg-white d-inline-block">
+                                        <img src="{{ $qrCodeUrl }}" alt="@lang('USDT wallet QR code')" class="setup-fee-qr-img d-block mx-auto">
                                     </div>
-                                    <small class="text-muted d-block mt-2">@lang('Scan this QR code with Binance')</small>
+                                    <small class="text-muted d-block mt-2">@lang('Scan this QR code with your TRC20-compatible wallet')</small>
                                 </div>
 
-                                <div class="col-md-7">
+                                <div class="col-lg-7 col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">@lang('Wallet Address')</label>
                                         <div class="input-group">
@@ -72,7 +72,7 @@
 
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">@lang('Network')</label>
-                                        <input type="text" class="form-control" value="{{ $walletNetwork ?: 'BEP20' }}" readonly>
+                                        <input type="text" class="form-control" value="{{ $walletNetwork ?: 'TRC20' }}" readonly>
                                     </div>
 
                                     <div class="mb-4">
@@ -100,6 +100,21 @@
         </div>
     </div>
 @endsection
+
+@push('style')
+    <style>
+        .setup-fee-qr-wrap {
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .setup-fee-qr-img {
+            width: 100%;
+            height: auto;
+            max-width: 280px;
+        }
+    </style>
+@endpush
 
 @push('script')
     <script>

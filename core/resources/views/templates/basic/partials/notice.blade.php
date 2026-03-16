@@ -59,13 +59,13 @@
                     <i class="fas fa-wallet"></i>
                 </div>
                 <p class="alert__message">
-                    <span class="fw-bold title">@lang('Setup Fee Under Review')</span>
+                    <span class="fw-bold title">@lang('Setup Fee In Progress')</span>
                     <br>
                     <small class="content">
-                        @lang('Your setup fee payment has been submitted and is waiting for admin validation.')
+                        @lang('Your setup fee transaction is processing. Keep the status page open until confirmation.')
                     </small>
                     <br>
-                    <a href="{{ route('user.gateway.setup.fee') }}" class="btn btn--base btn-sm mt-2">@lang('View Setup Fee')</a>
+                    <a href="{{ route('user.gateway.setup.fee.status') }}" class="btn btn--base btn-sm mt-2">@lang('Open Transaction Status')</a>
                 </p>
             </div>
         @elseif(($user->setup_fee_status ?? 'unpaid') !== 'approved')

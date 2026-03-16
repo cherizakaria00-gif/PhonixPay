@@ -263,17 +263,20 @@ class UserController extends Controller
     {
         $user = auth()->user();
 
-        if (($user->setup_fee_status ?? 'unpaid') === 'approved') {
-            return to_route('user.home');
+        if (in_array(($user->setup_fee_status ?? 'unpaid'), ['pending_review', 'approved'], true)) {
+            return to_route('user.gateway.setup.fee.status');
         }
 
         $paymentLink = $this->getOrCreateGatewaySetupFeeLink($user);
 
-        $walletAddress = trim((string) env('GATEWAY_SETUP_FEE_BINANCE_WALLET', ''));
-        $walletNetwork = trim((string) env('GATEWAY_SETUP_FEE_BINANCE_NETWORK', 'BEP20'));
+        $walletAddress = trim((string) env('GATEWAY_SETUP_FEE_USDT_TRC20_WALLET', env('GATEWAY_SETUP_FEE_BINANCE_WALLET', '')));
+        $walletNetwork = strtoupper(trim((string) env('GATEWAY_SETUP_FEE_USDT_NETWORK', env('GATEWAY_SETUP_FEE_BINANCE_NETWORK', 'TRC20'))));
+        if ($walletNetwork === '') {
+            $walletNetwork = 'TRC20';
+        }
         $pageTitle = 'Gateway Setup Fee';
         $countdownSeconds = max(0, now()->diffInSeconds($paymentLink->expires_at, false));
-        $reviewWindowHours = max(1, (int) env('GATEWAY_SETUP_FEE_REVIEW_HOURS', 24));
+        $reviewWindowHours = 1;
         $reviewCountdownSeconds = null;
 
         if (($user->setup_fee_status ?? 'unpaid') === 'pending_review' && $user->setup_fee_submitted_at) {
@@ -307,12 +310,12 @@ class UserController extends Controller
         $user = auth()->user();
 
         if (($user->setup_fee_status ?? 'unpaid') === 'approved') {
-            return to_route('user.home');
+            return to_route('user.gateway.setup.fee.status');
         }
 
         if (($user->setup_fee_status ?? 'unpaid') === 'pending_review') {
-            $notify[] = ['info', 'Your setup fee payment is already waiting for admin review'];
-            return to_route('user.gateway.setup.fee')->withNotify($notify);
+            $notify[] = ['info', 'Your setup fee transaction is still processing.'];
+            return to_route('user.gateway.setup.fee.status')->withNotify($notify);
         }
 
         $paymentLink = PaymentLink::query()
@@ -333,8 +336,56 @@ class UserController extends Controller
         $user->setup_fee_rejection_reason = null;
         $user->save();
 
-        $notify[] = ['success', 'Setup fee payment submitted for admin review. Stay on this page while we process it.'];
-        return to_route('user.gateway.setup.fee')->withNotify($notify);
+        $notify[] = ['success', 'Setup fee payment submitted. We are processing your transaction now.'];
+        return to_route('user.gateway.setup.fee.status')->withNotify($notify);
+    }
+
+    public function gatewaySetupFeeStatus()
+    {
+        $user = auth()->user();
+        $status = (string) ($user->setup_fee_status ?? 'unpaid');
+
+        if ($status === 'unpaid') {
+            return to_route('user.gateway.setup.fee');
+        }
+
+        $pageTitle = 'Setup Fee Transaction Status';
+        $trackingWindowHours = 1;
+        $countdownSeconds = 3600;
+
+        if ($user->setup_fee_submitted_at) {
+            $countdownSeconds = max(
+                0,
+                now()->diffInSeconds($user->setup_fee_submitted_at->copy()->addHours($trackingWindowHours), false)
+            );
+        }
+
+        return view('Template::user.gateway_setup_fee_status', compact(
+            'pageTitle',
+            'status',
+            'countdownSeconds',
+            'trackingWindowHours'
+        ));
+    }
+
+    public function gatewaySetupFeeStatusData()
+    {
+        $user = auth()->user();
+        $status = (string) ($user->setup_fee_status ?? 'unpaid');
+        $trackingWindowHours = 1;
+        $countdownSeconds = 0;
+
+        if ($user->setup_fee_submitted_at) {
+            $countdownSeconds = max(
+                0,
+                now()->diffInSeconds($user->setup_fee_submitted_at->copy()->addHours($trackingWindowHours), false)
+            );
+        }
+
+        return response()->json([
+            'status' => $status,
+            'countdown_seconds' => $countdownSeconds,
+        ]);
     }
 
     protected function generatePaymentLinkCode(): string

@@ -65,6 +65,8 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::get('dashboard/statistics', 'dashboardStatistics')->name('dashboard.statistics');
                 Route::get('gateway/setup-fee', 'gatewaySetupFee')->name('gateway.setup.fee');
                 Route::post('gateway/setup-fee/confirm', 'confirmGatewaySetupFee')->name('gateway.setup.fee.confirm');
+                Route::get('gateway/setup-fee/status', 'gatewaySetupFeeStatus')->name('gateway.setup.fee.status');
+                Route::get('gateway/setup-fee/status/data', 'gatewaySetupFeeStatusData')->name('gateway.setup.fee.status.data');
 
                 Route::get('api-key', 'apiKey')->name('api.key')->middleware('user.restricted');
                 Route::post('api-key', 'generateApiKey')->name('generate.key')->middleware('user.restricted');
