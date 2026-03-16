@@ -637,6 +637,8 @@ class UserController extends Controller
     {
 
         $user = auth()->user();
+        $hasWebsiteUrlColumn = Schema::hasColumn('users', 'website_url');
+        $hasWebsiteDomainColumn = Schema::hasColumn('users', 'website_domain');
 
         if ($user->profile_complete == Status::YES) {
             return to_route('user.home');
@@ -653,7 +655,7 @@ class UserController extends Controller
             'mobile_code'  => 'required|in:' . $mobileCodes,
             'username'     => 'required|unique:users|min:6',
             'mobile'       => ['required','regex:/^([0-9]*)$/',Rule::unique('users')->where('dial_code',$request->mobile_code)],
-            'website_url'  => 'required|string|max:255',
+            'website_url'  => ($hasWebsiteUrlColumn || $hasWebsiteDomainColumn) ? 'required|string|max:255' : 'nullable|string|max:255',
         ]);
 
 
@@ -673,15 +675,23 @@ class UserController extends Controller
         $user->state = $request->state;
         $user->zip = $request->zip;
         $user->country_name = @$request->country;
-        $normalizedDomain = $licenseService->normalizeDomain((string) $request->website_url);
-        if (!$normalizedDomain) {
-            $notify[] = ['error', 'Please enter a valid website URL or domain'];
-            return back()->withNotify($notify)->withInput($request->all());
-        }
-
         $user->dial_code = $request->mobile_code;
-        $user->website_url = trim((string) $request->website_url);
-        $user->website_domain = $normalizedDomain;
+
+        if ($hasWebsiteUrlColumn || $hasWebsiteDomainColumn) {
+            $normalizedDomain = $licenseService->normalizeDomain((string) $request->website_url);
+            if (!$normalizedDomain) {
+                $notify[] = ['error', 'Please enter a valid website URL or domain'];
+                return back()->withNotify($notify)->withInput($request->all());
+            }
+
+            if ($hasWebsiteUrlColumn) {
+                $user->website_url = trim((string) $request->website_url);
+            }
+
+            if ($hasWebsiteDomainColumn) {
+                $user->website_domain = $normalizedDomain;
+            }
+        }
 
         $user->profile_complete = Status::YES;
         $user->save();
