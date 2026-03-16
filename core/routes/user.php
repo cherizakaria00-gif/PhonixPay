@@ -84,8 +84,8 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('merchant-submit','kycSubmit')->name('kyc.submit');
 
                 //Report
-                Route::any('deposit/history', 'depositHistory')->name('deposit.history');
-                Route::get('transactions','transactions')->name('transactions');
+                Route::any('deposit/history', 'depositHistory')->name('deposit.history')->middleware('user.restricted');
+                Route::get('transactions','transactions')->name('transactions')->middleware('user.restricted');
 
                 Route::post('add-device-token','addDeviceToken')->name('add.device.token');
             });
@@ -115,7 +115,7 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('option-c/generate-license', 'generateLicense')->name('generate.license');
             });
 
-            Route::controller('RewardController')->prefix('rewards')->name('rewards.')->group(function () {
+            Route::controller('RewardController')->prefix('rewards')->name('rewards.')->middleware('user.restricted')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::get('overview-data', 'overview')->name('overview');
                 Route::get('ledger-data', 'ledger')->name('ledger');
@@ -130,7 +130,7 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('change-password', 'submitPassword');
             });
 
-            Route::prefix('plan-billing')->name('plan.')->group(function () {
+            Route::prefix('plan-billing')->name('plan.')->middleware('user.restricted')->group(function () {
                 Route::get('/', [UserPlanController::class, 'billing'])->name('billing');
                 Route::post('change', [UserPlanController::class, 'change'])->name('change');
                 Route::post('request-change', [UserPlanController::class, 'requestChange'])->name('request.change');
@@ -143,8 +143,8 @@ Route::middleware('auth')->name('user.')->group(function () {
                     Route::post('/withdraw/method', 'withdrawMethodSubmit')->name('withdraw.method.submit')->middleware('user.restricted');
                     Route::get('/download/withdraw/attachments/{fileHash}', 'downloadAttachment')->name('withdraw.download.attachment');
                 });
-                Route::post('/withdraw/request', 'requestPayout')->name('withdraw.request');
-                Route::get('/withdraws', 'withdraws')->name('withdraws');
+                Route::post('/withdraw/request', 'requestPayout')->name('withdraw.request')->middleware('user.restricted');
+                Route::get('/withdraws', 'withdraws')->name('withdraws')->middleware('user.restricted');
             });
         });
     });

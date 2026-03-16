@@ -91,6 +91,12 @@
                 @endif
 
                 <div class="flex-fill">
+                    <a href="{{ route('admin.setup.fees.index', ['search' => $user->username]) }}" class="btn btn--dark btn--shadow w-100 btn-lg">
+                        <i class="las la-wallet"></i>@lang('Setup Fee')
+                    </a>
+                </div>
+
+                <div class="flex-fill">
                     @if($user->status == Status::USER_ACTIVE)
                     <button type="button" class="btn btn--warning btn--shadow w-100 btn-lg userStatus" data-bs-toggle="modal" data-bs-target="#userStatusModal">
                         <i class="las la-ban"></i>@lang('Ban User')
@@ -230,6 +236,12 @@
                                 <div class="form-group">
                                     <label>@lang('KYC') </label>
                                     <input type="checkbox" data-width="100%" data-height="50" data-onstyle="-success" data-offstyle="-danger" data-bs-toggle="toggle" data-on="@lang('Verified')" data-off="@lang('Unverified')" name="kv" @if($user->kv == Status::KYC_VERIFIED) checked @endif>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-12">
+                                <div class="form-group">
+                                    <label>@lang('Setup Fee') </label>
+                                    <input type="checkbox" data-width="100%" data-height="50" data-onstyle="-success" data-offstyle="-danger" data-bs-toggle="toggle" data-on="@lang('Approved')" data-off="@lang('Pending')" name="setup_fee_approved" @if(($user->setup_fee_status ?? 'unpaid') == 'approved') checked @endif>
                                 </div>
                             </div>
                             <div class="col-md-12">

@@ -52,7 +52,7 @@
                 </small>
             </p>
         </div>
-
+    @elseif($user->kv == Status::KYC_VERIFIED && ($user->setup_fee_status ?? 'unpaid') !== 'approved')
         @if(($user->setup_fee_status ?? 'unpaid') === 'pending_review')
             <div class="alert border border--warning mt-3" role="alert">
                 <div class="alert__icon d-flex align-items-center text--warning">
@@ -68,16 +68,16 @@
                     <a href="{{ route('user.gateway.setup.fee.status') }}" class="btn btn--base btn-sm mt-2">@lang('Open Transaction Status')</a>
                 </p>
             </div>
-        @elseif(($user->setup_fee_status ?? 'unpaid') !== 'approved')
+        @else
             <div class="alert border border--warning mt-3" role="alert">
                 <div class="alert__icon d-flex align-items-center text--warning">
                     <i class="fas fa-wallet"></i>
                 </div>
                 <p class="alert__message">
-                    <span class="fw-bold title">@lang('Gateway Setup Fee')</span>
+                    <span class="fw-bold title">@lang('Gateway Setup Fee Required')</span>
                     <br>
                     <small class="content">
-                        @lang('After your merchant verification is approved, you must pay your gateway setup fee to activate your account. The exact USDT amount is shown on the payment page.')
+                        @lang('Your KYC is approved. Complete your setup fee payment to activate your merchant account.')
                     </small>
                     <br>
                     <a href="{{ route('user.gateway.setup.fee') }}" class="btn btn--base btn-sm mt-2">@lang('Pay Setup Fee Now')</a>

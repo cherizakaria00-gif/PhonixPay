@@ -19,8 +19,13 @@ class UserRestricted
     {   
         $user = auth()->user();
       
-        if($user->kv != Status::KYC_VERIFIED){    
+        if($user->kv != Status::KYC_VERIFIED){
             return response()->view(activeTemplate().'user.restricted', ['pageTitle'=>'Restricted Page']);
+        }
+
+        if ($user->requiresSetupFee()) {
+            $notify[] = ['warning', 'Please complete your setup fee payment to activate your merchant account.'];
+            return to_route('user.gateway.setup.fee')->withNotify($notify);
         }
 
         return $next($request);

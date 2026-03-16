@@ -263,6 +263,11 @@ class UserController extends Controller
     {
         $user = auth()->user();
 
+        if ((int) $user->kv !== Status::KYC_VERIFIED) {
+            $notify[] = ['warning', 'Please complete and verify your KYC before the setup fee step.'];
+            return to_route('user.kyc.form')->withNotify($notify);
+        }
+
         if (in_array(($user->setup_fee_status ?? 'unpaid'), ['pending_review', 'approved'], true)) {
             return to_route('user.gateway.setup.fee.status');
         }
@@ -309,6 +314,11 @@ class UserController extends Controller
 
         $user = auth()->user();
 
+        if ((int) $user->kv !== Status::KYC_VERIFIED) {
+            $notify[] = ['warning', 'Please complete and verify your KYC before the setup fee step.'];
+            return to_route('user.kyc.form')->withNotify($notify);
+        }
+
         if (($user->setup_fee_status ?? 'unpaid') === 'approved') {
             return to_route('user.gateway.setup.fee.status');
         }
@@ -343,6 +353,10 @@ class UserController extends Controller
     public function gatewaySetupFeeStatus()
     {
         $user = auth()->user();
+        if ((int) $user->kv !== Status::KYC_VERIFIED) {
+            $notify[] = ['warning', 'Please complete and verify your KYC before the setup fee step.'];
+            return to_route('user.kyc.form')->withNotify($notify);
+        }
         $status = (string) ($user->setup_fee_status ?? 'unpaid');
 
         if ($status === 'unpaid') {
@@ -371,6 +385,12 @@ class UserController extends Controller
     public function gatewaySetupFeeStatusData()
     {
         $user = auth()->user();
+        if ((int) $user->kv !== Status::KYC_VERIFIED) {
+            return response()->json([
+                'status' => 'unavailable',
+                'countdown_seconds' => 0,
+            ], 403);
+        }
         $status = (string) ($user->setup_fee_status ?? 'unpaid');
         $trackingWindowHours = 1;
         $countdownSeconds = 0;

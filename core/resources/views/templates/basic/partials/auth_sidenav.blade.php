@@ -1,6 +1,8 @@
 @php
     use App\Constants\Status;
-    $isAccountRestricted = auth()->user()->kv != Status::KYC_VERIFIED;
+    $merchantUser = auth()->user();
+    $isAccountRestricted = !$merchantUser->hasGatewayAccess();
+    $showSetupFeeMenu = $merchantUser->requiresSetupFee() || in_array(($merchantUser->setup_fee_status ?? 'unpaid'), ['pending_review', 'rejected'], true);
 @endphp
 
 <aside class="sidebar d-sidebar">
@@ -23,8 +25,10 @@
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive('user.deposit.history') }}">
-                <a href="{{ route('user.deposit.history') }}" class="sidebar-menu__link nav-item">
+            <li class="sidebar-menu__item {{ menuActive('user.deposit.history') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.deposit.history') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-file-alt n-ic"></i><span>@lang('Payment History')</span>
                 </a>
             </li>
@@ -37,26 +41,34 @@
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive('user.rewards*') }}">
-                <a href="{{ route('user.rewards.index') }}" class="sidebar-menu__link nav-item">
+            <li class="sidebar-menu__item {{ menuActive('user.rewards*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.rewards.index') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-gift n-ic"></i><span>@lang('Rewards')</span>
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive(['user.withdraws', 'user.withdraw.method']) }}">
-                <a href="{{ route('user.withdraws') }}" class="sidebar-menu__link nav-item">
+            <li class="sidebar-menu__item {{ menuActive(['user.withdraws', 'user.withdraw.method']) }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.withdraws') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-arrow-down n-ic"></i><span>@lang('Withdraws')</span>
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive('user.transactions') }}">
-                <a href="{{ route('user.transactions') }}" class="sidebar-menu__link nav-item">
+            <li class="sidebar-menu__item {{ menuActive('user.transactions') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.transactions') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-wallet n-ic"></i><span>@lang('Transactions')</span>
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive('ticket.*') }}">
-                <a href="{{ route('ticket.index') }}" class="sidebar-menu__link nav-item">
+            <li class="sidebar-menu__item {{ menuActive('ticket.*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('ticket.index') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-life-ring n-ic"></i><span>@lang('Get Support')</span>
                 </a>
             </li>
@@ -69,11 +81,21 @@
                 </a>
             </li>
 
-            <li class="sidebar-menu__item {{ menuActive('user.plan.billing') }}">
-                <a href="{{ route('user.plan.billing') }}" class="sidebar-menu__link nav-item">
+            <li class="sidebar-menu__item {{ menuActive('user.plan.billing') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.plan.billing') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-credit-card n-ic"></i><span>@lang('Plan & Billing')</span>
                 </a>
             </li>
+
+            @if($showSetupFeeMenu)
+                <li class="sidebar-menu__item {{ menuActive(['user.gateway.setup.fee*']) }}">
+                    <a href="{{ route('user.gateway.setup.fee') }}" class="sidebar-menu__link nav-item">
+                        <i class="las la-wallet n-ic"></i><span>@lang('Setup Fee')</span>
+                    </a>
+                </li>
+            @endif
 
             <li class="sidebar-menu__item {{ menuActive(['user.profile.setting', 'user.change.password', 'user.twofactor']) }}">
                 <a href="{{ route('user.profile.setting') }}" class="sidebar-menu__link nav-item">

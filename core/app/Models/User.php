@@ -6,6 +6,7 @@ use App\Constants\Status;
 use App\Traits\UserNotify;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -213,5 +214,24 @@ class User extends Authenticatable
     public function aiIntegrationEvents()
     {
         return $this->hasMany(AiIntegrationEvent::class, 'merchant_id')->orderByDesc('id');
+    }
+
+    public function isSetupFeeApproved(): bool
+    {
+        if (!Schema::hasColumn($this->getTable(), 'setup_fee_status')) {
+            return true;
+        }
+
+        return (string) ($this->setup_fee_status ?? 'unpaid') === 'approved';
+    }
+
+    public function requiresSetupFee(): bool
+    {
+        return (int) $this->kv === Status::KYC_VERIFIED && !$this->isSetupFeeApproved();
+    }
+
+    public function hasGatewayAccess(): bool
+    {
+        return (int) $this->kv === Status::KYC_VERIFIED && $this->isSetupFeeApproved();
     }
 }

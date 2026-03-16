@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Withdrawal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use App\Rules\FileTypeValidate;
 
 class ManageUsersController extends Controller
@@ -129,6 +130,9 @@ class ManageUsersController extends Controller
 
         $user = User::findOrFail($id);
         $user->kv = Status::KYC_VERIFIED;
+        if (Schema::hasColumn('users', 'setup_fee_status') && !in_array((string) ($user->setup_fee_status ?? ''), ['approved', 'pending_review', 'rejected', 'unpaid'], true)) {
+            $user->setup_fee_status = 'unpaid';
+        }
         $user->payment_fixed_charge = $request->payment_fixed_charge;
         $user->payment_percent_charge = $request->payment_percent_charge;
         $user->kyc_rejection_reason = null;
@@ -150,6 +154,13 @@ class ManageUsersController extends Controller
         ]);
         $user = User::findOrFail($id);
         $user->kv = Status::KYC_UNVERIFIED;
+        if (Schema::hasColumn('users', 'setup_fee_status')) {
+            $user->setup_fee_status = 'unpaid';
+            $user->setup_fee_submitted_at = null;
+            $user->setup_fee_reviewed_at = null;
+            $user->setup_fee_rejection_reason = null;
+            $user->setup_fee_payment_link_id = null;
+        }
         $user->kyc_rejection_reason = $request->reason;
         $user->save();
 
@@ -210,6 +221,13 @@ class ManageUsersController extends Controller
 
         if (!$request->kv) {
             $user->kv = Status::KYC_UNVERIFIED;
+            if (Schema::hasColumn('users', 'setup_fee_status')) {
+                $user->setup_fee_status = 'unpaid';
+                $user->setup_fee_submitted_at = null;
+                $user->setup_fee_reviewed_at = null;
+                $user->setup_fee_rejection_reason = null;
+                $user->setup_fee_payment_link_id = null;
+            }
             if ($user->kyc_data) {
                 foreach ($user->kyc_data as $kycData) {
                     if ($kycData->type == 'file') {
@@ -220,6 +238,20 @@ class ManageUsersController extends Controller
             $user->kyc_data = null;
         }else{
             $user->kv = Status::KYC_VERIFIED;
+
+            if (Schema::hasColumn('users', 'setup_fee_status')) {
+                if ($request->setup_fee_approved) {
+                    $user->setup_fee_status = 'approved';
+                    $user->setup_fee_reviewed_at = now();
+                    $user->setup_fee_rejection_reason = null;
+                } elseif (($user->setup_fee_status ?? 'unpaid') === 'approved') {
+                    $user->setup_fee_status = 'unpaid';
+                    $user->setup_fee_submitted_at = null;
+                    $user->setup_fee_reviewed_at = null;
+                    $user->setup_fee_rejection_reason = null;
+                    $user->setup_fee_payment_link_id = null;
+                }
+            }
         }
         $user->save();
 
