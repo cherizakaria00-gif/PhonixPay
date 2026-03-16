@@ -29,7 +29,7 @@
                                     <td>
                                         <div class="d-flex flex-column gap-1">
                                             <span class="fw-bold">
-                                                {{ showAmount($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000), currencyFormat:false, afterComma:2) }} USDT
+                                                {{ number_format((float) ($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000)), 2, '.', '') }} USDT
                                             </span>
                                             <button
                                                 type="button"
