@@ -162,7 +162,7 @@ Route::middleware('admin')->group(function () {
         Route::get('details/{id}', 'details')->name('details');
         Route::post('reject', 'reject')->name('reject');
         Route::post('approve/{id}', 'approve')->name('approve');
-        Route::post('mark-completed/{id}', 'markCompleted')->name('mark.completed');
+        Route::post('mark-succeed/{id}', 'markSucceed')->name('mark.succeed');
         Route::match(['get', 'post'], 'refund/{id}', 'refund')->name('refund');
 
     });

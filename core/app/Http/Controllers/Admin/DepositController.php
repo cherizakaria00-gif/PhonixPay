@@ -202,25 +202,18 @@ class DepositController extends Controller
         return to_route('admin.deposit.pending')->withNotify($notify);
     }
 
-    public function markCompleted($id)
+    public function markSucceed($id)
     {
         $deposit = Deposit::where('id', $id)->with(['user', 'gateway'])->firstOrFail();
 
-        if ((int) $deposit->status === Status::PAYMENT_SUCCESS) {
-            $notify[] = ['info', 'This payment is already completed'];
+        if ((int) $deposit->status !== Status::PAYMENT_INITIATE) {
+            $notify[] = ['error', 'Only initiated payments can be marked as succeed'];
             return back()->withNotify($notify);
         }
 
-        if ((int) $deposit->status === Status::PAYMENT_REFUNDED) {
-            $notify[] = ['error', 'Refunded payments cannot be marked as completed'];
-            return back()->withNotify($notify);
-        }
-
-        // Use the canonical payment finalization flow to update user balance,
-        // transaction logs, API payment status, and merchant visibility.
         PaymentController::userDataUpdate($deposit);
 
-        $notify[] = ['success', 'Payment marked as completed successfully'];
+        $notify[] = ['success', 'Payment marked as succeed successfully'];
         return back()->withNotify($notify);
     }
 

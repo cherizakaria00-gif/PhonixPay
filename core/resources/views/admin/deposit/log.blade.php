@@ -112,6 +112,15 @@
                                 </td>
                                 <td>
                                     @php echo $deposit->statusBadge @endphp
+                                    @if((int) $deposit->status === \App\Constants\Status::PAYMENT_INITIATE)
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-outline--success confirmationBtn"
+                                                    data-question="@lang('Are you sure to change status from Initiated to Succeed?')"
+                                                    data-action="{{ route('admin.deposit.mark.succeed', $deposit->id) }}">
+                                                <i class="la la-check-circle"></i> @lang('Set Succeed')
+                                            </button>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td>
                                     {{ $deposit->integration_source_type ?: __('N/A') }}
@@ -121,13 +130,6 @@
                                        class="btn btn-sm btn-outline--primary ms-1">
                                         <i class="la la-desktop"></i> @lang('Details')
                                     </a>
-                                    @if(!in_array((int) $deposit->status, [\App\Constants\Status::PAYMENT_SUCCESS, \App\Constants\Status::PAYMENT_REFUNDED], true))
-                                        <button class="btn btn-sm btn-outline--success ms-1 confirmationBtn"
-                                                data-question="@lang('Are you sure to mark this payment as completed?')"
-                                                data-action="{{ route('admin.deposit.mark.completed', $deposit->id) }}">
-                                            <i class="la la-check-circle"></i> @lang('Mark Completed')
-                                        </button>
-                                    @endif
                                     @if($isRefundableGateway && $deposit->status == \App\Constants\Status::PAYMENT_SUCCESS)
                                         <button class="btn btn-sm btn-outline--danger ms-1 confirmationBtn"
                                                 data-question="@lang('Are you sure to refund this payment?')"
