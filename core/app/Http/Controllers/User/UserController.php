@@ -111,56 +111,66 @@ class UserController extends Controller
             ];
         })->values();
 
-        $paymentLinkSeries = collect();
-        $pluginDirectSeries = collect();
+        $hasPaymentLinkId = Schema::hasColumn('deposits', 'payment_link_id');
+        $hasSourceType = Schema::hasColumn('deposits', 'integration_source_type');
+
+        $paymentLinkDaily = [];
+        $pluginDirectDaily = [];
         $paymentLinkTotal = 0.0;
         $pluginDirectTotal = 0.0;
 
-        if (Schema::hasColumn('deposits', 'integration_source_type')) {
-            $paymentLinkSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) use ($user) {
-                $date = Carbon::today()->subDays($offset);
-                return [
-                    'label' => $date->format('M d'),
-                    'amount' => (float) Deposit::where('user_id', $user->id)
-                        ->where('status', Status::PAYMENT_SUCCESS)
-                        ->where('integration_source_type', 'payment_link')
-                        ->whereDate('created_at', $date)
-                        ->sum('amount'),
-                ];
-            })->values();
+        foreach (range($selectedRangeDays - 1, 0) as $offset) {
+            $date = Carbon::today()->subDays($offset);
 
-            $pluginDirectSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) use ($user) {
-                $date = Carbon::today()->subDays($offset);
-                return [
-                    'label' => $date->format('M d'),
-                    'amount' => (float) Deposit::where('user_id', $user->id)
-                        ->where('status', Status::PAYMENT_SUCCESS)
-                        ->whereIn('integration_source_type', ['plugin_sdk', 'plugin', 'woocommerce'])
-                        ->whereDate('created_at', $date)
-                        ->sum('amount'),
-                ];
-            })->values();
-
-            $paymentLinkTotal = (float) Deposit::where('user_id', $user->id)
+            $successfulQuery = Deposit::where('user_id', $user->id)
                 ->where('status', Status::PAYMENT_SUCCESS)
-                ->where('integration_source_type', 'payment_link')
-                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
-                ->sum('amount');
+                ->whereDate('created_at', $date);
 
-            $pluginDirectTotal = (float) Deposit::where('user_id', $user->id)
-                ->where('status', Status::PAYMENT_SUCCESS)
-                ->whereIn('integration_source_type', ['plugin_sdk', 'plugin', 'woocommerce'])
-                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
-                ->sum('amount');
-        } else {
-            $paymentLinkSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) {
-                return ['label' => Carbon::today()->subDays($offset)->format('M d'), 'amount' => 0.0];
-            })->values();
+            $dailyTotal = (float) (clone $successfulQuery)->sum('amount');
 
-            $pluginDirectSeries = collect(range($selectedRangeDays - 1, 0))->map(function ($offset) {
-                return ['label' => Carbon::today()->subDays($offset)->format('M d'), 'amount' => 0.0];
-            })->values();
+            $paymentLinkQuery = clone $successfulQuery;
+            if ($hasPaymentLinkId) {
+                $paymentLinkQuery->whereNotNull('payment_link_id');
+            } elseif ($hasSourceType) {
+                $paymentLinkQuery->where('integration_source_type', 'payment_link');
+            } else {
+                $paymentLinkQuery->whereRaw('1 = 0');
+            }
+
+            $dailyPaymentLink = (float) $paymentLinkQuery->sum('amount');
+            $dailyPluginDirect = max(0, $dailyTotal - $dailyPaymentLink);
+
+            $paymentLinkDaily[] = [
+                'label' => $date->format('M d'),
+                'amount' => $dailyPaymentLink,
+            ];
+
+            $pluginDirectDaily[] = [
+                'label' => $date->format('M d'),
+                'amount' => $dailyPluginDirect,
+            ];
         }
+
+        $periodSuccessfulQuery = Deposit::where('user_id', $user->id)
+            ->where('status', Status::PAYMENT_SUCCESS)
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+
+        $periodTotal = (float) (clone $periodSuccessfulQuery)->sum('amount');
+        $periodPaymentLinkQuery = clone $periodSuccessfulQuery;
+
+        if ($hasPaymentLinkId) {
+            $periodPaymentLinkQuery->whereNotNull('payment_link_id');
+        } elseif ($hasSourceType) {
+            $periodPaymentLinkQuery->where('integration_source_type', 'payment_link');
+        } else {
+            $periodPaymentLinkQuery->whereRaw('1 = 0');
+        }
+
+        $paymentLinkTotal = (float) $periodPaymentLinkQuery->sum('amount');
+        $pluginDirectTotal = max(0, $periodTotal - $paymentLinkTotal);
+
+        $paymentLinkSeries = collect($paymentLinkDaily)->values();
+        $pluginDirectSeries = collect($pluginDirectDaily)->values();
 
         $payoutAvailable = max(0, (float) ($user->balance ?? 0) * 0.7);
         $monthNet = max(0, $monthGross * 0.95);
