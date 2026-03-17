@@ -121,6 +121,13 @@
                                        class="btn btn-sm btn-outline--primary ms-1">
                                         <i class="la la-desktop"></i> @lang('Details')
                                     </a>
+                                    @if(!in_array((int) $deposit->status, [\App\Constants\Status::PAYMENT_SUCCESS, \App\Constants\Status::PAYMENT_REFUNDED], true))
+                                        <button class="btn btn-sm btn-outline--success ms-1 confirmationBtn"
+                                                data-question="@lang('Are you sure to mark this payment as completed?')"
+                                                data-action="{{ route('admin.deposit.mark.completed', $deposit->id) }}">
+                                            <i class="la la-check-circle"></i> @lang('Mark Completed')
+                                        </button>
+                                    @endif
                                     @if($isRefundableGateway && $deposit->status == \App\Constants\Status::PAYMENT_SUCCESS)
                                         <button class="btn btn-sm btn-outline--danger ms-1 confirmationBtn"
                                                 data-question="@lang('Are you sure to refund this payment?')"
