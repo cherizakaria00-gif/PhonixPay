@@ -29,6 +29,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Test bootstrap should not hit settings/template queries before the
+        // test database has been prepared.
+        if ($this->app->environment('testing')) {
+            Paginator::useBootstrapFive();
+            return;
+        }
+
         if (!cache()->get('SystemInstalled')) {
             $envFilePath = base_path('.env');
             $envExamplePath = base_path('.env.example');

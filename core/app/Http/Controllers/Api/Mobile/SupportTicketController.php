@@ -62,9 +62,20 @@ class SupportTicketController extends ApiMobileController
         ], 201);
     }
 
-    public function show(Request $request, SupportTicket $ticket)
+    public function show(Request $request, string $ticket)
     {
-        if ((int) $ticket->user_id !== (int) $request->user()->id) {
+        $ticketRecord = SupportTicket::query()
+            ->where('user_id', $request->user()->id)
+            ->where(function ($query) use ($ticket) {
+                if (is_numeric($ticket)) {
+                    $query->where('id', (int) $ticket);
+                }
+
+                $query->orWhere('ticket', $ticket);
+            })
+            ->first();
+
+        if (!$ticketRecord) {
             return response()->json([
                 'message' => 'Ticket not found.',
                 'errors' => [
@@ -74,13 +85,13 @@ class SupportTicketController extends ApiMobileController
         }
 
         $messages = SupportMessage::query()
-            ->where('support_ticket_id', $ticket->id)
+            ->where('support_ticket_id', $ticketRecord->id)
             ->with('admin')
             ->orderBy('id')
             ->get();
 
         return $this->ok([
-            'ticket' => (new SupportTicketResource($ticket))->resolve(),
+            'ticket' => (new SupportTicketResource($ticketRecord))->resolve(),
             'messages' => SupportMessageResource::collection($messages)->resolve(),
         ]);
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Mobile;
 
 use App\Constants\Status;
 use App\Http\Resources\Mobile\UserResource;
+use App\Lib\SocialLogin;
 use App\Models\AdminNotification;
 use App\Models\Plan;
 use App\Models\User;
@@ -20,18 +21,19 @@ class AuthController extends ApiMobileController
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required|string',
+            'username' => 'nullable|string|required_without:email',
+            'email' => 'nullable|string|required_without:username',
             'password' => 'required|string',
         ]);
 
-        $login = trim((string) $request->input('username'));
+        $login = trim((string) ($request->input('username') ?: $request->input('email')));
         $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
         if (!Auth::attempt([$field => $login, 'password' => (string) $request->input('password')])) {
             return response()->json([
                 'message' => 'Invalid credentials.',
                 'errors' => [
-                    'username' => ['The provided credentials are incorrect.'],
+                    $field === 'email' ? 'email' : 'username' => ['The provided credentials are incorrect.'],
                 ],
             ], 422);
         }
@@ -136,6 +138,81 @@ class AuthController extends ApiMobileController
             'token' => $token,
             'user' => (new UserResource($user->fresh()))->toArray($request),
         ], 201);
+    }
+
+    public function registerMobile(Request $request)
+    {
+        $request->validate([
+            'account.firstname' => 'required|string|max:191',
+            'account.lastname' => 'required|string|max:191',
+            'account.email' => 'required|email|max:191',
+            'account.password' => 'required|string|min:6',
+            'account.password_confirmation' => 'required|string|same:account.password',
+            'account.agree' => 'accepted',
+            'profile.username' => 'required|string|min:6|max:191',
+            'profile.mobile' => 'required|string|max:50',
+            'profile.dial_code' => 'required|string|max:20',
+            'profile.country' => 'required|string|max:191',
+            'profile.country_code' => 'required|string|max:10',
+            'profile.city' => 'nullable|string|max:191',
+            'profile.state' => 'nullable|string|max:191',
+            'profile.zip' => 'nullable|string|max:50',
+            'profile.address' => 'nullable|string|max:255',
+        ]);
+
+        $request->merge([
+            'firstname' => data_get($request, 'account.firstname'),
+            'lastname' => data_get($request, 'account.lastname'),
+            'email' => data_get($request, 'account.email'),
+            'password' => data_get($request, 'account.password'),
+            'password_confirmation' => data_get($request, 'account.password_confirmation'),
+            'username' => data_get($request, 'profile.username'),
+            'mobile' => data_get($request, 'profile.mobile'),
+            'dial_code' => data_get($request, 'profile.dial_code'),
+            'country' => data_get($request, 'profile.country'),
+            'country_code' => data_get($request, 'profile.country_code'),
+            'city' => data_get($request, 'profile.city'),
+            'state' => data_get($request, 'profile.state'),
+            'zip' => data_get($request, 'profile.zip'),
+            'address' => data_get($request, 'profile.address'),
+        ]);
+
+        return $this->register($request);
+    }
+
+    public function socialLogin(Request $request, string $provider)
+    {
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        if (!in_array($provider, ['google', 'facebook', 'linkedin'], true)) {
+            return response()->json([
+                'message' => 'Unsupported social provider.',
+                'errors' => [
+                    'provider' => ['Unsupported social provider.'],
+                ],
+            ], 422);
+        }
+
+        try {
+            $result = (new SocialLogin($provider, true))->login();
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'message' => $exception->getMessage() ?: 'Unable to login with social provider.',
+                'errors' => [
+                    'token' => [$exception->getMessage() ?: 'Unable to login with social provider.'],
+                ],
+            ], 422);
+        }
+
+        /** @var User $user */
+        $user = $result['user'];
+
+        return $this->ok([
+            'token' => $result['access_token'],
+            'user' => (new UserResource($user->fresh()))->toArray($request),
+        ]);
     }
 
     public function me(Request $request)

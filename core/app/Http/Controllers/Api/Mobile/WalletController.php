@@ -82,11 +82,17 @@ class WalletController extends ApiMobileController
     {
         return Deposit::query()
             ->where('user_id', $userId)
+            ->with('apiPayment')
             ->latest('id')
             ->get()
             ->map(function (Deposit $deposit) {
                 $fee = (float) ($deposit->charge + ($deposit->payment_charge ?? 0));
                 $amount = (float) $deposit->amount;
+                $customer = $deposit->apiPayment?->customer;
+                $customerName = trim(implode(' ', array_filter([
+                    data_get($customer, 'first_name'),
+                    data_get($customer, 'last_name'),
+                ])));
 
                 return collect([
                     'id' => (int) $deposit->id,
@@ -98,6 +104,9 @@ class WalletController extends ApiMobileController
                     'net' => (float) ($deposit->net_amount ?? max(0, $amount - $fee)),
                     'reference' => (string) ($deposit->trx ?: $deposit->btc_wallet),
                     'description' => (string) data_get($deposit, 'apiPayment.details', ''),
+                    'customer' => $customerName ?: null,
+                    'email' => data_get($customer, 'email'),
+                    'phone' => data_get($customer, 'mobile'),
                     'created_at' => $deposit->created_at,
                 ]);
             });

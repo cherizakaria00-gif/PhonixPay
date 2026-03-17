@@ -43,7 +43,7 @@ class ClientInfo{
     * @return array
     */
 	public static function osBrowser(){
-	    $userAgent = $_SERVER['HTTP_USER_AGENT'];
+	    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? request()->userAgent() ?? 'Unknown User Agent';
 	    $osPlatform = "Unknown OS Platform";
 	    $osArray = array(
 	        '/windows nt 10/i' => 'Windows 10',

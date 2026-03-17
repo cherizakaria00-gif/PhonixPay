@@ -327,8 +327,8 @@ function getFileExt($key)
 
 function diffForHumans($date)
 {
-    $lang = session()->get('lang');
-    Carbon::setlocale($lang);
+    $lang = session()->get('lang') ?: config('app.locale', 'en');
+    Carbon::setLocale(is_string($lang) && $lang !== '' ? $lang : 'en');
     return Carbon::parse($date)->diffForHumans();
 }
 
@@ -409,7 +409,7 @@ function showEmailAddress($email)
 
 function getRealIP()
 {
-    $ip = $_SERVER["REMOTE_ADDR"];
+    $ip = $_SERVER['REMOTE_ADDR'] ?? request()->ip() ?? '127.0.0.1';
     //Deep detect ip
     if (filter_var(@$_SERVER['HTTP_FORWARDED'], FILTER_VALIDATE_IP)) {
         $ip = $_SERVER['HTTP_FORWARDED'];

@@ -18,6 +18,9 @@ class TransactionResource extends JsonResource
             'net' => (float) data_get($this, 'net', 0),
             'reference' => (string) data_get($this, 'reference', ''),
             'description' => (string) data_get($this, 'description', ''),
+            'customer' => data_get($this, 'customer'),
+            'email' => data_get($this, 'email'),
+            'phone' => data_get($this, 'phone'),
             'created_at' => optional(data_get($this, 'created_at'))->toIso8601String(),
         ];
     }

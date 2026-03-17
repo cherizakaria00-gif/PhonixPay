@@ -13,7 +13,7 @@ class PaymentController extends ApiMobileController
         $request->validate([
             'amount' => 'required|numeric|gt:0',
             'currency' => 'required|string|max:10',
-            'description' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
         ]);
 
         $user = $request->user();
@@ -26,7 +26,7 @@ class PaymentController extends ApiMobileController
         $apiPayment->ip = $request->ip();
         $apiPayment->amount = (float) $request->amount;
         $apiPayment->currency = strtoupper((string) $request->currency);
-        $apiPayment->details = (string) $request->description;
+        $apiPayment->details = trim((string) ($request->description ?: 'Mobile payment intent'));
         $apiPayment->site_name = (string) (gs('site_name') ?: 'FlujiPay');
         $apiPayment->checkout_theme = 'light';
         $apiPayment->ipn_url = route('home');
