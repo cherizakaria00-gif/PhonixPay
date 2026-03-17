@@ -356,7 +356,7 @@ class UserController extends Controller
         $user->setup_fee_rejection_reason = null;
         $user->save();
 
-        $notify[] = ['success', 'Setup fee payment submitted. We are processing your transaction now.'];
+        $notify[] = ['success', 'Setup fee payment submitted successfully. Your transfer is now under manual review.'];
         return to_route('user.gateway.setup.fee.status')->withNotify($notify);
     }
 
@@ -373,7 +373,7 @@ class UserController extends Controller
             return to_route('user.gateway.setup.fee');
         }
 
-        $pageTitle = 'Setup Fee Transaction Status';
+        $pageTitle = 'Setup Fee Review Status';
         $trackingWindowHours = 1;
         $countdownSeconds = 3600;
 

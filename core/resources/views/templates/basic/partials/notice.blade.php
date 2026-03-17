@@ -62,10 +62,10 @@
                     <span class="fw-bold title">@lang('Setup Fee In Progress')</span>
                     <br>
                     <small class="content">
-                        @lang('Your setup fee transaction is processing. Keep the status page open until confirmation.')
+                        @lang('Your setup fee transfer has been submitted and is under manual review.')
                     </small>
                     <br>
-                    <a href="{{ route('user.gateway.setup.fee.status') }}" class="btn btn--base btn-sm mt-2">@lang('Open Transaction Status')</a>
+                    <a href="{{ route('user.gateway.setup.fee.status') }}" class="btn btn--base btn-sm mt-2">@lang('Open Review Status')</a>
                 </p>
             </div>
         @else

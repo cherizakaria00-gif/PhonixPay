@@ -29,13 +29,13 @@
                         @if(($user->setup_fee_status ?? 'unpaid') === 'pending_review')
                             <div class="alert alert--info mb-4" role="alert">
                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                    <span>@lang('Your setup fee transaction is processing. Keep this status open until confirmation.')</span>
+                                    <span>@lang('Your setup fee transfer is under manual review.')</span>
                                     @if(!is_null($reviewCountdownSeconds))
                                         <span class="fw-bold" id="setupFeeReviewCountdown">00:00:00</span>
                                     @endif
                                 </div>
                                 <small class="d-block mt-2 text-muted">
-                                    @lang('Estimated transaction window: :hours hour(s)', ['hours' => 1])
+                                    @lang('Off-chain Binance transfers may not display a blockchain TxID immediately. Validation is handled manually.')
                                 </small>
                             </div>
                         @elseif(($user->setup_fee_status ?? 'unpaid') === 'rejected')
