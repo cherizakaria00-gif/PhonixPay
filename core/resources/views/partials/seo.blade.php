@@ -1,35 +1,40 @@
-@if($seo)
-    @php
-        $metaTitle = @$seoContents->meta_title ?: gs()->siteName(__($pageTitle));
-        $metaDescription = @$seoContents->description ?? $seo->description;
-        $metaKeywords = implode(',', @$seoContents->keywords ?? $seo->keywords);
-        $socialTitle = @$seoContents->social_title ?? $seo->social_title;
-        $socialDescription = @$seoContents->social_description ?? $seo->social_description;
-    @endphp
-    <meta name="title" Content="{{ $metaTitle }}">
-    <meta name="description" content="{{ $metaDescription }}">
-    <meta name="keywords" content="{{ $metaKeywords }}">
-    <link rel="shortcut icon" href="{{ siteFavicon() }}" type="image/x-icon">
+@php
+    $metaTitle = (string) (@$seoContents->meta_title ?: gs()->siteName(__($pageTitle ?? gs('site_name'))));
+    $metaDescription = (string) (@$seoContents->description ?? ($seo->description ?? gs('site_name')));
+    $metaKeywords = implode(',', (array) (@$seoContents->keywords ?? ($seo->keywords ?? [])));
+    $socialTitle = (string) (@$seoContents->social_title ?? ($seo->social_title ?? $metaTitle));
+    $socialDescription = (string) (@$seoContents->social_description ?? ($seo->social_description ?? $metaDescription));
+    $defaultSeoImage = isset($seo) && !empty($seo->image)
+        ? getImage(getFilePath('seo') . '/' . $seo->image)
+        : siteLogo();
+    $socialImage = $seoImage ?? $defaultSeoImage;
+    $socialImageSize = explode('x', getFileSize('seo'));
+@endphp
 
-    {{--<!-- Apple Stuff -->--}}
-    <link rel="apple-touch-icon" href="{{ siteLogo() }}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="{{ $metaTitle }}">
-    {{--<!-- Google / Search Engine Tags -->--}}
-    <meta itemprop="name" content="{{ $metaTitle }}">
-    <meta itemprop="description" content="{{ $metaDescription }}">
-    <meta itemprop="image" content="{{ $seoImage ?? getImage(getFilePath('seo') .'/'. $seo->image) }}">
-    {{--<!-- Facebook Meta Tags -->--}}
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ $socialTitle }}">
-    <meta property="og:description" content="{{ $socialDescription }}">
-    <meta property="og:image" content="{{ $seoImage ?? getImage(getFilePath('seo') .'/'. $seo->image) }}">
-    <meta property="og:image:type" content="image/{{ pathinfo(getImage(getFilePath('seo')) .'/'. $seo->image)['extension'] }}">
-    @php $socialImageSize = explode('x', getFileSize('seo')) @endphp
-    <meta property="og:image:width" content="{{ $socialImageSize[0] }}">
-    <meta property="og:image:height" content="{{ $socialImageSize[1] }}">
-    <meta property="og:url" content="{{ url()->current() }}">
-    {{--<!-- Twitter Meta Tags -->--}}
-    <meta name="twitter:card" content="summary_large_image">
-@endif
+<meta name="title" content="{{ $metaTitle }}">
+<meta name="description" content="{{ $metaDescription }}">
+<meta name="keywords" content="{{ $metaKeywords }}">
+<link rel="shortcut icon" href="{{ siteFavicon() }}" type="image/x-icon">
+
+<link rel="apple-touch-icon" href="{{ siteLogo() }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="{{ $metaTitle }}">
+
+<meta itemprop="name" content="{{ $metaTitle }}">
+<meta itemprop="description" content="{{ $metaDescription }}">
+<meta itemprop="image" content="{{ $socialImage }}">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ $socialTitle }}">
+<meta property="og:description" content="{{ $socialDescription }}">
+<meta property="og:image" content="{{ $socialImage }}">
+<meta property="og:image:type" content="image/{{ pathinfo($socialImage, PATHINFO_EXTENSION) ?: 'png' }}">
+<meta property="og:image:width" content="{{ $socialImageSize[0] ?? 1200 }}">
+<meta property="og:image:height" content="{{ $socialImageSize[1] ?? 630 }}">
+<meta property="og:url" content="{{ url()->current() }}">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $socialTitle }}">
+<meta name="twitter:description" content="{{ $socialDescription }}">
+<meta name="twitter:image" content="{{ $socialImage }}">
