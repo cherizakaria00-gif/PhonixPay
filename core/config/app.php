@@ -1,6 +1,17 @@
 <?php
 use Illuminate\Support\Facades\Facade;
-require_once('timezone.php');
+
+$timezone = env('APP_TIMEZONE', 'UTC');
+$timezoneConfigPath = __DIR__ . '/timezone.php';
+
+if (is_file($timezoneConfigPath)) {
+    require_once $timezoneConfigPath;
+}
+
+if (!isset($timezone) || !is_string($timezone) || trim($timezone) === '') {
+    $timezone = env('APP_TIMEZONE', 'UTC');
+}
+
 return [
 
     /*

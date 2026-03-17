@@ -33,7 +33,7 @@
                                 @lang('Your setup fee transfer has been submitted and is waiting for manual validation.')
                             </p>
                             <div class="alert alert--warning border border--warning mb-4 text-start">
-                                @lang('Binance internal/off-chain transfers may not provide an on-chain TxID immediately. This does not block your review.')
+                                @lang('If no TxID is available yet, your submitted reference is used as the default transaction identifier for review.')
                             </div>
                         @endif
 

@@ -35,7 +35,7 @@
                                     @endif
                                 </div>
                                 <small class="d-block mt-2 text-muted">
-                                    @lang('Off-chain Binance transfers may not display a blockchain TxID immediately. Validation is handled manually.')
+                                    @lang('If your wallet does not show a TxID immediately, use this payment reference as your default transaction identifier.')
                                 </small>
                             </div>
                         @elseif(($user->setup_fee_status ?? 'unpaid') === 'rejected')
