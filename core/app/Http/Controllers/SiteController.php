@@ -270,7 +270,7 @@ class SiteController extends Controller
         return view('Template::api_documentation', compact('pageTitle', 'allCurrency'));
     }
 
-    public function successPaymentRedirect($depositId)
+    public function successPaymentRedirect(Request $request, $depositId)
     {
         $deposit = Deposit::where('id', $depositId)->orderBy('id', 'desc')->firstOrFail();
 
@@ -283,6 +283,7 @@ class SiteController extends Controller
         }
 
         $this->finalizeBictorysOnSuccessRedirect($request, $deposit);
+        $this->finalizeNowPaymentsOnSuccessRedirect($request, $deposit);
         $deposit->refresh();
 
         if ($deposit->gateway && $deposit->gateway->alias === 'StripePaymentLink') {
@@ -335,6 +336,94 @@ class SiteController extends Controller
     {
         $alias = (string) ($deposit->gateway->alias ?? '');
         return in_array($alias, ['BictorysCheckout', 'BictorysDirect'], true);
+    }
+
+    private function isNowPaymentsGateway(Deposit $deposit): bool
+    {
+        $alias = (string) ($deposit->gateway->alias ?? '');
+        return in_array($alias, ['NowPaymentsHosted', 'NowPaymentsCheckout'], true);
+    }
+
+    private function finalizeNowPaymentsOnSuccessRedirect(Request $request, Deposit $deposit): void
+    {
+        if (!in_array((int) $deposit->status, [Status::PAYMENT_INITIATE, Status::PAYMENT_PENDING], true)) {
+            return;
+        }
+
+        if (!$this->isNowPaymentsGateway($deposit)) {
+            return;
+        }
+
+        if ($this->hasFailureSignalInSuccessRedirect($request)) {
+            return;
+        }
+
+        $status = strtolower(trim((string) ($request->query('payment_status') ?: $request->query('status') ?: '')));
+        if (in_array($status, ['finished', 'confirmed', 'success', 'successful', 'paid', 'completed'], true)) {
+            PaymentController::userDataUpdate((int) $deposit->id);
+            Log::info('NowPayments fallback finalization applied from success redirect (query status)', [
+                'deposit_id' => (int) $deposit->id,
+                'trx' => (string) $deposit->trx,
+                'status' => $status,
+            ]);
+            return;
+        }
+
+        $apiKey = $this->resolveNowPaymentsApiKey($deposit);
+        if ($apiKey === '') {
+            return;
+        }
+
+        $paymentId = trim((string) ($request->query('payment_id') ?: ''));
+        if ($paymentId !== '') {
+            $responseRaw = \App\Lib\CurlRequest::curlContent(
+                'https://api.nowpayments.io/v1/payment/' . urlencode($paymentId),
+                ["x-api-key: {$apiKey}"]
+            );
+            $response = json_decode((string) $responseRaw, true);
+            $externalStatus = strtolower(trim((string) (($response['payment_status'] ?? $response['status'] ?? ''))));
+            if (in_array($externalStatus, ['finished', 'confirmed'], true)) {
+                PaymentController::userDataUpdate((int) $deposit->id);
+                Log::info('NowPayments fallback finalization applied from success redirect (payment API)', [
+                    'deposit_id' => (int) $deposit->id,
+                    'trx' => (string) $deposit->trx,
+                    'payment_id' => $paymentId,
+                    'external_status' => $externalStatus,
+                ]);
+                return;
+            }
+        }
+
+        $invoiceId = trim((string) ($request->query('invoice_id') ?: ''));
+        if ($invoiceId !== '') {
+            $responseRaw = \App\Lib\CurlRequest::curlContent(
+                'https://api.nowpayments.io/v1/invoice/' . urlencode($invoiceId),
+                ["x-api-key: {$apiKey}"]
+            );
+            $response = json_decode((string) $responseRaw, true);
+            $externalStatus = strtolower(trim((string) (($response['payment_status'] ?? $response['status'] ?? ''))));
+            if (in_array($externalStatus, ['finished', 'confirmed', 'paid'], true)) {
+                PaymentController::userDataUpdate((int) $deposit->id);
+                Log::info('NowPayments fallback finalization applied from success redirect (invoice API)', [
+                    'deposit_id' => (int) $deposit->id,
+                    'trx' => (string) $deposit->trx,
+                    'invoice_id' => $invoiceId,
+                    'external_status' => $externalStatus,
+                ]);
+            }
+        }
+    }
+
+    private function resolveNowPaymentsApiKey(Deposit $deposit): string
+    {
+        $gatewayParams = json_decode((string) optional($deposit->gatewayCurrency())->gateway_parameter);
+        $fromCurrency = trim((string) (is_object($gatewayParams) ? ($gatewayParams->api_key ?? '') : ''));
+        if ($fromCurrency !== '') {
+            return $fromCurrency;
+        }
+
+        $gatewayAccount = json_decode((string) optional($deposit->gateway)->gateway_parameters);
+        return trim((string) (is_object($gatewayAccount) ? data_get($gatewayAccount, 'api_key.value', data_get($gatewayAccount, 'api_key', '')) : ''));
     }
 
     private function hasValidBictorysVerificationToken(Deposit $deposit, string $token): bool
