@@ -3,8 +3,13 @@
 @php
     $showHeaderBalance = true;
 
-    $grossDisplay = $todayRevenue ?? 0;
-    $yesterdayDisplay = $yesterdayRevenue ?? 0;
+    $todayCardPresetsCollection = collect($todayCardPresets ?? []);
+    $todayCardDefault = $todayCardPresetsCollection->get($todayCardRange ?? 'today', $todayCardPresetsCollection->get('today', []));
+    $grossDisplay = (float) data_get($todayCardDefault, 'current_total', 0);
+    $yesterdayDisplay = (float) data_get($todayCardDefault, 'compare_total', 0);
+    $todayCardTitle = (string) data_get($todayCardDefault, 'title', 'Today');
+    $todayCompareLabel = (string) data_get($todayCardDefault, 'compare_label', 'Previous');
+    $todayRangeHint = (string) data_get($todayCardDefault, 'range_hint', '00:00 - 23:59');
     $balanceDisplay = (float) ($user->balance ?? 0);
     $payoutDisplay = $payoutAvailable ?? 0;
 
@@ -38,29 +43,39 @@
 <div class="stripe-dashboard">
     <div class="stripe-card stripe-today-card">
         <div class="stripe-card-head">
-            <h2>Today</h2>
+            <h2 id="stripeTodayTitle">{{ $todayCardTitle }}</h2>
         </div>
 
         <div class="stripe-today-body">
             <div class="stripe-today-main">
                 <div class="stripe-today-metrics">
                     <div class="stripe-metric">
-                        <button type="button" class="stripe-metric-label">Gross volume <i class="las la-angle-down"></i></button>
-                        <div class="stripe-metric-value">{{ showAmount($grossDisplay) }}</div>
-                        <div class="stripe-metric-sub">{{ now()->format('g:i A') }}</div>
+                        <label for="stripeTodayRangeSelect" class="stripe-metric-label d-inline-flex align-items-center gap-1">
+                            Gross volume <i class="las la-angle-down"></i>
+                        </label>
+                        <select id="stripeTodayRangeSelect" class="form-control form-control-sm mt-2" style="max-width: 180px;">
+                            <option value="today" @selected(($todayCardRange ?? 'today') === 'today')>Today</option>
+                            <option value="yesterday" @selected(($todayCardRange ?? 'today') === 'yesterday')>Yesterday</option>
+                            <option value="15" @selected(($todayCardRange ?? 'today') === '15')>Last 15 days</option>
+                            <option value="30" @selected(($todayCardRange ?? 'today') === '30')>Last 1 month</option>
+                        </select>
+                        <div class="stripe-metric-value" id="stripeTodayCurrentValue">{{ showAmount($grossDisplay) }}</div>
+                        <div class="stripe-metric-sub" id="stripeTodayRangeHint">{{ $todayRangeHint }}</div>
                     </div>
                     <div class="stripe-metric">
-                        <button type="button" class="stripe-metric-label">Yesterday <i class="las la-angle-down"></i></button>
-                        <div class="stripe-metric-value">{{ showAmount($yesterdayDisplay) }}</div>
+                        <span class="stripe-metric-label" id="stripeCompareLabel">{{ $todayCompareLabel }}</span>
+                        <div class="stripe-metric-value" id="stripeTodayCompareValue">{{ showAmount($yesterdayDisplay) }}</div>
                     </div>
                 </div>
 
                 <div class="stripe-chart-wrap">
+                    <div id="stripeChartTooltip" class="stripe-chart-tooltip d-none"></div>
                     <svg id="stripeTodayChart" viewBox="0 0 900 230" preserveAspectRatio="none" aria-label="Today chart">
                         <path id="stripeYesterdayPath" class="line-yesterday" d="" />
                         <path id="stripeTodayPath" class="line-today" d="" />
+                        <g id="stripeTodayPoints"></g>
                     </svg>
-                    <div class="stripe-chart-time">11:59 PM</div>
+                    <div class="stripe-chart-time" id="stripeChartTimeLabel">{{ $todayRangeHint }}</div>
                 </div>
             </div>
 
@@ -89,6 +104,7 @@
             <h2>Your overview</h2>
             <form class="stripe-filters" method="GET" action="{{ route('user.home') }}">
                 <input type="hidden" name="compare" value="{{ ($compareEnabled ?? true) ? 1 : 0 }}">
+                <input type="hidden" name="today_range" value="{{ $todayCardRange ?? 'today' }}">
                 <div class="stripe-filter-group">
                     <span>Date range</span>
                     <select name="range" class="stripe-filter-native" onchange="this.form.submit()">
@@ -228,11 +244,40 @@
 </div>
 @endsection
 
+@push('style')
+<style>
+    .stripe-chart-wrap { position: relative; }
+    .stripe-chart-tooltip {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform: translate(-50%, -120%);
+        background: #0f172a;
+        color: #fff;
+        border-radius: 8px;
+        font-size: 12px;
+        line-height: 1.2;
+        padding: 8px 10px;
+        pointer-events: none;
+        white-space: nowrap;
+        z-index: 5;
+        box-shadow: 0 10px 24px rgba(2, 6, 23, .28);
+    }
+    .stripe-chart-point {
+        fill: #635bff;
+        stroke: #fff;
+        stroke-width: 2;
+        cursor: pointer;
+    }
+</style>
+@endpush
+
 @push('script')
 <script>
     (function () {
-        const labels = @json($chartLabels);
-        const values = @json($chartValues);
+        const todayCardPresets = @json($todayCardPresets ?? []);
+        const currencyCode = @json(gs('cur_text'));
+        const defaultRange = @json($todayCardRange ?? 'today');
         const splitLabels = @json($paymentLinkLabels);
         const paymentLinkSeries = @json($paymentLinkValues);
         const pluginDirectSeries = @json($pluginDirectValues);
@@ -240,14 +285,26 @@
         const svg = document.getElementById('stripeTodayChart');
         const todayPath = document.getElementById('stripeTodayPath');
         const yesterdayPath = document.getElementById('stripeYesterdayPath');
+        const pointsWrap = document.getElementById('stripeTodayPoints');
+        const tooltip = document.getElementById('stripeChartTooltip');
+        const rangeSelect = document.getElementById('stripeTodayRangeSelect');
+        const titleEl = document.getElementById('stripeTodayTitle');
+        const compareLabelEl = document.getElementById('stripeCompareLabel');
+        const currentValueEl = document.getElementById('stripeTodayCurrentValue');
+        const compareValueEl = document.getElementById('stripeTodayCompareValue');
+        const hintEl = document.getElementById('stripeTodayRangeHint');
+        const chartTimeEl = document.getElementById('stripeChartTimeLabel');
 
-        if (!svg || !todayPath || !yesterdayPath || !Array.isArray(values) || !values.length) return;
+        if (!svg || !todayPath || !yesterdayPath || !pointsWrap || !rangeSelect) return;
 
         const width = 900;
         const height = 230;
-        const max = Math.max(...values, 1);
+        const money = (value) => {
+            const safe = Number(value || 0);
+            return `$${safe.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencyCode}`;
+        };
 
-        function buildPath(series) {
+        function buildPath(series, max) {
             const stepX = width / Math.max(series.length - 1, 1);
             return series.map((val, idx) => {
                 const x = idx * stepX;
@@ -256,14 +313,83 @@
             }).join(' ');
         }
 
-        const todaySeries = values;
-        const yesterdaySeries = values.map((v, i) => {
-            const ratio = 0.75 + ((i % 3) * 0.05);
-            return Math.max(0, v * ratio);
+        function animatePath(pathEl) {
+            const length = pathEl.getTotalLength();
+            pathEl.style.strokeDasharray = `${length}`;
+            pathEl.style.strokeDashoffset = `${length}`;
+            pathEl.getBoundingClientRect();
+            pathEl.style.transition = 'stroke-dashoffset 560ms ease';
+            pathEl.style.strokeDashoffset = '0';
+        }
+
+        function hideTooltip() {
+            if (!tooltip) return;
+            tooltip.classList.add('d-none');
+        }
+
+        function renderToday(rangeKey) {
+            const preset = todayCardPresets[rangeKey] || todayCardPresets.today;
+            if (!preset) return;
+
+            const currentSeriesRaw = Array.isArray(preset.current_series) ? preset.current_series : [];
+            const compareSeriesRaw = Array.isArray(preset.compare_series) ? preset.compare_series : [];
+            const currentSeries = currentSeriesRaw.map(item => Number(item.amount || 0));
+            const compareSeries = compareSeriesRaw.map(item => Number(item.amount || 0));
+            const labels = currentSeriesRaw.map(item => item.label || '');
+
+            const max = Math.max(...currentSeries, ...compareSeries, 1);
+            todayPath.setAttribute('d', buildPath(currentSeries, max));
+            yesterdayPath.setAttribute('d', buildPath(compareSeries, max));
+            animatePath(todayPath);
+            animatePath(yesterdayPath);
+
+            pointsWrap.innerHTML = '';
+            const stepX = width / Math.max(currentSeries.length - 1, 1);
+
+            currentSeries.forEach((val, idx) => {
+                const x = idx * stepX;
+                const y = height - ((val / max) * (height - 20)) - 10;
+                const point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                point.setAttribute('cx', x.toFixed(2));
+                point.setAttribute('cy', y.toFixed(2));
+                point.setAttribute('r', '4');
+                point.setAttribute('class', 'stripe-chart-point');
+                point.dataset.label = labels[idx] || '';
+                point.dataset.value = String(val);
+                point.dataset.x = x.toFixed(2);
+                point.dataset.y = y.toFixed(2);
+
+                point.addEventListener('mouseenter', () => {
+                    if (!tooltip) return;
+                    tooltip.classList.remove('d-none');
+                    tooltip.innerHTML = `${point.dataset.label}<br><strong>${money(point.dataset.value)}</strong>`;
+                });
+
+                point.addEventListener('mousemove', () => {
+                    if (!tooltip) return;
+                    const px = Number(point.dataset.x || 0) / width;
+                    const py = Number(point.dataset.y || 0) / height;
+                    tooltip.style.left = `${(px * 100).toFixed(2)}%`;
+                    tooltip.style.top = `${(py * 100).toFixed(2)}%`;
+                });
+
+                point.addEventListener('mouseleave', hideTooltip);
+                pointsWrap.appendChild(point);
+            });
+
+            if (titleEl) titleEl.textContent = preset.title || 'Today';
+            if (compareLabelEl) compareLabelEl.textContent = preset.compare_label || 'Previous';
+            if (currentValueEl) currentValueEl.textContent = money(preset.current_total || 0);
+            if (compareValueEl) compareValueEl.textContent = money(preset.compare_total || 0);
+            if (hintEl) hintEl.textContent = preset.range_hint || '';
+            if (chartTimeEl) chartTimeEl.textContent = preset.range_hint || '';
+        }
+
+        rangeSelect.addEventListener('change', function () {
+            renderToday(this.value);
         });
 
-        todayPath.setAttribute('d', buildPath(todaySeries));
-        yesterdayPath.setAttribute('d', buildPath(yesterdaySeries));
+        renderToday(defaultRange);
 
         const splitSvg = document.getElementById('stripePaymentsSplitChart');
         const paymentLinkPath = document.getElementById('stripePaymentLinkPath');

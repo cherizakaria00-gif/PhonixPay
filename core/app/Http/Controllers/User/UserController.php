@@ -33,6 +33,11 @@ class UserController extends Controller
     {
         $pageTitle = 'Dashboard'; 
         $user = auth()->user();
+        $todayCardRange = (string) $request->input('today_range', 'today');
+        if (!in_array($todayCardRange, ['today', 'yesterday', '15', '30'], true)) {
+            $todayCardRange = 'today';
+        }
+
         $selectedRangeDays = (int) $request->input('range', 7);
         if (!in_array($selectedRangeDays, [7, 14, 30], true)) {
             $selectedRangeDays = 7;
@@ -84,6 +89,92 @@ class UserController extends Controller
             ->where('status', Status::PAYMENT_SUCCESS)
             ->whereDate('created_at', Carbon::yesterday())
             ->sum('amount');
+
+        $buildHourlySeries = function (Carbon $targetDay) use ($user) {
+            $start = $targetDay->copy()->startOfDay();
+            $end = $targetDay->copy()->endOfDay();
+
+            $rows = Deposit::where('user_id', $user->id)
+                ->where('status', Status::PAYMENT_SUCCESS)
+                ->whereBetween('created_at', [$start, $end])
+                ->selectRaw('HOUR(created_at) as h, SUM(amount) as amount')
+                ->groupBy('h')
+                ->pluck('amount', 'h');
+
+            return collect(range(0, 23))->map(function ($hour) use ($rows) {
+                return [
+                    'label' => str_pad((string) $hour, 2, '0', STR_PAD_LEFT) . ':00',
+                    'amount' => (float) ($rows[$hour] ?? 0),
+                ];
+            })->values();
+        };
+
+        $buildDailySeries = function (int $days, Carbon $endDay) use ($user) {
+            $start = $endDay->copy()->subDays($days - 1)->startOfDay();
+            $end = $endDay->copy()->endOfDay();
+
+            $rows = Deposit::where('user_id', $user->id)
+                ->where('status', Status::PAYMENT_SUCCESS)
+                ->whereBetween('created_at', [$start, $end])
+                ->selectRaw('DATE(created_at) as d, SUM(amount) as amount')
+                ->groupBy('d')
+                ->pluck('amount', 'd');
+
+            return collect(range($days - 1, 0))->map(function ($offset) use ($endDay, $rows) {
+                $date = $endDay->copy()->subDays($offset)->toDateString();
+                return [
+                    'label' => Carbon::parse($date)->format('M d'),
+                    'amount' => (float) ($rows[$date] ?? 0),
+                ];
+            })->values();
+        };
+
+        $buildPreset = function (string $key) use ($buildHourlySeries, $buildDailySeries) {
+            if ($key === 'today') {
+                $currentSeries = $buildHourlySeries(Carbon::today());
+                $compareSeries = $buildHourlySeries(Carbon::yesterday());
+                return [
+                    'title' => 'Today',
+                    'compare_label' => 'Yesterday',
+                    'range_hint' => '00:00 - 23:59',
+                    'current_series' => $currentSeries,
+                    'compare_series' => $compareSeries,
+                    'current_total' => (float) $currentSeries->sum('amount'),
+                    'compare_total' => (float) $compareSeries->sum('amount'),
+                ];
+            }
+
+            if ($key === 'yesterday') {
+                $currentSeries = $buildHourlySeries(Carbon::yesterday());
+                $compareSeries = $buildHourlySeries(Carbon::yesterday()->subDay());
+                return [
+                    'title' => 'Yesterday',
+                    'compare_label' => 'Day Before',
+                    'range_hint' => '00:00 - 23:59',
+                    'current_series' => $currentSeries,
+                    'compare_series' => $compareSeries,
+                    'current_total' => (float) $currentSeries->sum('amount'),
+                    'compare_total' => (float) $compareSeries->sum('amount'),
+                ];
+            }
+
+            $days = (int) $key;
+            $currentSeries = $buildDailySeries($days, Carbon::today());
+            $compareSeries = $buildDailySeries($days, Carbon::today()->subDays($days));
+            return [
+                'title' => $days === 15 ? 'Last 15 Days' : 'Last 1 Month',
+                'compare_label' => 'Previous Period',
+                'range_hint' => $days . ' day window',
+                'current_series' => $currentSeries,
+                'compare_series' => $compareSeries,
+                'current_total' => (float) $currentSeries->sum('amount'),
+                'compare_total' => (float) $compareSeries->sum('amount'),
+            ];
+        };
+
+        $todayCardPresets = collect(['today', 'yesterday', '15', '30'])
+            ->mapWithKeys(fn ($key) => [$key => $buildPreset($key)])
+            ->all();
 
         $rangeStart = Carbon::now()->subDays($selectedRangeDays - 1)->startOfDay();
         $rangeEnd = Carbon::now()->endOfDay();
@@ -198,6 +289,8 @@ class UserController extends Controller
             'paymentLinkTotal',
             'pluginDirectTotal',
             'selectedRangeDays',
+            'todayCardRange',
+            'todayCardPresets',
             'compareEnabled',
             'granularity',
             'payoutAvailable',
