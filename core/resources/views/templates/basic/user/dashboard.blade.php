@@ -85,6 +85,7 @@
                         <line id="stripeHoverGuide" class="stripe-hover-guide d-none" x1="0" y1="8" x2="0" y2="212" />
                         <circle id="stripeCompareDot" class="stripe-compare-dot d-none" cx="0" cy="0" r="5" />
                         <circle id="stripeCurrentDot" class="stripe-current-dot d-none" cx="0" cy="0" r="5" />
+                        <rect id="stripeChartOverlay" class="stripe-chart-overlay" x="0" y="0" width="900" height="230"></rect>
                         <g id="stripeTodayPoints"></g>
                     </svg>
                     <div class="stripe-chart-time" id="stripeChartTimeLabel">{{ $todayRangeHint }}</div>
@@ -264,7 +265,8 @@
         top: 0;
         left: 0;
         transform: translate(-28%, -18%);
-        min-width: 290px;
+        min-width: 220px;
+        max-width: 260px;
         background: #ffffff;
         color: #0f172a;
         border: 1px solid #e2e8f0;
@@ -336,6 +338,11 @@
     }
     .stripe-chart-hit {
         fill: transparent;
+        cursor: crosshair;
+    }
+    .stripe-chart-overlay {
+        fill: transparent;
+        pointer-events: all;
         cursor: crosshair;
     }
     .stripe-chart-point {
@@ -425,6 +432,7 @@
         const hoverGuide = document.getElementById('stripeHoverGuide');
         const compareDot = document.getElementById('stripeCompareDot');
         const currentDot = document.getElementById('stripeCurrentDot');
+        const chartOverlay = document.getElementById('stripeChartOverlay');
         const rangeSelect = document.getElementById('stripeTodayRangeSelect');
         const titleEl = document.getElementById('stripeTodayTitle');
         const compareLabelEl = document.getElementById('stripeCompareLabel');
@@ -491,13 +499,13 @@
                 </div>
                 <div class="stripe-tooltip-row">
                     <span class="stripe-tooltip-dot compare"></span>
-                    <span>${compareLabel || '-'}</span>
+                    <span>${compareLabel || 'Previous period'}</span>
                     <span class="stripe-tooltip-value">${money(compareValue)}</span>
                 </div>
             `;
         }
 
-        function showHoverState(index, labels, compareLabels, currentSeries, compareSeries, max) {
+        function showHoverState(index, labels, currentSeries, compareSeries, max, compareTitle) {
             if (index < 0 || index >= currentSeries.length) return;
             const stepX = width / Math.max(currentSeries.length - 1, 1);
             const x = index * stepX;
@@ -525,7 +533,7 @@
             if (!tooltip) return;
             tooltip.innerHTML = tooltipMarkup(
                 labels[index] || '',
-                compareLabels[index] || '',
+                compareTitle || 'Previous period',
                 currentVal,
                 compareVal
             );
@@ -543,7 +551,7 @@
             const currentSeries = currentSeriesRaw.map(item => Number(item.amount || 0));
             const compareSeries = compareSeriesRaw.map(item => Number(item.amount || 0));
             const labels = currentSeriesRaw.map(item => item.label || '');
-            const compareLabels = compareSeriesRaw.map(item => item.label || '');
+            const compareTitle = preset.compare_label || 'Previous period';
 
             const max = Math.max(...currentSeries, ...compareSeries, 1);
             todayPath.setAttribute('d', buildPath(currentSeries, max));
@@ -552,21 +560,6 @@
             animatePath(yesterdayPath);
 
             pointsWrap.innerHTML = '';
-            const stepX = width / Math.max(currentSeries.length - 1, 1);
-
-            currentSeries.forEach((val, idx) => {
-                const x = idx * stepX;
-                const y = height - ((val / max) * (height - 20)) - 10;
-                const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                hit.setAttribute('cx', x.toFixed(2));
-                hit.setAttribute('cy', y.toFixed(2));
-                hit.setAttribute('r', '10');
-                hit.setAttribute('class', 'stripe-chart-hit');
-                hit.addEventListener('mouseenter', () => showHoverState(idx, labels, compareLabels, currentSeries, compareSeries, max));
-                hit.addEventListener('mousemove', () => showHoverState(idx, labels, compareLabels, currentSeries, compareSeries, max));
-                hit.addEventListener('mouseleave', hideTooltip);
-                pointsWrap.appendChild(hit);
-            });
 
             if (titleEl) titleEl.textContent = preset.title || 'Today';
             if (compareLabelEl) compareLabelEl.textContent = preset.compare_label || 'Previous';
@@ -574,7 +567,24 @@
             if (compareValueEl) compareValueEl.textContent = money(preset.compare_total || 0);
             if (hintEl) hintEl.textContent = preset.range_hint || '';
             if (chartTimeEl) chartTimeEl.textContent = preset.range_hint || '';
-            showHoverState(Math.max(0, currentSeries.length - 1), labels, compareLabels, currentSeries, compareSeries, max);
+            showHoverState(Math.max(0, currentSeries.length - 1), labels, currentSeries, compareSeries, max, compareTitle);
+
+            if (chartOverlay) {
+                const stepX = width / Math.max(currentSeries.length - 1, 1);
+                const toIndex = (event) => {
+                    const rect = svg.getBoundingClientRect();
+                    const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+                    return Math.max(0, Math.min(currentSeries.length - 1, Math.round((x / rect.width) * (width / stepX))));
+                };
+
+                chartOverlay.onmousemove = (event) => {
+                    showHoverState(toIndex(event), labels, currentSeries, compareSeries, max, compareTitle);
+                };
+                chartOverlay.onmouseenter = (event) => {
+                    showHoverState(toIndex(event), labels, currentSeries, compareSeries, max, compareTitle);
+                };
+                chartOverlay.onmouseleave = hideTooltip;
+            }
         }
 
         rangeSelect.addEventListener('change', function () {
