@@ -50,10 +50,16 @@
             <div class="stripe-today-main">
                 <div class="stripe-today-metrics">
                     <div class="stripe-metric">
-                        <label for="stripeTodayRangeSelect" class="stripe-metric-label d-inline-flex align-items-center gap-1">
-                            Gross volume <i class="las la-angle-down"></i>
-                        </label>
-                        <select id="stripeTodayRangeSelect" class="form-control form-control-sm mt-2" style="max-width: 180px;">
+                        <div class="stripe-metric-head-inline">
+                            <span class="stripe-metric-label m-0">Gross volume</span>
+                            <select id="stripeTodayRangeSelect" class="stripe-range-select-minimal" aria-label="Gross volume period">
+                                <option value="today" @selected(($todayCardRange ?? 'today') === 'today')>Today</option>
+                                <option value="yesterday" @selected(($todayCardRange ?? 'today') === 'yesterday')>Yesterday</option>
+                                <option value="15" @selected(($todayCardRange ?? 'today') === '15')>Last 15 days</option>
+                                <option value="30" @selected(($todayCardRange ?? 'today') === '30')>Last 1 month</option>
+                            </select>
+                        </div>
+                        <select id="stripeTodayRangeSelectLegacy" class="d-none">
                             <option value="today" @selected(($todayCardRange ?? 'today') === 'today')>Today</option>
                             <option value="yesterday" @selected(($todayCardRange ?? 'today') === 'yesterday')>Yesterday</option>
                             <option value="15" @selected(($todayCardRange ?? 'today') === '15')>Last 15 days</option>
@@ -268,6 +274,42 @@
         stroke: #fff;
         stroke-width: 2;
         cursor: pointer;
+    }
+    .stripe-metric-head-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+    .stripe-range-select-minimal {
+        border: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background-color: transparent !important;
+        color: #394b63 !important;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.2;
+        height: auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 0 18px 0 0 !important;
+        margin: 0 !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        background-image: linear-gradient(45deg, transparent 50%, #6b7280 50%), linear-gradient(135deg, #6b7280 50%, transparent 50%);
+        background-position: calc(100% - 10px) 8px, calc(100% - 5px) 8px;
+        background-size: 5px 5px, 5px 5px;
+        background-repeat: no-repeat;
+        cursor: pointer;
+        vertical-align: baseline;
+    }
+    .stripe-range-select-minimal:focus {
+        outline: none !important;
+        box-shadow: none !important;
+        color: #111827 !important;
     }
 </style>
 @endpush
