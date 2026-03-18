@@ -69,7 +69,10 @@
                         <div class="stripe-metric-sub" id="stripeTodayRangeHint">{{ $todayRangeHint }}</div>
                     </div>
                     <div class="stripe-metric">
-                        <span class="stripe-metric-label" id="stripeCompareLabel">{{ $todayCompareLabel }}</span>
+                        <div class="stripe-metric-compare-head">
+                            <span class="stripe-metric-label" id="stripeCompareLabel">{{ $todayCompareLabel }}</span>
+                            <i class="las la-angle-down" aria-hidden="true"></i>
+                        </div>
                         <div class="stripe-metric-value" id="stripeTodayCompareValue">{{ showAmount($yesterdayDisplay) }}</div>
                     </div>
                 </div>
@@ -79,6 +82,9 @@
                     <svg id="stripeTodayChart" viewBox="0 0 900 230" preserveAspectRatio="none" aria-label="Today chart">
                         <path id="stripeYesterdayPath" class="line-yesterday" d="" />
                         <path id="stripeTodayPath" class="line-today" d="" />
+                        <line id="stripeHoverGuide" class="stripe-hover-guide d-none" x1="0" y1="8" x2="0" y2="212" />
+                        <circle id="stripeCompareDot" class="stripe-compare-dot d-none" cx="0" cy="0" r="5" />
+                        <circle id="stripeCurrentDot" class="stripe-current-dot d-none" cx="0" cy="0" r="5" />
                         <g id="stripeTodayPoints"></g>
                     </svg>
                     <div class="stripe-chart-time" id="stripeChartTimeLabel">{{ $todayRangeHint }}</div>
@@ -257,23 +263,110 @@
         position: absolute;
         top: 0;
         left: 0;
-        transform: translate(-50%, -120%);
-        background: #0f172a;
-        color: #fff;
-        border-radius: 8px;
+        transform: translate(-28%, -18%);
+        min-width: 290px;
+        background: #ffffff;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
         font-size: 12px;
         line-height: 1.2;
-        padding: 8px 10px;
+        padding: 10px 14px 12px;
         pointer-events: none;
         white-space: nowrap;
         z-index: 5;
-        box-shadow: 0 10px 24px rgba(2, 6, 23, .28);
+        box-shadow: 0 10px 22px rgba(2, 6, 23, 0.14);
+    }
+    .stripe-tooltip-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #dbe3ef;
+        margin-bottom: 8px;
+        font-size: 17px;
+        font-weight: 700;
+        color: #374151;
+    }
+    .stripe-tooltip-badge {
+        font-size: 14px;
+        line-height: 1;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 5px 10px;
+        border: 1px solid transparent;
+    }
+    .stripe-tooltip-badge.is-pos {
+        color: #166534;
+        background: #dcfce7;
+        border-color: #86efac;
+    }
+    .stripe-tooltip-badge.is-neg {
+        color: #c2410c;
+        background: #fef3c7;
+        border-color: #fcd34d;
+    }
+    .stripe-tooltip-badge.is-flat {
+        color: #334155;
+        background: #e2e8f0;
+        border-color: #cbd5e1;
+    }
+    .stripe-tooltip-row {
+        display: grid;
+        grid-template-columns: 18px 1fr auto;
+        align-items: center;
+        gap: 9px;
+        font-size: 15px;
+        color: #4b5563;
+        margin: 5px 0;
+    }
+    .stripe-tooltip-dot {
+        width: 8px;
+        height: 18px;
+        border-radius: 0;
+        display: inline-block;
+    }
+    .stripe-tooltip-dot.today { background: #7c5cff; }
+    .stripe-tooltip-dot.compare { background: #b7bfcb; }
+    .stripe-tooltip-value {
+        font-weight: 700;
+        font-size: 18px;
+        color: #374151;
+    }
+    .stripe-chart-hit {
+        fill: transparent;
+        cursor: crosshair;
     }
     .stripe-chart-point {
         fill: #635bff;
         stroke: #fff;
         stroke-width: 2;
         cursor: pointer;
+    }
+    .stripe-hover-guide {
+        stroke: #94a3b8;
+        stroke-width: 1.5;
+        stroke-dasharray: 4 4;
+    }
+    .stripe-current-dot {
+        fill: #7c5cff;
+        stroke: #7c5cff;
+        stroke-width: 1;
+    }
+    .stripe-compare-dot {
+        fill: #b7bfcb;
+        stroke: #ffffff;
+        stroke-width: 2;
+    }
+    .stripe-metric-compare-head {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .stripe-metric-compare-head i {
+        color: #475569;
+        font-size: 14px;
     }
     .stripe-metric-head-inline {
         display: flex;
@@ -329,6 +422,9 @@
         const yesterdayPath = document.getElementById('stripeYesterdayPath');
         const pointsWrap = document.getElementById('stripeTodayPoints');
         const tooltip = document.getElementById('stripeChartTooltip');
+        const hoverGuide = document.getElementById('stripeHoverGuide');
+        const compareDot = document.getElementById('stripeCompareDot');
+        const currentDot = document.getElementById('stripeCurrentDot');
         const rangeSelect = document.getElementById('stripeTodayRangeSelect');
         const titleEl = document.getElementById('stripeTodayTitle');
         const compareLabelEl = document.getElementById('stripeCompareLabel');
@@ -367,6 +463,75 @@
         function hideTooltip() {
             if (!tooltip) return;
             tooltip.classList.add('d-none');
+            if (hoverGuide) hoverGuide.classList.add('d-none');
+            if (compareDot) compareDot.classList.add('d-none');
+            if (currentDot) currentDot.classList.add('d-none');
+        }
+
+        function percentageDiff(currentValue, compareValue) {
+            const current = Number(currentValue || 0);
+            const compare = Number(compareValue || 0);
+            if (compare === 0) return current === 0 ? 0 : 100;
+            return ((current - compare) / Math.abs(compare)) * 100;
+        }
+
+        function tooltipMarkup(label, compareLabel, currentValue, compareValue) {
+            const diff = percentageDiff(currentValue, compareValue);
+            const diffText = `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`;
+            const badgeClass = diff > 0 ? 'is-pos' : (diff < 0 ? 'is-neg' : 'is-flat');
+            return `
+                <div class="stripe-tooltip-head">
+                    <span>Gross volume</span>
+                    <span class="stripe-tooltip-badge ${badgeClass}">${diffText}</span>
+                </div>
+                <div class="stripe-tooltip-row">
+                    <span class="stripe-tooltip-dot today"></span>
+                    <span>${label || '-'}</span>
+                    <span class="stripe-tooltip-value">${money(currentValue)}</span>
+                </div>
+                <div class="stripe-tooltip-row">
+                    <span class="stripe-tooltip-dot compare"></span>
+                    <span>${compareLabel || '-'}</span>
+                    <span class="stripe-tooltip-value">${money(compareValue)}</span>
+                </div>
+            `;
+        }
+
+        function showHoverState(index, labels, compareLabels, currentSeries, compareSeries, max) {
+            if (index < 0 || index >= currentSeries.length) return;
+            const stepX = width / Math.max(currentSeries.length - 1, 1);
+            const x = index * stepX;
+            const currentVal = Number(currentSeries[index] || 0);
+            const compareVal = Number(compareSeries[index] || 0);
+            const currentY = height - ((currentVal / max) * (height - 20)) - 10;
+            const compareY = height - ((compareVal / max) * (height - 20)) - 10;
+
+            if (hoverGuide) {
+                hoverGuide.setAttribute('x1', x.toFixed(2));
+                hoverGuide.setAttribute('x2', x.toFixed(2));
+                hoverGuide.classList.remove('d-none');
+            }
+            if (currentDot) {
+                currentDot.setAttribute('cx', x.toFixed(2));
+                currentDot.setAttribute('cy', currentY.toFixed(2));
+                currentDot.classList.remove('d-none');
+            }
+            if (compareDot) {
+                compareDot.setAttribute('cx', x.toFixed(2));
+                compareDot.setAttribute('cy', compareY.toFixed(2));
+                compareDot.classList.remove('d-none');
+            }
+
+            if (!tooltip) return;
+            tooltip.innerHTML = tooltipMarkup(
+                labels[index] || '',
+                compareLabels[index] || '',
+                currentVal,
+                compareVal
+            );
+            tooltip.classList.remove('d-none');
+            tooltip.style.left = `${Math.min(90, Math.max(10, (x / width) * 100 + 6)).toFixed(2)}%`;
+            tooltip.style.top = `${Math.min(90, Math.max(32, (currentY / height) * 100 + 28)).toFixed(2)}%`;
         }
 
         function renderToday(rangeKey) {
@@ -378,6 +543,7 @@
             const currentSeries = currentSeriesRaw.map(item => Number(item.amount || 0));
             const compareSeries = compareSeriesRaw.map(item => Number(item.amount || 0));
             const labels = currentSeriesRaw.map(item => item.label || '');
+            const compareLabels = compareSeriesRaw.map(item => item.label || '');
 
             const max = Math.max(...currentSeries, ...compareSeries, 1);
             todayPath.setAttribute('d', buildPath(currentSeries, max));
@@ -391,32 +557,15 @@
             currentSeries.forEach((val, idx) => {
                 const x = idx * stepX;
                 const y = height - ((val / max) * (height - 20)) - 10;
-                const point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                point.setAttribute('cx', x.toFixed(2));
-                point.setAttribute('cy', y.toFixed(2));
-                point.setAttribute('r', '4');
-                point.setAttribute('class', 'stripe-chart-point');
-                point.dataset.label = labels[idx] || '';
-                point.dataset.value = String(val);
-                point.dataset.x = x.toFixed(2);
-                point.dataset.y = y.toFixed(2);
-
-                point.addEventListener('mouseenter', () => {
-                    if (!tooltip) return;
-                    tooltip.classList.remove('d-none');
-                    tooltip.innerHTML = `${point.dataset.label}<br><strong>${money(point.dataset.value)}</strong>`;
-                });
-
-                point.addEventListener('mousemove', () => {
-                    if (!tooltip) return;
-                    const px = Number(point.dataset.x || 0) / width;
-                    const py = Number(point.dataset.y || 0) / height;
-                    tooltip.style.left = `${(px * 100).toFixed(2)}%`;
-                    tooltip.style.top = `${(py * 100).toFixed(2)}%`;
-                });
-
-                point.addEventListener('mouseleave', hideTooltip);
-                pointsWrap.appendChild(point);
+                const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                hit.setAttribute('cx', x.toFixed(2));
+                hit.setAttribute('cy', y.toFixed(2));
+                hit.setAttribute('r', '10');
+                hit.setAttribute('class', 'stripe-chart-hit');
+                hit.addEventListener('mouseenter', () => showHoverState(idx, labels, compareLabels, currentSeries, compareSeries, max));
+                hit.addEventListener('mousemove', () => showHoverState(idx, labels, compareLabels, currentSeries, compareSeries, max));
+                hit.addEventListener('mouseleave', hideTooltip);
+                pointsWrap.appendChild(hit);
             });
 
             if (titleEl) titleEl.textContent = preset.title || 'Today';
@@ -425,6 +574,7 @@
             if (compareValueEl) compareValueEl.textContent = money(preset.compare_total || 0);
             if (hintEl) hintEl.textContent = preset.range_hint || '';
             if (chartTimeEl) chartTimeEl.textContent = preset.range_hint || '';
+            showHoverState(Math.max(0, currentSeries.length - 1), labels, compareLabels, currentSeries, compareSeries, max);
         }
 
         rangeSelect.addEventListener('change', function () {
