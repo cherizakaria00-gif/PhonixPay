@@ -35,7 +35,11 @@ class Push extends NotifyProcess implements Notifiable{
     public function redirectForApp($getTemplateName){
 
         $screens = [
-
+            'TRANSACTIONS'   => ['BAL_ADD', 'BAL_SUB', 'DEPOSIT_COMPLETE', 'DEPOSIT_REJECT'],
+            'PAYOUT'         => ['WITHDRAW_APPROVE', 'WITHDRAW_REJECT', 'WITHDRAW_REQUEST', 'INSUFFICIENT_WITHDRAW_BALANCE'],
+            'PROFILE'        => ['KYC_APPROVE', 'KYC_REJECT'],
+            'SUPPORT_DETAIL' => ['ADMIN_SUPPORT_REPLY'],
+            'NOTIFICATIONS'  => ['DEFAULT'],
         ];
 
         foreach($screens as $screen => $array){
@@ -44,7 +48,7 @@ class Push extends NotifyProcess implements Notifiable{
             }
         }
 
-        return 'HOME';
+        return 'NOTIFICATIONS';
     }
 
 
@@ -77,9 +81,13 @@ class Push extends NotifyProcess implements Notifiable{
                 ];
 
                 $data['data'] = [
-                    'icon'=>siteFavicon(),
-                    'click_action'=>$this->redirectUrl,
-                    'app_click_action'=>$this->redirectForApp($this->templateName)
+                    'icon'             => siteFavicon(),
+                    'click_action'     => $this->redirectUrl,
+                    'app_click_action' => $this->redirectForApp($this->templateName),
+                    // Deep-link IDs for mobile navigation
+                    'transaction_id'   => (string) ($this->shortCodes['trx'] ?? ''),
+                    'ticket_id'        => (string) ($this->shortCodes['ticket_id'] ?? ''),
+                    'payment_link_id'  => (string) ($this->shortCodes['payment_link_id'] ?? ''),
                 ];
                 foreach ($this->toAddress as $toAddress) {
                     $data['token'] = $toAddress;

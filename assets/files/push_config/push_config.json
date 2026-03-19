@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "phonixpay-6e800",
+  "private_key_id": "ec37df517768d504b22ffa26ae28d45d95bf8060",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQD1nSvW5WkUMEA2\nDzdTRhrVvnAxqT5UuvSpcw6Pwzqexpc3I5HQbwewOP2U85kbkhNssWyX/CNpd8D/\n/C0GWQ26o9Pdz1DXhbPvul8qe6gEgcv6KT9BLMLqIOy4LagwCBQq+tRCUsGojRbA\nYMScCtbeYM3VvjIZed9cMdHQIjV3g4spi8Tkov0LriwEZnFftOJjRLlsj6JZTCqj\nobN3BA/VRYrszqV26OEkv3BI7kIYgB3KS0/vmEhIH/ygz49W8FDqV9Ei2ErJk6AH\n7/Jt/lDm5RKqlkwfJ474xehI9XWEKyXz43Y+9eA3JGg9Y5MccdlHrABOb93yYftw\n/4aZHz5dAgMBAAECggEABbTy75GRhTdQyqDEYZIzres4mqLK0LeuVyCWAkegPU+y\ndETGjtABnvnYBIW7dT1J58Dgm9BvNzRh3uDKYAciL0e+tLzsLTHNWkDblLZeU0p7\nxZJ/RoGmfr+omGfxLDqH027UDz1yg/rRQEOPVevXjb+0kKaUbeybwL3kmOAum1n+\nsu+cD0JBz9141gHbFdpKDQ6y4L6tkTQzbFl5VxWXHdVkVEny7fP0xgCt9PxVGqh+\nzNzgDrdWNmqQfler0EJTfyAbn8ol4EnzEUJh/IZchazc9TQwy7IOONEgAXUPfBSJ\nmJyUORqG94S9uyysHAUfVKR0XgV2adEP8nmlk7ZKoQKBgQD7Wh69G6E2DnXzCyFn\n8ySCoSlGaJDCFF9m9ZvRxvJGjtOUOV/YSIQITlEX+pXtfxQd4BUB4ukzkJjnI5u2\nMpqwPAwIS8YzA8vXPeRLlzqHFWU+As+5wa3EmTkD0UtEOe/OljNYz1qubGX8Z27/\nmEXBxpwzZU+OKbKk4/0kyWU6IQKBgQD6J+M3ovWTsWSn2axpwxTIRMav7OmDyGOk\nx6LUL8QVG9N8cxTSfk+Ky9j62OikyupjdsU3t3dneNDGvfEfId+RDdpZBIAjuDE3\nwNl4M7eMySehiV0UFiKYAGwDbdxim86KPQB16zbRHfgAVtVNAD7cqSbUsKrkmsBG\nBuuX7UDUvQKBgQDgn8EorzB65qFx+lh4VUojk3MXgQsc5qf7kzMVXf3WIH3k0QFe\ngC++XH8MNt0VyaNor4EWlnphoq+CoMffI4oqRP9bypvtq07XpHAJPbUIU46OxGRv\nVS69q1DQoJHq/vvYW1K341be2fCqiKUhtitg6OVe6QMXwRvtT/JCldjpAQKBgQDC\nD5mEOsYaOl6knAfV0EHaDwi3x6lr01QBq+GUjC2oVnrdK4W2uchJG1SLXSQ1Wzkz\nyhq623gk7CPCWe2pQiTmqYF+1y/1Bdogr1nFlxFIhXBaL27muzlBA+rHSj3SvZ4f\nva0SzVMsLPyMftBgONWLZym5jAg26hpI+OthY+uMXQKBgQDPWydfXFO5O5Vz6EpV\nCwH795f21JHZ6Ie6z/BXki6MdgRfwi5pRc+tE3032/HWdsOdeJKkqKSSMhyJ1Xbn\ncK8BqvyfVUKI2qPMn+3wugsRDz04kfZkvy2pdlExQtvJs2/ScwcMthIexApY3qmy\nvgmUV2pCdBTFsX0I+TNH8kK0WA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@phonixpay-6e800.iam.gserviceaccount.com",
+  "client_id": "115072189977940950832",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40phonixpay-6e800.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

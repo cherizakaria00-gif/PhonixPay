@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Mobile\AuthController;
 use App\Http\Controllers\Api\Mobile\AuthorizationController;
 use App\Http\Controllers\Api\Mobile\DashboardController;
+use App\Http\Controllers\Api\Mobile\DeviceTokenController;
 use App\Http\Controllers\Api\Mobile\NotificationController;
 use App\Http\Controllers\Api\Mobile\PaymentController;
 use App\Http\Controllers\Api\Mobile\PaymentLinkController;
@@ -62,6 +63,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('payouts/request', [PayoutController::class, 'requestPayout']);
+
+    Route::post('device-token', [DeviceTokenController::class, 'store']);
+    Route::delete('device-token', [DeviceTokenController::class, 'destroy']);
 
     Route::prefix('notifications')->group(function () {
         Route::get('', [NotificationController::class, 'index']);
