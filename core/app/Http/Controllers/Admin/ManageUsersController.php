@@ -9,6 +9,7 @@ use App\Models\NotificationTemplate;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Withdrawal;
+use App\Services\PlanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -138,6 +139,11 @@ class ManageUsersController extends Controller
         $user->kyc_rejection_reason = null;
         $user->save();
 
+        if (Schema::hasTable('plans') && Schema::hasColumn('users', 'plan_id') && $user->plan_id) {
+            app(PlanService::class)->syncMerchantFeeSnapshot($user);
+            $user->refresh();
+        }
+
         notify($user,'KYC_APPROVE',[
             'payment_fixed_charge'=>showAmount($user->payment_fixed_charge, currencyFormat:false),
             'payment_percent_charge'=>showAmount($user->payment_percent_charge, currencyFormat:false)
@@ -263,6 +269,10 @@ class ManageUsersController extends Controller
             }
         }
         $user->save();
+
+        if (Schema::hasTable('plans') && Schema::hasColumn('users', 'plan_id') && $user->plan_id) {
+            app(PlanService::class)->syncMerchantFeeSnapshot($user);
+        }
 
         notify($user, 'NEW_UPDATE', [
             'update_title' => 'Your merchant profile was updated',

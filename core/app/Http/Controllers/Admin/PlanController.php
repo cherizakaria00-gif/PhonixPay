@@ -156,6 +156,7 @@ class PlanController extends Controller
 
         $merchant->plan_custom_overrides = null;
         $merchant->save();
+        $this->planService->syncMerchantFeeSnapshot($merchant);
 
         $currentPrice = (int) ($currentPlan?->price_monthly_cents ?? 0);
         if ((int) $plan->price_monthly_cents > $currentPrice) {
@@ -215,6 +216,7 @@ class PlanController extends Controller
 
         $merchant->plan_custom_overrides = $clean ?: null;
         $merchant->save();
+        $this->planService->syncMerchantFeeSnapshot($merchant);
 
         $notify[] = ['success', 'Overrides updated successfully'];
         return back()->withNotify($notify);
@@ -254,6 +256,7 @@ class PlanController extends Controller
         $this->planService->assignPlan($changeRequest->user, $changeRequest->toPlan, false);
         $changeRequest->user->plan_custom_overrides = null;
         $changeRequest->user->save();
+        $this->planService->syncMerchantFeeSnapshot($changeRequest->user);
         $changeRequest->status = 'approved';
         $changeRequest->save();
 

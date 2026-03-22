@@ -52,8 +52,6 @@ class PlanService
             $effective = $this->applyOverrides($effective, $overrides);
         }
 
-        $effective = $this->applyLegacyMerchantFeeOverrides($user, $effective);
-
         return $effective;
     }
 
@@ -103,16 +101,8 @@ class PlanService
     {
         $plan = $this->getEffectivePlan($user);
 
-        // Merchant-level fee config always wins for payment transactions.
-        $percentFee = $this->toNullableNumber($user->payment_percent_charge ?? null);
-        $fixedFee = $this->toNullableNumber($user->payment_fixed_charge ?? null);
-
-        if ($percentFee === null) {
-            $percentFee = (float) ($plan['fee_percent'] ?? 0);
-        }
-        if ($fixedFee === null) {
-            $fixedFee = (float) ($plan['fee_fixed'] ?? 0);
-        }
+        $percentFee = (float) ($plan['fee_percent'] ?? 0);
+        $fixedFee = (float) ($plan['fee_fixed'] ?? 0);
 
         $percentFee = max(0, min(100, (float) $percentFee));
         $fixedFee = max(0, (float) $fixedFee);
@@ -273,6 +263,22 @@ class PlanService
             $user->plan_renews_at = $plan->price_monthly_cents > 0 ? Carbon::now()->addMonth() : null;
         }
 
+        $this->syncLegacyFeeColumnsOnModel($user, [
+            'fee_percent' => (float) $plan->fee_percent,
+            'fee_fixed' => (float) $plan->fee_fixed,
+        ]);
+
+        $user->save();
+    }
+
+    public function syncMerchantFeeSnapshot(User $user): void
+    {
+        if (!$this->legacyMerchantFeeColumnsExist()) {
+            return;
+        }
+
+        $effective = $this->getEffectivePlan($user);
+        $this->syncLegacyFeeColumnsOnModel($user, $effective);
         $user->save();
     }
 
@@ -527,24 +533,14 @@ class PlanService
         ];
     }
 
-    private function applyLegacyMerchantFeeOverrides(User $user, array $effectivePlan): array
+    private function syncLegacyFeeColumnsOnModel(User $user, array $feeSource): void
     {
         if (!$this->legacyMerchantFeeColumnsExist()) {
-            return $effectivePlan;
+            return;
         }
 
-        $customPercent = $this->toNullableNumber($user->payment_percent_charge ?? null);
-        $customFixed = $this->toNullableNumber($user->payment_fixed_charge ?? null);
-
-        if ($customPercent !== null) {
-            $effectivePlan['fee_percent'] = max(0, min(100, $customPercent));
-        }
-
-        if ($customFixed !== null) {
-            $effectivePlan['fee_fixed'] = max(0, $customFixed);
-        }
-
-        return $effectivePlan;
+        $user->payment_percent_charge = max(0, min(100, (float) ($feeSource['fee_percent'] ?? 0)));
+        $user->payment_fixed_charge = max(0, (float) ($feeSource['fee_fixed'] ?? 0));
     }
 
     private function legacyMerchantFeeColumnsExist(): bool
