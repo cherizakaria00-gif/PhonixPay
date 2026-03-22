@@ -47,7 +47,6 @@
                                     @php $freq = old('payout_frequency', $plan->payout_frequency); @endphp
                                     <option value="weekly_7d" {{ $freq == 'weekly_7d' ? 'selected' : '' }}>Weekly (Wednesday)</option>
                                     <option value="twice_weekly" {{ $freq == 'twice_weekly' ? 'selected' : '' }}>2x per week (Wednesday/Saturday)</option>
-                                    <option value="every_2_days" {{ $freq == 'every_2_days' ? 'selected' : '' }}>2x per week (Wednesday/Saturday)</option>
                                 </select>
                             </div>
                             <div class="col-md-4">

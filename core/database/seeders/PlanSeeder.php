@@ -70,7 +70,7 @@ class PlanSeeder extends Seeder
                 'tx_limit_monthly' => null,
                 'fee_percent' => 9.00,
                 'fee_fixed' => 0.30,
-                'payout_frequency' => 'every_2_days',
+                'payout_frequency' => 'twice_weekly',
                 'payout_delay_days' => null,
                 'support_channels' => ['email', 'whatsapp'],
                 'notification_channels' => ['push', 'sms'],
