@@ -69,9 +69,8 @@
                                 $isStarter = $plan->slug === 'starter';
                                 $features = $plan->features ?? [];
                                 $payoutLabel = match($plan->payout_frequency) {
-                                    'twice_weekly' => '2x per week (Tue/Fri)',
-                                    'every_2_days' => 'Every 2 days',
-                                    default => 'Every 7 days',
+                                    'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
+                                    default => 'Weekly (Wed)',
                                 };
                             @endphp
                             <div class="col-lg-3 col-md-6">

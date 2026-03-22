@@ -525,9 +525,8 @@
                                 $style = $styleMap[$plan->slug] ?? $styleMap['growth'];
                                 $txLimit = $plan->tx_limit_monthly ? number_format($plan->tx_limit_monthly) . ' Transactions / Month' : 'Unlimited Transactions';
                                 $payoutLabel = match($plan->payout_frequency) {
-                                    'twice_weekly' => 'Payout 2x / Week',
-                                    'every_2_days' => 'Payout Every 2 Days',
-                                    default => 'Payout in 7 Days',
+                                    'twice_weekly', 'every_2_days' => 'Payout Wednesday & Saturday',
+                                    default => 'Payout every Wednesday',
                                 };
                                 $planFeatures = is_array($plan->features) ? $plan->features : [];
                                 $supportText = in_array('whatsapp', $plan->support_channels ?? []) ? 'Email + WhatsApp Support' : 'Email Support';

@@ -35,7 +35,12 @@
                                         <td>${{ number_format($plan->price_monthly_cents / 100, 2) }}/@lang('month')</td>
                                         <td>{{ $plan->tx_limit_monthly ?? __('Unlimited') }}</td>
                                         <td>{{ number_format($plan->fee_percent, 2) }}% + ${{ number_format($plan->fee_fixed, 2) }}</td>
-                                        <td>{{ str_replace('_', ' ', $plan->payout_frequency) }}</td>
+                                        <td>
+                                            {{ match($plan->payout_frequency) {
+                                                'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
+                                                default => 'Weekly (Wed)',
+                                            } }}
+                                        </td>
                                         <td>
                                             @if($plan->is_active)
                                                 <span class="badge badge--success">@lang('Active')</span>

@@ -66,9 +66,9 @@
                                 @php $freq = $overrides['payout_frequency'] ?? ''; @endphp
                                 <select class="form-control" name="payout_frequency">
                                     <option value="">@lang('Use plan default')</option>
-                                    <option value="weekly_7d" {{ $freq === 'weekly_7d' ? 'selected' : '' }}>weekly_7d</option>
-                                    <option value="twice_weekly" {{ $freq === 'twice_weekly' ? 'selected' : '' }}>twice_weekly</option>
-                                    <option value="every_2_days" {{ $freq === 'every_2_days' ? 'selected' : '' }}>every_2_days</option>
+                                    <option value="weekly_7d" {{ $freq === 'weekly_7d' ? 'selected' : '' }}>Weekly (Wednesday)</option>
+                                    <option value="twice_weekly" {{ $freq === 'twice_weekly' ? 'selected' : '' }}>2x per week (Wednesday/Saturday)</option>
+                                    <option value="every_2_days" {{ $freq === 'every_2_days' ? 'selected' : '' }}>2x per week (Wednesday/Saturday)</option>
                                 </select>
                             </div>
 

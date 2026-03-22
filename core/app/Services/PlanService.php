@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\Payout;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Withdrawal;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -440,49 +441,75 @@ class PlanService
 
     public function isPayoutRunDue(User $user, ?Carbon $now = null): bool
     {
-        $now = $now ?: Carbon::now();
-        $plan = $this->getEffectivePlan($user);
-        $frequency = $plan['payout_frequency'] ?? 'weekly_7d';
+        $now = ($now ?: Carbon::now())->copy()->utc();
+        $nextRunAt = $this->nextPayoutRunAt($user);
 
-        $lastPayout = Payout::where('user_id', $user->id)
-            ->latest('scheduled_for')
-            ->first();
-
-        if ($frequency === 'twice_weekly') {
-            $isRunDay = in_array($now->dayOfWeekIso, [2, 5], true);
-            if (!$isRunDay) {
-                return false;
-            }
-
-            if (!$lastPayout) {
-                return true;
-            }
-
-            return !$lastPayout->scheduled_for->isSameDay($now);
-        }
-
-        if ($frequency === 'every_2_days') {
-            if (!$lastPayout) {
-                return true;
-            }
-
-            return $lastPayout->scheduled_for->diffInDays($now) >= 2;
-        }
-
-        if (!$lastPayout) {
-            return true;
-        }
-
-        return $lastPayout->scheduled_for->diffInDays($now) >= 7;
+        return $nextRunAt ? $now->greaterThanOrEqualTo($nextRunAt) : false;
     }
 
     public function payoutFrequencyLabel(string $frequency): string
     {
         return match ($frequency) {
-            'twice_weekly' => '2x per week (Tue/Fri)',
-            'every_2_days' => 'Every 2 days',
-            default => 'Every 7 days',
+            'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
+            default => 'Weekly (Wed)',
         };
+    }
+
+    public function nextPayoutRequestAvailableAt(User $user): ?Carbon
+    {
+        $effectivePlan = $this->getEffectivePlan($user);
+        $frequency = (string) ($effectivePlan['payout_frequency'] ?? 'weekly_7d');
+        $allowedDays = $this->allowedPayoutDays($frequency);
+
+        $lastApprovedWithdrawal = Withdrawal::where('user_id', $user->id)
+            ->approved()
+            ->latest('updated_at')
+            ->first();
+
+        if ($lastApprovedWithdrawal) {
+            $base = Carbon::parse($lastApprovedWithdrawal->updated_at)->utc();
+            $candidate = in_array($frequency, ['twice_weekly', 'every_2_days'], true)
+                ? $base->copy()->addDay()->startOfDay()
+                : $base->copy()->addDays(7)->startOfDay();
+
+            return $this->alignToAllowedPayoutDay($candidate, $allowedDays);
+        }
+
+        $activationAt = $this->merchantActivationAt($user);
+        if (!$activationAt) {
+            return null;
+        }
+
+        $firstEligible = $activationAt->copy()->addDays(15)->startOfDay();
+        return $this->alignToAllowedPayoutDay($firstEligible, $allowedDays);
+    }
+
+    public function nextPayoutRunAt(User $user): ?Carbon
+    {
+        $effectivePlan = $this->getEffectivePlan($user);
+        $frequency = (string) ($effectivePlan['payout_frequency'] ?? 'weekly_7d');
+        $allowedDays = $this->allowedPayoutDays($frequency);
+
+        $lastPayout = Payout::where('user_id', $user->id)
+            ->latest('scheduled_for')
+            ->first();
+
+        if ($lastPayout && $lastPayout->scheduled_for) {
+            $base = Carbon::parse($lastPayout->scheduled_for)->utc();
+            $candidate = in_array($frequency, ['twice_weekly', 'every_2_days'], true)
+                ? $base->copy()->addDay()->startOfDay()
+                : $base->copy()->addDays(7)->startOfDay();
+
+            return $this->alignToAllowedPayoutDay($candidate, $allowedDays);
+        }
+
+        $activationAt = $this->merchantActivationAt($user);
+        if (!$activationAt) {
+            return null;
+        }
+
+        $firstEligible = $activationAt->copy()->addDays(15)->startOfDay();
+        return $this->alignToAllowedPayoutDay($firstEligible, $allowedDays);
     }
 
     private function applyOverrides(array $basePlan, array $overrides): array
@@ -541,6 +568,37 @@ class PlanService
 
         $user->payment_percent_charge = max(0, min(100, (float) ($feeSource['fee_percent'] ?? 0)));
         $user->payment_fixed_charge = max(0, (float) ($feeSource['fee_fixed'] ?? 0));
+    }
+
+    private function allowedPayoutDays(string $frequency): array
+    {
+        return in_array($frequency, ['twice_weekly', 'every_2_days'], true) ? [3, 6] : [3];
+    }
+
+    private function alignToAllowedPayoutDay(Carbon $from, array $allowedDays): Carbon
+    {
+        $cursor = $from->copy()->startOfDay();
+        for ($i = 0; $i < 14; $i++) {
+            if (in_array($cursor->dayOfWeekIso, $allowedDays, true)) {
+                return $cursor;
+            }
+            $cursor->addDay();
+        }
+
+        return $from->copy()->addWeek()->startOfDay();
+    }
+
+    private function merchantActivationAt(User $user): ?Carbon
+    {
+        if ($user->plan_started_at) {
+            return Carbon::parse($user->plan_started_at)->utc();
+        }
+
+        if ($user->created_at) {
+            return Carbon::parse($user->created_at)->utc();
+        }
+
+        return null;
     }
 
     private function legacyMerchantFeeColumnsExist(): bool

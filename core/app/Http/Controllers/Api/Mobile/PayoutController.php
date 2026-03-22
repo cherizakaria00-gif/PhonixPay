@@ -6,7 +6,6 @@ use App\Constants\Status;
 use App\Models\AdminNotification;
 use App\Models\Transaction;
 use App\Models\Withdrawal;
-use App\Services\PlanService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -36,7 +35,7 @@ class PayoutController extends ApiMobileController
             ], 422);
         }
 
-        $nextPlanPayoutAt = $this->nextPlanPayoutAvailableAt($user);
+        $nextPlanPayoutAt = app(\App\Services\PlanService::class)->nextPayoutRequestAvailableAt($user);
         $nextMethodPayoutAt = $withdrawSetting->next_withdraw_date ? Carbon::parse($withdrawSetting->next_withdraw_date)->startOfDay() : null;
         $nextAllowedPayoutAt = $this->maxDate($nextPlanPayoutAt, $nextMethodPayoutAt);
         if ($nextAllowedPayoutAt && now()->lt($nextAllowedPayoutAt)) {
@@ -122,41 +121,6 @@ class PayoutController extends ApiMobileController
             'success' => true,
             'message' => 'Your payout request has been received. Please wait for confirmation.',
         ]);
-    }
-
-    private function nextPlanPayoutAvailableAt($user): ?Carbon
-    {
-        $lastApproved = Withdrawal::where('user_id', $user->id)
-            ->approved()
-            ->latest('updated_at')
-            ->first();
-
-        if (!$lastApproved) {
-            return null;
-        }
-
-        $effectivePlan = app(PlanService::class)->getEffectivePlan($user);
-        $frequency = (string) ($effectivePlan['payout_frequency'] ?? 'weekly_7d');
-        $base = Carbon::parse($lastApproved->updated_at);
-
-        return match ($frequency) {
-            'every_2_days' => $base->copy()->addDays(2)->startOfDay(),
-            'twice_weekly' => $this->nextTwiceWeeklySlotAfter($base),
-            default => $base->copy()->addDays(7)->startOfDay(),
-        };
-    }
-
-    private function nextTwiceWeeklySlotAfter(Carbon $from): Carbon
-    {
-        $cursor = $from->copy()->addDay()->startOfDay();
-        for ($i = 0; $i < 14; $i++) {
-            if (in_array($cursor->dayOfWeekIso, [2, 5], true)) {
-                return $cursor;
-            }
-            $cursor->addDay();
-        }
-
-        return $from->copy()->addDays(3)->startOfDay();
     }
 
     private function maxDate(?Carbon $first, ?Carbon $second): ?Carbon
