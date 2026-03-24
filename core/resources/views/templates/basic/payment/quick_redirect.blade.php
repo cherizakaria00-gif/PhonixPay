@@ -1,50 +1,136 @@
 @extends($activeTemplate.'layouts.app')
 
 @section('app')
-<div class="py-60">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-6 col-md-8">
-                <div class="quick-redirect-card text-center">
-                    <div class="quick-redirect-loader mb-3"></div>
-                    <h5 class="mb-2">@lang('Redirecting to secure payment...')</h5>
-                    <p class="text-muted mb-4">@lang('Please wait, do not close this page.')</p>
-                    <a href="{{ $redirectUrl }}" class="btn btn--base btn-sm">@lang('Continue')</a>
-                </div>
+<div class="payment-modal is-open">
+    <div class="payment-modal__backdrop"></div>
+    <div class="modal payment-gateway-preview">
+        <button type="button" class="payment-modal__close" aria-label="@lang('Close')">&times;</button>
+        <div class="payment-gateway-preview__content">
+            <p class="payment-gateway-preview__eyebrow">@lang('Secure Checkout')</p>
+            <h4 class="payment-gateway-preview__title">@lang('Complete Payment')</h4>
+
+            <div class="payment-gateway-preview__frame-wrap">
+                <iframe
+                    src="{{ $redirectUrl }}"
+                    class="payment-gateway-preview__frame"
+                    title="@lang('Payment Checkout')"
+                    loading="eager"
+                    allow="payment *"
+                ></iframe>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{{ $redirectUrl }}" target="_blank" rel="noopener" class="btn btn--base btn-sm">@lang('Open in new tab')</a>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-    setTimeout(function () {
-        window.location.href = @json($redirectUrl);
-    }, 250);
-</script>
 @endsection
 
 @push('style')
 <style>
-    .quick-redirect-card {
+    .payment-modal {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9998;
+        padding: 18px;
+    }
+
+    .payment-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(3px);
+    }
+
+    .payment-gateway-preview {
+        position: relative;
+        z-index: 1;
+        width: min(1150px, 98vw);
         background: #fff;
-        border: 1px solid rgba(27, 31, 59, 0.08);
-        box-shadow: 0 16px 40px rgba(20, 28, 68, 0.10);
-        border-radius: 16px;
-        padding: 28px 24px;
+        border-radius: 18px;
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(15, 23, 42, 0.08);
     }
 
-    .quick-redirect-loader {
-        width: 38px;
-        height: 38px;
-        border: 3px solid rgba(72, 96, 255, 0.15);
-        border-top-color: #5868ff;
-        border-radius: 50%;
-        margin: 0 auto;
-        animation: quick-spin .9s linear infinite;
+    .payment-modal__close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 34px;
+        height: 34px;
+        border: none;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.08);
+        color: #111827;
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
     }
 
-    @keyframes quick-spin {
-        to { transform: rotate(360deg); }
+    .payment-gateway-preview__content {
+        padding: 24px;
+    }
+
+    .payment-gateway-preview__eyebrow {
+        margin: 0 0 6px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+
+    .payment-gateway-preview__title {
+        margin: 0 0 14px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .payment-gateway-preview__frame-wrap {
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .payment-gateway-preview__frame {
+        width: 100%;
+        height: min(76vh, 820px);
+        border: 0;
+        display: block;
+    }
+
+    @media (max-width: 767px) {
+        .payment-gateway-preview__content {
+            padding: 12px;
+        }
+
+        .payment-gateway-preview__frame {
+            height: 78vh;
+        }
     }
 </style>
+@endpush
+
+@push('script')
+<script>
+    (function () {
+        const closeBtn = document.querySelector('.payment-modal__close');
+        const backdrop = document.querySelector('.payment-modal__backdrop');
+        const goBack = function () {
+            window.history.back();
+        };
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', goBack);
+        }
+        if (backdrop) {
+            backdrop.addEventListener('click', goBack);
+        }
+    })();
+</script>
 @endpush
