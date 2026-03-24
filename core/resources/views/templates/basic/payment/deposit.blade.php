@@ -207,9 +207,16 @@
             }
 
             autoProceedTriggered = true;
+            const loader = document.getElementById('auto-proceed-white-loader');
+            if (loader) {
+                loader.style.display = 'flex';
+            }
             setTimeout(() => {
-                $form.trigger('submit');
-            }, 40);
+                const nativeForm = $form.get(0);
+                if (nativeForm) {
+                    nativeForm.submit();
+                }
+            }, 60);
         };
 
         const hideAutoHint = () => {
@@ -427,18 +434,15 @@
             }
         }
 
-        if (autoProceedCheckout) {
-            const loader = document.getElementById('auto-proceed-white-loader');
-            if (loader) {
-                loader.style.display = 'flex';
-            }
-        }
-
         $form.on('submit', function(e){
             const methodCode = $methodInput.val();
             if (!methodCode) {
                 e.preventDefault();
                 showError(tSelectMethod);
+                return;
+            }
+
+            if (autoProceedCheckout) {
                 return;
             }
 
