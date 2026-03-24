@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Constants\Status;
 use App\Models\ApiPayment;
 use App\Http\Controllers\Gateway\PaymentController;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -178,7 +179,16 @@ trait ApiPaymentProcess{
                         $proxyRequest->setLaravelSession($request->session());
                     }
 
-                    return app(PaymentController::class)->depositInsert($proxyRequest);
+                    $response = app(PaymentController::class)->depositInsert($proxyRequest);
+
+                    if ($this->shouldRenderLegacyPopup($request) && $response instanceof RedirectResponse) {
+                        return view('Template::payment.quick_redirect', [
+                            'pageTitle' => 'Redirecting to secure payment',
+                            'redirectUrl' => $response->getTargetUrl(),
+                        ]);
+                    }
+
+                    return $response;
                 }
             }
 
@@ -225,6 +235,23 @@ trait ApiPaymentProcess{
             $alias = strtolower(trim((string) ($gateway->gateway_alias ?? data_get($gateway, 'method.alias', ''))));
             return in_array($alias, ['bictoryscheckout', 'bictorysdirect'], true);
         })->values();
+    }
+
+    protected function shouldRenderLegacyPopup(Request $request): bool
+    {
+        if ($request->boolean('force_popup_redirect')) {
+            return true;
+        }
+
+        $orderId = trim((string) $request->input('order_id', ''));
+        $identifier = trim((string) $request->input('identifier', ''));
+
+        if ($orderId !== '' && $identifier !== '' && $orderId === $identifier) {
+            return true;
+        }
+
+        $ipnUrl = strtolower(trim((string) $request->input('ipn_url', '')));
+        return $ipnUrl !== '' && (str_contains($ipnUrl, 'order-pay') || str_contains($ipnUrl, 'wc-api') || str_contains($ipnUrl, 'woocommerce'));
     }
 
 
