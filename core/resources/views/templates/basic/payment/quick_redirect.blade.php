@@ -6,21 +6,14 @@
     <div class="modal payment-gateway-preview">
         <button type="button" class="payment-modal__close" aria-label="@lang('Close')">&times;</button>
         <div class="payment-gateway-preview__content">
-            <p class="payment-gateway-preview__eyebrow">@lang('Secure Checkout')</p>
-            <h4 class="payment-gateway-preview__title">@lang('Complete Payment')</h4>
-
             <div class="payment-gateway-preview__frame-wrap">
                 <iframe
                     src="{{ $redirectUrl }}"
-                    class="payment-gateway-preview__frame"
+                    class="payment-gateway-preview__frame payment-gateway-preview__frame--white-only"
                     title="@lang('Payment Checkout')"
                     loading="eager"
                     allow="payment *"
                 ></iframe>
-            </div>
-
-            <div class="text-center mt-3">
-                <a href="{{ $redirectUrl }}" target="_blank" rel="noopener" class="btn btn--base btn-sm">@lang('Open in new tab')</a>
             </div>
         </div>
     </div>
@@ -79,21 +72,6 @@
         padding: 24px;
     }
 
-    .payment-gateway-preview__eyebrow {
-        margin: 0 0 6px;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        color: #64748b;
-        text-transform: uppercase;
-    }
-
-    .payment-gateway-preview__title {
-        margin: 0 0 14px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-
     .payment-gateway-preview__frame-wrap {
         border: 1px solid rgba(15, 23, 42, 0.1);
         border-radius: 14px;
@@ -106,6 +84,17 @@
         height: min(76vh, 820px);
         border: 0;
         display: block;
+    }
+
+    /* Desktop checkout provider view is split in two columns.
+       Keep only the right/white panel visible inside the popup. */
+    @media (min-width: 992px) {
+        .payment-gateway-preview__frame--white-only {
+            width: 200%;
+            max-width: none;
+            transform: translateX(-50%);
+            transform-origin: top left;
+        }
     }
 
     @media (max-width: 767px) {
