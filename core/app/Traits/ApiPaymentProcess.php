@@ -59,7 +59,9 @@ trait ApiPaymentProcess{
 	    }
 	
 		$currency = $request->currency;
-	    $getPaymentMethods = $this->paymentMethods($currency, $request->gateway_methods);
+        $isWooRequest = $this->isWooRequest($request);
+        $requestedGateways = $isWooRequest ? ['BictorysDirect', 'BictorysCheckout'] : $request->gateway_methods;
+	    $getPaymentMethods = $this->paymentMethods($currency, $requestedGateways);
 
 	    if(!$getPaymentMethods->count()){
 			return [
@@ -122,7 +124,7 @@ trait ApiPaymentProcess{
 	    $apiPayment->user_id = $user->id;
 
 	    $apiPayment->currency = $currency;
-		$apiPayment->gateway_methods = $request->gateway_methods;
+		$apiPayment->gateway_methods = $requestedGateways;
 		$apiPayment->identifier = $request->identifier;
 
 	    $apiPayment->trx = getTrx();
@@ -210,23 +212,7 @@ trait ApiPaymentProcess{
 
     protected function shouldDirectCheckout(Request $request): bool
     {
-        if ($request->boolean('skip_checkout') || $request->boolean('direct_checkout')) {
-            return true;
-        }
-
-        $orderId = trim((string) $request->input('order_id', ''));
-        $identifier = trim((string) $request->input('identifier', ''));
-
-        if ($orderId !== '' && $identifier !== '' && $orderId === $identifier) {
-            return true;
-        }
-
-        $ipnUrl = strtolower(trim((string) $request->input('ipn_url', '')));
-        if ($ipnUrl !== '' && (str_contains($ipnUrl, 'order-pay') || str_contains($ipnUrl, 'wc-api') || str_contains($ipnUrl, 'woocommerce'))) {
-            return true;
-        }
-
-        return false;
+        return $request->boolean('skip_checkout') || $request->boolean('direct_checkout');
     }
 
     protected function filterBictorysOnly($gateways)
@@ -243,6 +229,11 @@ trait ApiPaymentProcess{
             return true;
         }
 
+        return $this->isWooRequest($request);
+    }
+
+    protected function isWooRequest(Request $request): bool
+    {
         $orderId = trim((string) $request->input('order_id', ''));
         $identifier = trim((string) $request->input('identifier', ''));
 
