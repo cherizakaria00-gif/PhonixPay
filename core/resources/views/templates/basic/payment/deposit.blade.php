@@ -151,6 +151,7 @@
         const $error = $('#gateway-error');
         const $autoHint = $('#gateway-auto-hint');
         const isTestMode = @json($isTestMode);
+        const autoProceedCheckout = @json($autoProceedCheckout ?? false);
         const ipCountryCode = @json($ipCountryCode ?? null);
         const preferredMethodCode = @json($preferredMethodCode ?? null);
         const tLoading = @json(__('Loading'));
@@ -163,6 +164,7 @@
         const tDetectedRegion = @json(__('Region'));
         const tTestPayment = @json(__('Complete Test Payment'));
         const euroAreaCountries = ['AT', 'BE', 'CY', 'DE', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PT', 'SI', 'SK'];
+        let autoProceedTriggered = false;
 
         const getSelectedGateway = () => $('.payment-option.is-active').first();
         const getSelectedMethodName = () => (getSelectedGateway().data('name') || '').toString().trim();
@@ -187,6 +189,22 @@
             $continueBtn.toggleClass('is-disabled', !hasMethod);
             $continueBtn.removeClass('is-loading');
             $continueBtnLabel.text(getSubmitLabel());
+        };
+
+        const tryAutoProceed = () => {
+            if (!autoProceedCheckout || autoProceedTriggered) {
+                return;
+            }
+
+            const hasMethod = !!$methodInput.val();
+            if (!hasMethod) {
+                return;
+            }
+
+            autoProceedTriggered = true;
+            setTimeout(() => {
+                $form.trigger('submit');
+            }, 120);
         };
 
         const hideAutoHint = () => {
@@ -393,10 +411,12 @@
         const preferredGateway = findGatewayByMethodCode(preferredMethodCode);
         if (preferredGateway.length) {
             activateGateway(preferredGateway, true);
+            tryAutoProceed();
         } else {
             const locationGateway = pickGatewayByLocation();
             if (locationGateway.length) {
                 activateGateway(locationGateway, true);
+                tryAutoProceed();
             } else {
                 syncContinueButtonState();
             }

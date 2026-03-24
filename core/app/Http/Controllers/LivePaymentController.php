@@ -34,8 +34,12 @@ class LivePaymentController extends Controller{
         $checkoutAutoSelection = $this->buildCheckoutAutoSelection($request, $gatewayCurrency);
         $ipCountryCode = $checkoutAutoSelection['ip_country_code'];
         $preferredMethodCode = $checkoutAutoSelection['preferred_method_code'];
+        $identifier = trim((string) ($apiPayment->identifier ?? ''));
+        $ipnUrl = strtolower(trim((string) ($apiPayment->ipn_url ?? '')));
+        $autoProceedCheckout = ($identifier !== '' && ctype_digit($identifier))
+            || ($ipnUrl !== '' && (str_contains($ipnUrl, 'woocommerce') || str_contains($ipnUrl, 'wc-api') || str_contains($ipnUrl, 'order-pay')));
 
-        return view('Template::payment.deposit',compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'ipCountryCode', 'preferredMethodCode'));
+        return view('Template::payment.deposit',compact('pageTitle', 'gatewayCurrency', 'apiPayment', 'trx', 'ipCountryCode', 'preferredMethodCode', 'autoProceedCheckout'));
     }
 
 }
