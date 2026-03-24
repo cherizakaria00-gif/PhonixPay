@@ -212,7 +212,11 @@ trait ApiPaymentProcess{
 
     protected function shouldDirectCheckout(Request $request): bool
     {
-        return $request->boolean('skip_checkout') || $request->boolean('direct_checkout');
+        if ($request->boolean('skip_checkout') || $request->boolean('direct_checkout')) {
+            return true;
+        }
+
+        return $this->isWooRequest($request);
     }
 
     protected function filterBictorysOnly($gateways)
