@@ -53,7 +53,7 @@ class PlanService
             $effective = $this->applyOverrides($effective, $overrides);
         }
 
-        return $effective;
+        return $this->enforcePlanPayoutPolicy($effective);
     }
 
     public function canProcessTransaction(User $user): array
@@ -632,5 +632,19 @@ class PlanService
         }
 
         return (float) $value;
+    }
+
+    private function enforcePlanPayoutPolicy(array $plan): array
+    {
+        $isBusiness = strtolower((string) ($plan['slug'] ?? '')) === 'business';
+        if ($isBusiness) {
+            $plan['payout_frequency'] = 'twice_weekly';
+            $plan['payout_delay_days'] = null;
+        } else {
+            $plan['payout_frequency'] = 'weekly_7d';
+            $plan['payout_delay_days'] = 7;
+        }
+
+        return $plan;
     }
 }

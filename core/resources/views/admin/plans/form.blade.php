@@ -48,10 +48,11 @@
                                     <option value="weekly_7d" {{ $freq == 'weekly_7d' ? 'selected' : '' }}>Weekly (Wednesday)</option>
                                     <option value="twice_weekly" {{ $freq == 'twice_weekly' ? 'selected' : '' }}>2x per week (Wednesday/Saturday)</option>
                                 </select>
+                                <small class="text-muted">@lang('Only Business plan keeps 2x/week. Other plans are forced to weekly.')</small>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">@lang('Payout Delay Days')</label>
-                                <input type="number" min="0" name="payout_delay_days" class="form-control" value="{{ old('payout_delay_days', $plan->payout_delay_days) }}">
+                                <input type="number" min="0" name="payout_delay_days" class="form-control" value="{{ old('payout_delay_days', $plan->payout_delay_days ?? 7) }}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">@lang('Sort Order')</label>

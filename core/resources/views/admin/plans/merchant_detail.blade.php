@@ -14,7 +14,15 @@
                         <li class="list-group-item d-flex justify-content-between"><span>@lang('Status')</span><strong class="text-capitalize">{{ $merchant->plan_status ?? 'active' }}</strong></li>
                         <li class="list-group-item d-flex justify-content-between"><span>@lang('Used this month')</span><strong>{{ $usage['used'] }} / {{ $usage['unlimited'] ? __('Unlimited') : $usage['limit'] }}</strong></li>
                         <li class="list-group-item d-flex justify-content-between"><span>@lang('Effective Fees')</span><strong>{{ number_format($effectivePlan['fee_percent'], 2) }}% + ${{ number_format($effectivePlan['fee_fixed'], 2) }}</strong></li>
-                        <li class="list-group-item d-flex justify-content-between"><span>@lang('Payout')</span><strong>{{ str_replace('_', ' ', $effectivePlan['payout_frequency']) }}</strong></li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>@lang('Payout')</span>
+                            <strong>
+                                {{ match($effectivePlan['payout_frequency'] ?? 'weekly_7d') {
+                                    'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
+                                    default => 'Weekly (Wed)',
+                                } }}
+                            </strong>
+                        </li>
                         <li class="list-group-item d-flex justify-content-between"><span>@lang('Last Payout')</span><strong>{{ $lastPayout ? showDateTime($lastPayout->scheduled_for) : '-' }}</strong></li>
                     </ul>
                 </div>

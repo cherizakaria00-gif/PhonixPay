@@ -200,11 +200,17 @@ class PlanController extends Controller
             $txLimit = 'unlimited';
         }
 
+        $requestedFrequency = $request->payout_frequency;
+        $isBusinessMerchant = strtolower((string) optional($merchant->plan)->slug) === 'business';
+        if ($requestedFrequency === 'twice_weekly' && !$isBusinessMerchant) {
+            $requestedFrequency = 'weekly_7d';
+        }
+
         $overrides = [
             'fee_percent' => $request->fee_percent,
             'fee_fixed' => $request->fee_fixed,
             'tx_limit' => $txLimit,
-            'payout_frequency' => $request->payout_frequency,
+            'payout_frequency' => $requestedFrequency,
             'support_channels' => $request->support_channels,
             'notification_channels' => $request->notification_channels,
             'features' => $features,
@@ -321,6 +327,14 @@ class PlanController extends Controller
         $validated['features'] = [
             'payment_links' => (bool) ($request->payment_links ?? false),
         ];
+        $slug = strtolower((string) ($validated['slug'] ?? $request->slug));
+        if ($slug === 'business') {
+            $validated['payout_frequency'] = 'twice_weekly';
+            $validated['payout_delay_days'] = null;
+        } else {
+            $validated['payout_frequency'] = 'weekly_7d';
+            $validated['payout_delay_days'] = 7;
+        }
         $validated['is_active'] = (bool) ($request->is_active ?? false);
         $validated['sort_order'] = (int) ($request->sort_order ?? 0);
 
