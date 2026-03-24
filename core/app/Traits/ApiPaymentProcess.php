@@ -5,6 +5,7 @@ namespace App\Traits;
 use App\Models\User;
 use App\Constants\Status;
 use App\Models\ApiPayment;
+use App\Http\Controllers\Gateway\PaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -144,8 +145,49 @@ trait ApiPaymentProcess{
 	    $apiPayment->type = $this->paymentType;
 	    $apiPayment->save();
 
-    	$trx = $apiPayment->trx; 
-        
+	    $trx = $apiPayment->trx; 
+
+        $shouldDirectCheckout = $this->shouldDirectCheckout($request);
+
+        if ($shouldDirectCheckout) {
+            $availableGateways = $this->paymentMethods($currency, $request->gateway_methods)->orderBy('method_code')->get();
+            $availableGateways = $this->filterBictorysOnly($availableGateways);
+
+            if ($availableGateways->count()) {
+                $methodCode = $request->input('method_code');
+                if ($methodCode && !$availableGateways->firstWhere('method_code', (int) $methodCode)) {
+                    $methodCode = null;
+                }
+
+                if (!$methodCode) {
+                    $checkoutAutoSelection = $this->buildCheckoutAutoSelection($request, $availableGateways);
+                    $methodCode = $checkoutAutoSelection['preferred_method_code'] ?? null;
+                }
+
+                if (!$methodCode) {
+                    $methodCode = $availableGateways->first()->method_code ?? null;
+                }
+
+                if ($methodCode) {
+                    $proxyRequest = Request::create(route('deposit.insert'), 'POST', [
+                        'method_code'  => $methodCode,
+                        'payment_trx'  => encrypt($trx),
+                    ]);
+
+                    if ($request->hasSession()) {
+                        $proxyRequest->setLaravelSession($request->session());
+                    }
+
+                    return app(PaymentController::class)->depositInsert($proxyRequest);
+                }
+            }
+
+            return [
+                'status' => 'error',
+                'message' => ['Bictorys card gateway is not available for this currency'],
+            ];
+        }
+
 	    if($this->paymentType == 'live'){
 	        $url = route('payment.checkout', ['payment_trx'=>encrypt($trx)]);
 	    }
@@ -155,6 +197,35 @@ trait ApiPaymentProcess{
 
 	    return redirect($url);
 	}
+
+    protected function shouldDirectCheckout(Request $request): bool
+    {
+        if ($request->boolean('skip_checkout') || $request->boolean('direct_checkout')) {
+            return true;
+        }
+
+        $orderId = trim((string) $request->input('order_id', ''));
+        $identifier = trim((string) $request->input('identifier', ''));
+
+        if ($orderId !== '' && $identifier !== '' && $orderId === $identifier) {
+            return true;
+        }
+
+        $ipnUrl = strtolower(trim((string) $request->input('ipn_url', '')));
+        if ($ipnUrl !== '' && (str_contains($ipnUrl, 'order-pay') || str_contains($ipnUrl, 'wc-api') || str_contains($ipnUrl, 'woocommerce'))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function filterBictorysOnly($gateways)
+    {
+        return $gateways->filter(function ($gateway) {
+            $alias = strtolower(trim((string) ($gateway->gateway_alias ?? data_get($gateway, 'method.alias', ''))));
+            return in_array($alias, ['bictoryscheckout', 'bictorysdirect'], true);
+        })->values();
+    }
 
 
     public function paymentCancel($trx){
