@@ -75,9 +75,24 @@ class Push extends NotifyProcess implements Notifiable{
                 ];
 
                 $data['notification'] = [
-                    'body'=>$message,
-                    'title'=>$this->getTitle(),
-                    'image'=>asset(getFilePath('push')).'/'.$this->pushImage,
+                    'body'  => $message,
+                    'title' => $this->getTitle(),
+                    'image' => asset(getFilePath('push')).'/'.$this->pushImage,
+                ];
+
+                // Android-specific block: high priority wakes the device even when
+                // the app is backgrounded or fully closed (Doze-safe delivery).
+                // channel_id must match a channel created by the mobile app on first launch.
+                $data['android'] = [
+                    'priority' => 'high',
+                    'notification' => [
+                        'channel_id'              => 'flujipay-default',
+                        'sound'                   => 'default',
+                        'default_sound'           => true,
+                        'default_vibrate_timings' => true,
+                        'visibility'              => 'PUBLIC',
+                        'notification_priority'   => 'PRIORITY_HIGH',
+                    ],
                 ];
 
                 $data['data'] = [
@@ -89,19 +104,44 @@ class Push extends NotifyProcess implements Notifiable{
                     'ticket_id'        => (string) ($this->shortCodes['ticket_id'] ?? ''),
                     'payment_link_id'  => (string) ($this->shortCodes['payment_link_id'] ?? ''),
                 ];
+
+                $fcmUrl = 'https://fcm.googleapis.com/v1/projects/'.gs('firebase_config')->projectId.'/messages:send';
+
                 foreach ($this->toAddress as $toAddress) {
                     $data['token'] = $toAddress;
                     $payloadData['message'] = $data;
                     $payload = json_encode($payloadData);
+
                     $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/v1/projects/'.gs('firebase_config')->projectId.'/messages:send');
+                    curl_setopt($ch, CURLOPT_URL, $fcmUrl);
                     curl_setopt($ch, CURLOPT_POST, true);
                     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-                    curl_exec($ch);
+
+                    $result   = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $curlErr  = curl_error($ch);
                     curl_close($ch);
+
+                    if ($curlErr) {
+                        error_log("FCM curl error (token: {$toAddress}): {$curlErr}");
+                        $this->createErrorLog("FCM curl error: {$curlErr}");
+                        continue;
+                    }
+
+                    if ($httpCode !== 200) {
+                        error_log("FCM delivery failed HTTP {$httpCode} (token: {$toAddress}): {$result}");
+                        $this->createErrorLog("FCM push failed (HTTP {$httpCode}): {$result}");
+
+                        // Remove token that FCM has marked as unregistered/invalid
+                        $decoded = json_decode($result, true);
+                        $fcmStatus = $decoded['error']['status'] ?? '';
+                        if ($httpCode === 404 || in_array($fcmStatus, ['NOT_FOUND', 'UNREGISTERED'])) {
+                            \App\Models\DeviceToken::where('token', $toAddress)->delete();
+                        }
+                    }
                 }
             } catch(\Exception $e){
                 $this->createErrorLog($e->getMessage());
