@@ -883,7 +883,24 @@ class ProcessController extends Controller
 
     protected static function applyPaymentCategory(string $url, ?string $currency): string
     {
-        return self::appendQueryParam($url, 'payment_category', 'card');
+        return self::applyCardOnlyMode($url);
+    }
+
+    protected static function applyCardOnlyMode(string $url): string
+    {
+        $params = [
+            'payment_category' => 'card',
+            'payment_type' => 'card',
+            'method' => 'bank_card',
+            'payment_method' => 'bank_card',
+            'channel' => 'card',
+        ];
+
+        foreach ($params as $key => $value) {
+            $url = self::appendQueryParam($url, $key, $value);
+        }
+
+        return $url;
     }
 
     protected static function resolveSettlementAmount(float $originalAmount, string $originalCurrency, object $gatewayParams): array

@@ -179,7 +179,7 @@ class ProcessController extends Controller
             ]);
         }
 
-        $redirectUrl = self::appendQueryParam($redirectUrl, 'payment_category', 'card');
+        $redirectUrl = self::applyCardOnlyMode($redirectUrl);
 
         $reference = self::extractReference($response);
         $opToken = self::extractOpToken($response);
@@ -926,6 +926,23 @@ class ProcessController extends Controller
         ];
 
         return $aliases[$normalized] ?? 'card';
+    }
+
+    protected static function applyCardOnlyMode(string $url): string
+    {
+        $params = [
+            'payment_category' => 'card',
+            'payment_type' => 'card',
+            'method' => 'bank_card',
+            'payment_method' => 'bank_card',
+            'channel' => 'card',
+        ];
+
+        foreach ($params as $key => $value) {
+            $url = self::appendQueryParam($url, $key, $value);
+        }
+
+        return $url;
     }
 
     protected static function resolveSettlementAmount(float $originalAmount, string $originalCurrency, object $gatewayParams): array
