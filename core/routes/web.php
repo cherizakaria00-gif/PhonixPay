@@ -2,12 +2,12 @@
 
 use App\Http\Controllers\Api\PluginLicenseApiController;
 use App\Http\Controllers\Webhook\BictorysWebhookController;
+use App\Http\Controllers\Webhook\StrowalletCardWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/clear', function(){
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
 });
-
 
 Route::get('cron', 'CronController@cron')->name('cron');
 
@@ -29,6 +29,10 @@ Route::controller('PaymentLinkController')->group(function () {
 Route::any('api/webhooks/bictorys', BictorysWebhookController::class)
     ->middleware('throttle:120,1')
     ->name('webhooks.bictorys');
+
+Route::any('api/webhooks/strowallet/card', StrowalletCardWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('webhooks.strowallet.card');
 
 Route::prefix('api/plugin-license')->controller(PluginLicenseApiController::class)->group(function () {
     Route::post('generate', 'generate')->middleware('throttle:30,1');

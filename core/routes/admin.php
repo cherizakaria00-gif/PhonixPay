@@ -187,6 +187,20 @@ Route::middleware('admin')->group(function () {
         Route::get('/', 'index')->name('index');
     });
 
+    Route::controller('VirtualCardController')->prefix('virtual-cards')->name('virtual.cards.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('settings', 'updateSettings')->name('settings.update');
+        Route::post('sync-all', 'syncAll')->name('sync.all');
+        Route::get('{id}', 'show')->name('show');
+        Route::post('merchant/{userId}/create', 'createForMerchant')->name('merchant.create');
+        Route::post('{id}/fund', 'fund')->name('fund');
+        Route::post('{id}/sync', 'sync')->name('sync');
+        Route::post('{id}/freeze', 'freeze')->name('freeze');
+        Route::post('{id}/withdraw', 'withdraw')->name('withdraw');
+        Route::post('{id}/upgrade-limit', 'upgradeLimit')->name('upgrade.limit');
+        Route::post('{id}/mastercard-details', 'fetchMastercard')->name('mastercard.details');
+    });
+
 
     // WITHDRAW SYSTEM
     Route::name('withdraw.')->prefix('withdraw')->group(function(){

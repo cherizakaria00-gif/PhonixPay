@@ -167,6 +167,16 @@ class User extends Authenticatable
         return $this->hasMany(Payout::class);
     }
 
+    public function virtualCards()
+    {
+        return $this->hasMany(VirtualCard::class)->orderByDesc('id');
+    }
+
+    public function virtualCardTransactions()
+    {
+        return $this->hasMany(VirtualCardTransaction::class)->orderByDesc('id');
+    }
+
     public function planChangeRequests()
     {
         return $this->hasMany(PlanChangeRequest::class);

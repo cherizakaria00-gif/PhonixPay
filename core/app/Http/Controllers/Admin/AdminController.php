@@ -14,7 +14,10 @@ use App\Models\PlanChangeRequest;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserLogin;
+use App\Models\VirtualCard;
+use App\Models\VirtualCardSetting;
 use App\Models\Withdrawal;
+use App\Services\StrowalletService;
 use App\Rules\FileTypeValidate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,7 +27,7 @@ use Illuminate\Support\Facades\Schema;
 class AdminController extends Controller
 {
 
-    public function dashboard()
+    public function dashboard(StrowalletService $strowalletService)
     {
         $pageTitle = 'Dashboard';
 
@@ -154,6 +157,36 @@ class AdminController extends Controller
             }
         }
 
+        $virtualCard = [
+            'enabled' => false,
+            'strowallet_balance' => null,
+            'strowallet_balance_currency' => strtoupper((string) gs('cur_text')),
+            'total_fee_revenue' => 0.0,
+            'active_cards' => 0,
+            'total_cards' => 0,
+        ];
+
+        if (Schema::hasTable('virtual_card_settings') && Schema::hasTable('virtual_cards')) {
+            $vcSettings = VirtualCardSetting::config();
+            $virtualCard['enabled'] = (bool) $vcSettings->enabled;
+            $virtualCard['strowallet_balance_currency'] = strtoupper((string) ($vcSettings->default_currency ?: $virtualCard['strowallet_balance_currency']));
+            $virtualCard['total_cards'] = (int) VirtualCard::query()->count();
+            $virtualCard['active_cards'] = (int) VirtualCard::query()->whereIn('status', ['active', 'success', 'succeed', 'live'])->count();
+
+            $virtualCard['total_fee_revenue'] = (float) Transaction::query()
+                ->whereIn('remark', ['virtual_card_create_charge', 'virtual_card_reload_charge'])
+                ->sum('amount');
+
+            if ($virtualCard['enabled']) {
+                try {
+                    $balanceResponse = $strowalletService->walletBalance($virtualCard['strowallet_balance_currency']);
+                    $virtualCard['strowallet_balance'] = (float) ($balanceResponse['balance'] ?? 0);
+                } catch (\Throwable $e) {
+                    $virtualCard['strowallet_balance'] = null;
+                }
+            }
+        }
+
         return view('admin.dashboard', compact(
             'pageTitle',
             'widget',
@@ -165,7 +198,8 @@ class AdminController extends Controller
             'hasConversionTable',
             'conversionCurrencies',
             'conversionRates',
-            'totalRevenueXof'
+            'totalRevenueXof',
+            'virtualCard'
         ));
     }
 

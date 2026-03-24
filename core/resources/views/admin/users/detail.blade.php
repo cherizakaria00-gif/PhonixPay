@@ -97,6 +97,16 @@
                 </div>
 
                 <div class="flex-fill">
+                    <form action="{{ route('admin.virtual.cards.merchant.create', $user->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="currency" value="USD">
+                        <button type="submit" class="btn btn--info btn--shadow w-100 btn-lg">
+                            <i class="las la-credit-card"></i>@lang('Create Virtual Card')
+                        </button>
+                    </form>
+                </div>
+
+                <div class="flex-fill">
                     @if($user->status == Status::USER_ACTIVE)
                     <button type="button" class="btn btn--warning btn--shadow w-100 btn-lg userStatus" data-bs-toggle="modal" data-bs-target="#userStatusModal">
                         <i class="las la-ban"></i>@lang('Ban User')

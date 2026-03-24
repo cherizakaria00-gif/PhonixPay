@@ -389,6 +389,26 @@
             "admin.setting.app.purchase"
         ]
     },
+    "gateway_setting": {
+        "title": "Gateway Setting",
+        "header": "Settings",
+        "icon": "las la-cogs",
+        "menu_active": ["admin.gateway*", "admin.virtual.cards.*"],
+        "submenu": [
+            {
+                "keyword": ["gateway", "payment gateway", "automatic gateway"],
+                "title": "Payment Gateways",
+                "route_name": "admin.gateway.automatic.index",
+                "menu_active": "admin.gateway*"
+            },
+            {
+                "keyword": ["virtual card", "strowallet", "virtual card strowallet", "card api"],
+                "title": "Virtual Card Strowallet",
+                "route_name": "admin.virtual.cards.index",
+                "menu_active": ["admin.virtual.cards.index", "admin.virtual.cards.show"]
+            }
+        ]
+    },
     "holiday_setting": {
         "title": "Holiday Setting",
         "keyword": ["Holiday Setting", "Holiday", "Setting", "Week", "Day", "Off Day", "Control Panel"],

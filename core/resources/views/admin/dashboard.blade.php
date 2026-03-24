@@ -72,6 +72,36 @@
                     <span class="pf-admin-stat-change pf-admin-stat-change--negative">@lang('Needs validation')</span>
                 </div>
             </a>
+            <a href="{{ route('admin.virtual.cards.index') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-credit-card"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Strowallet Balance')</p>
+                    <h3 class="pf-admin-stat-value">
+                        @if(!is_null(data_get($virtualCard ?? [], 'strowallet_balance')))
+                            {{ showAmount((float) data_get($virtualCard, 'strowallet_balance')) }}
+                        @else
+                            N/A
+                        @endif
+                    </h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">
+                        {{ data_get($virtualCard ?? [], 'strowallet_balance_currency', strtoupper((string) gs('cur_text'))) }}
+                    </span>
+                </div>
+            </a>
+            <a href="{{ route('admin.virtual.cards.index') }}" class="pf-admin-stat-card">
+                <div class="pf-admin-stat-icon">
+                    <i class="las la-coins"></i>
+                </div>
+                <div class="pf-admin-stat-body">
+                    <p class="pf-admin-stat-label">@lang('Virtual Card Revenue')</p>
+                    <h3 class="pf-admin-stat-value">{{ showAmount((float) data_get($virtualCard ?? [], 'total_fee_revenue', 0)) }}</h3>
+                    <span class="pf-admin-stat-change pf-admin-stat-change--positive">
+                        {{ (int) data_get($virtualCard ?? [], 'active_cards', 0) }} @lang('active') / {{ (int) data_get($virtualCard ?? [], 'total_cards', 0) }} @lang('total')
+                    </span>
+                </div>
+            </a>
         </div>
 
         <div class="pf-admin-panel pf-admin-panel--currency">

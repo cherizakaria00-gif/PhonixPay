@@ -146,6 +146,16 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('/withdraw/request', 'requestPayout')->name('withdraw.request')->middleware('user.restricted');
                 Route::get('/withdraws', 'withdraws')->name('withdraws')->middleware('user.restricted');
             });
+
+            Route::controller('VirtualCardController')->prefix('virtual-cards')->name('virtual.cards.')->middleware(['kyc', 'user.restricted'])->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('quick-create', 'quickCreate')->name('quick.create');
+                Route::post('/', 'store');
+                Route::post('create', 'store')->name('store');
+                Route::post('{id}/fund', 'fund')->name('fund');
+                Route::post('{id}/withdraw', 'withdraw')->name('withdraw');
+                Route::post('{id}/sync', 'sync')->name('sync');
+            });
         });
     });
 });

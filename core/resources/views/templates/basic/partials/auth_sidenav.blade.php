@@ -65,6 +65,14 @@
                 </a>
             </li>
 
+            <li class="sidebar-menu__item is-disabled">
+                <a href="javascript:void(0)"
+                   class="sidebar-menu__link nav-item is-disabled-link"
+                   aria-disabled="true" tabindex="-1">
+                    <i class="las la-credit-card n-ic"></i><span>@lang('Virtual Card (Coming Soon)')</span>
+                </a>
+            </li>
+
             <li class="sidebar-menu__item {{ menuActive('ticket.*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
                 <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('ticket.index') }}"
                    class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
