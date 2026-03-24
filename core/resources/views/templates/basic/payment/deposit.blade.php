@@ -6,6 +6,11 @@
 @endphp
 
 @section('app')  
+@if(($autoProceedCheckout ?? false))
+<div id="auto-proceed-white-loader" aria-live="polite" aria-busy="true">
+    <div class="auto-proceed-white-loader__spinner"></div>
+</div>
+@endif
 <div class="py-60 checkout {{ @$apiPayment->checkout_theme }}">
     <div class="container"> 
         <div class="row justify-content-center">
@@ -204,7 +209,7 @@
             autoProceedTriggered = true;
             setTimeout(() => {
                 $form.trigger('submit');
-            }, 120);
+            }, 40);
         };
 
         const hideAutoHint = () => {
@@ -422,6 +427,13 @@
             }
         }
 
+        if (autoProceedCheckout) {
+            const loader = document.getElementById('auto-proceed-white-loader');
+            if (loader) {
+                loader.style.display = 'flex';
+            }
+        }
+
         $form.on('submit', function(e){
             const methodCode = $methodInput.val();
             if (!methodCode) {
@@ -476,6 +488,31 @@
             .jp-card {
                 left: 80%;
                 transform: translateX(-50%);
+            }
+        }
+
+        #auto-proceed-white-loader {
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auto-proceed-white-loader__spinner {
+            width: 46px;
+            height: 46px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: autoProceedSpin .9s linear infinite;
+        }
+
+        @keyframes autoProceedSpin {
+            to {
+                transform: rotate(360deg);
             }
         }
 
