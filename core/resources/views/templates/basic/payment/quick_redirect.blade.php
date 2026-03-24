@@ -56,6 +56,10 @@
         border: 1px solid rgba(15, 23, 42, 0.08);
     }
 
+    .payment-modal .modal {
+        display: block;
+    }
+
     .payment-modal__close {
         position: absolute;
         top: 10px;
