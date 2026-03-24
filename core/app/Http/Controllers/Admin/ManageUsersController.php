@@ -278,7 +278,7 @@ class ManageUsersController extends Controller
             'update_title' => 'Your merchant profile was updated',
             'update_message' => 'Your account settings were updated by administrator.',
             'updated_at' => now()->format('Y-m-d H:i:s'),
-        ], ['email']);
+        ], ['email', 'push']);
 
         $notify[] = ['success', 'User details updated successfully'];
         return back()->withNotify($notify);
