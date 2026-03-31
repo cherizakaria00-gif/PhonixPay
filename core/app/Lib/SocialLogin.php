@@ -62,13 +62,27 @@ class SocialLogin
             $user->id = $user->sub;
         }
 
+        $normalizedEmail = $user->email ? strtolower((string) $user->email) : null;
+
         $userData = User::where('provider_id', $user->id)->first();
+
+        // Existing accounts created with email/password should be linked on first
+        // successful social login instead of being rejected as duplicate email.
+        if (!$userData && $normalizedEmail) {
+            $userData = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->first();
+            if ($userData) {
+                $userData->provider_id = $user->id;
+                $userData->provider = $this->provider;
+                $userData->email = $normalizedEmail;
+                $userData->save();
+            }
+        }
 
         if (!$userData) {
             if (!gs('registration')) {
                 throw new Exception('New account registration is currently disabled');
             }
-            $emailExists = User::where('email', @$user->email)->exists();
+            $emailExists = $normalizedEmail ? User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->exists() : false;
             if ($emailExists) {
                 throw new Exception('Email already exists');
             }
@@ -121,7 +135,7 @@ class SocialLogin
         $newUser = new User();
         $newUser->provider_id = $user->id;
 
-        $newUser->email = $user->email;
+        $newUser->email = strtolower((string) $user->email);
 
         $newUser->password = Hash::make($password);
         $newUser->firstname = $firstName;
