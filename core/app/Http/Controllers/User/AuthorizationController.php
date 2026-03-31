@@ -25,6 +25,7 @@ class AuthorizationController extends Controller
     public function authorizeForm()
     {
         $user = auth()->user();
+        $requiresTwoFactor = (int) $user->ts === Status::ENABLE && filled($user->tsc);
         if (!$user->status) {
             $pageTitle = 'Banned';
             $type = 'ban';
@@ -36,7 +37,7 @@ class AuthorizationController extends Controller
             $type = 'sms';
             $pageTitle = 'Verify Mobile Number';
             $notifyTemplate = 'SVER_CODE';
-        }elseif (!$user->tv) {
+        }elseif ($requiresTwoFactor && !$user->tv) {
             $pageTitle = '2FA Verification';
             $type = '2fa';
         }else{

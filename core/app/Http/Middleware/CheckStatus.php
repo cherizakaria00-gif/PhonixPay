@@ -18,7 +18,8 @@ class CheckStatus
     {
         if (Auth::check()) {
             $user = auth()->user();
-            if ($user->status  && $user->ev  && $user->sv  && $user->tv) {
+            $twoFactorSatisfied = !(($user->ts ?? 0) && filled($user->tsc)) || (bool) $user->tv;
+            if ($user->status  && $user->ev  && $user->sv  && $twoFactorSatisfied) {
                 return $next($request);
             } else {
                 if ($request->is('api/*')) {
@@ -39,3 +40,4 @@ class CheckStatus
         abort(403);
     }
 }
+

@@ -41,7 +41,8 @@ class AuthController extends ApiMobileController
         /** @var User $user */
         $user = Auth::user();
 
-        $user->tv = (int) $user->ts === Status::VERIFIED ? Status::UNVERIFIED : Status::VERIFIED;
+        $requiresTwoFactor = (int) $user->ts === Status::ENABLE && filled($user->tsc);
+        $user->tv = $requiresTwoFactor ? Status::UNVERIFIED : Status::VERIFIED;
         $user->save();
 
         $this->storeLoginLog($user);
@@ -260,3 +261,4 @@ class AuthController extends ApiMobileController
         $log->save();
     }
 }
+

@@ -157,6 +157,8 @@ class AuthorizationController extends ApiMobileController
 
     private function resolveAuthorizationState($user): array
     {
+        $requiresTwoFactor = (int) $user->ts === Status::ENABLE && filled($user->tsc);
+
         if ((int) $user->status !== Status::USER_ACTIVE) {
             return ['ban', 'Your account is banned. Please contact support.'];
         }
@@ -169,7 +171,7 @@ class AuthorizationController extends ApiMobileController
             return ['sms', 'Please verify your mobile number.'];
         }
 
-        if ((int) $user->tv !== Status::VERIFIED) {
+        if ($requiresTwoFactor && (int) $user->tv !== Status::VERIFIED) {
             return ['2fa', 'Please complete your two-factor authentication.'];
         }
 

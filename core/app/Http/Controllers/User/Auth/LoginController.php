@@ -105,7 +105,8 @@ class LoginController extends Controller
 
     public function authenticated(Request $request, $user)
     {
-        $user->tv = $user->ts == Status::VERIFIED ? Status::UNVERIFIED : Status::VERIFIED;
+        $requiresTwoFactor = (int) $user->ts === Status::ENABLE && filled($user->tsc);
+        $user->tv = $requiresTwoFactor ? Status::UNVERIFIED : Status::VERIFIED;
         $user->save();
         $ip = getRealIP();
         $exist = UserLogin::where('user_ip',$ip)->first();
@@ -139,3 +140,4 @@ class LoginController extends Controller
 
 
 }
+
