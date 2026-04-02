@@ -156,6 +156,13 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('{id}/withdraw', 'withdraw')->name('withdraw');
                 Route::post('{id}/sync', 'sync')->name('sync');
             });
+
+            Route::controller('DisputeController')->prefix('disputes')->name('disputes.')->middleware('user.restricted')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('{id}', 'show')->name('show');
+                Route::post('open', 'open')->name('open');
+                Route::post('{id}/resolve', 'resolve')->name('resolve');
+            });
         });
     });
 });

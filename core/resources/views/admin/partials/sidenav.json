@@ -168,7 +168,7 @@
         "title": "Payments",
         "icon": "las la-file-invoice-dollar",
         "counters": ["pendingDepositsCount"],
-        "menu_active": ["admin.deposit*", "admin.payment.links*", "admin.plugin.licenses*"],
+        "menu_active": ["admin.deposit*", "admin.payment.links*", "admin.plugin.licenses*", "admin.disputes*"],
         "submenu": [{
                 "keyword": ["Successful Payments", "Payments", "Payment management", "Payment activity"],
                 "title": "Successful Payments",
@@ -192,6 +192,12 @@
                 "title": "Payment Links",
                 "route_name": "admin.payment.links.index",
                 "menu_active": "admin.payment.links.index"
+            },
+            {
+                "keyword": ["Disputes", "Chargebacks", "Dispute management", "Risk disputes"],
+                "title": "Disputes",
+                "route_name": "admin.disputes.index",
+                "menu_active": ["admin.disputes.index", "admin.disputes.show"]
             },
             {
                 "keyword": ["License Keys", "Plugin Licenses", "WooCommerce license", "License key management", "Plugin activation"],

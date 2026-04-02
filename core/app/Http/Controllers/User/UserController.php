@@ -616,7 +616,7 @@ class UserController extends Controller
         $deposits = Deposit::where('user_id', $user->id)->when($scope, function($query) use ($scope){
                 $query->$scope();
             })->searchable(['trx'])->filter($filters)->dateFilter()
-        ->with(['gateway', 'apiPayment', 'stripeAccount'])->orderBy('id','desc');
+        ->with(['gateway', 'apiPayment', 'stripeAccount', 'dispute'])->orderBy('id','desc');
 
         if($request->export_type){
             return $deposits->export();

@@ -36,6 +36,7 @@ class User extends Authenticatable
         'discount_active_until' => 'datetime',
         'monthly_tx_count_reset_at' => 'datetime',
         'plan_custom_overrides' => 'array',
+        'manual_next_payout_at' => 'datetime',
         'monthly_tx_count' => 'integer',
         'plan_id' => 'integer',
         'setup_fee_payment_link_id' => 'integer',
@@ -225,6 +226,11 @@ class User extends Authenticatable
     public function aiIntegrationEvents()
     {
         return $this->hasMany(AiIntegrationEvent::class, 'merchant_id')->orderByDesc('id');
+    }
+
+    public function disputes()
+    {
+        return $this->hasMany(Dispute::class, 'merchant_id')->latest('id');
     }
 
     public function isSetupFeeApproved(): bool

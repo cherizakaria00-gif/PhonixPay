@@ -97,6 +97,7 @@ Route::middleware('admin')->group(function () {
         Route::get('merchants/{id}', [PlanController::class, 'merchantDetail'])->name('merchants.detail');
         Route::post('merchants/{id}/assign', [PlanController::class, 'assignMerchantPlan'])->name('merchants.assign');
         Route::post('merchants/{id}/overrides', [PlanController::class, 'updateMerchantOverrides'])->name('merchants.overrides');
+        Route::post('merchants/{id}/payout-date', [PlanController::class, 'updateMerchantPayoutDate'])->name('merchants.payout.date');
 
         Route::get('change-requests', [PlanController::class, 'requests'])->name('requests');
         Route::post('change-requests/{id}/approve', [PlanController::class, 'approveRequest'])->name('requests.approve');
@@ -170,6 +171,16 @@ Route::middleware('admin')->group(function () {
     // Payment Links
     Route::controller('PaymentLinkController')->prefix('payment-links')->name('payment.links.')->group(function () {
         Route::get('/', 'index')->name('index');
+    });
+
+    // Disputes
+    Route::controller('DisputeController')->prefix('disputes')->name('disputes.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('open', 'open')->name('open');
+        Route::get('{id}', 'show')->name('show');
+        Route::post('{id}/status', 'updateStatus')->name('status');
+        Route::post('{id}/provider-notify', 'notifyProvider')->name('provider.notify');
+        Route::post('{id}/notes', 'saveNotes')->name('notes');
     });
 
     // Plugin Licenses

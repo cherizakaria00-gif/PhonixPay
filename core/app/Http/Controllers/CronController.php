@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\Withdrawal;
 use App\Models\WithdrawSetting;
 use App\Services\BictorysDepositSyncService;
+use App\Services\DisputeService;
 use App\Services\PlanService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +74,7 @@ class CronController extends Controller
         app(PlanService::class)->sendUpcomingRenewalNotifications(now()->utc());
         app(PlanService::class)->processMonthlyRenewals(now()->utc());
         $this->processPlanPayouts();
+        $this->processDisputeDeadlines();
 
         if (request()->target == 'all') {
             $notify[] = ['success', 'Cron executed successfully'];
@@ -154,6 +156,11 @@ class CronController extends Controller
                     $payout->status = 'pending';
                     $payout->scheduled_for = $now;
                     $payout->save();
+
+                    if (Schema::hasColumn('users', 'manual_next_payout_at') && $user->manual_next_payout_at) {
+                        $user->manual_next_payout_at = null;
+                        $user->save();
+                    }
 
                     Deposit::whereIn('id', $eligibleDeposits->pluck('id')->all())
                         ->update(['payout_id' => $payout->id]);
@@ -298,5 +305,14 @@ class CronController extends Controller
             'max_pending_per_gateway' => 500,
             'expire_after_minutes' => (int) config('services.bictorys.pending_expire_minutes', 180),
         ]);
+    }
+
+    private function processDisputeDeadlines(): void
+    {
+        if (!Schema::hasTable('disputes')) {
+            return;
+        }
+
+        app(DisputeService::class)->processExpiredPendingResolution();
     }
 }

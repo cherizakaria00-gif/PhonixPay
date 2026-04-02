@@ -104,6 +104,7 @@
                                 <th>@lang('Status')</th>
                                 <th>@lang('Source')</th>
                                 <th>@lang('Date')</th>
+                                <th>@lang('Action')</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -148,10 +149,26 @@
                                     <td><span class="status-badge {{ $statusClass }}">{{ __($statusLabel) }}</span></td>
                                     <td>{{ $deposit->integration_source_type ?: __('N/A') }}</td>
                                     <td>{{ showDateTime(@$deposit->created_at, 'M d, Y') }}</td>
+                                    <td>
+                                        @php
+                                            $hasActiveDispute = $deposit->dispute && in_array($deposit->dispute->status, \App\Models\Dispute::ACTIVE_STATUSES, true);
+                                            $canOpenDispute = (int) $deposit->status === \App\Constants\Status::PAYMENT_SUCCESS && !$hasActiveDispute;
+                                        @endphp
+                                        @if($canOpenDispute)
+                                            <form action="{{ route('user.disputes.open') }}" method="POST" class="d-inline-block mb-1">
+                                                @csrf
+                                                <input type="hidden" name="deposit_id" value="{{ $deposit->id }}">
+                                                <button class="btn btn-sm btn-outline--warning">@lang('Open Dispute')</button>
+                                            </form>
+                                        @endif
+                                        @if($deposit->dispute)
+                                            <a href="{{ route('user.disputes.show', $deposit->dispute->id) }}" class="btn btn-sm btn-outline--primary">@lang('Dispute')</a>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td class="text-muted text-center" colspan="8">{{ __('Data not found') }}</td>
+                                    <td class="text-muted text-center" colspan="9">{{ __('Data not found') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

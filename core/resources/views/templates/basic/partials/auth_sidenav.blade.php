@@ -65,6 +65,14 @@
                 </a>
             </li>
 
+            <li class="sidebar-menu__item {{ menuActive('user.disputes*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.disputes.index') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
+                    <i class="las la-exclamation-triangle n-ic"></i><span>@lang('Disputes')</span>
+                </a>
+            </li>
+
             <li class="sidebar-menu__item is-disabled">
                 <a href="javascript:void(0)"
                    class="sidebar-menu__link nav-item is-disabled-link"

@@ -65,6 +65,11 @@ class Deposit extends Model
         return $this->belongsTo(AiIntegration::class, 'ai_integration_id');
     }
 
+    public function dispute()
+    {
+        return $this->hasOne(Dispute::class);
+    }
+
     public function referrer()
     {
         return $this->belongsTo(User::class, 'referrer_user_id');

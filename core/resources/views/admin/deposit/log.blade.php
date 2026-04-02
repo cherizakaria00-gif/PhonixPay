@@ -112,6 +112,14 @@
                                 </td>
                                 <td>
                                     @php echo $deposit->statusBadge @endphp
+                                    @if($deposit->dispute)
+                                        @php $activeDispute = in_array($deposit->dispute->status, \App\Models\Dispute::ACTIVE_STATUSES, true); @endphp
+                                        <div class="mt-1">
+                                            <span class="badge {{ $activeDispute ? 'badge--warning' : 'badge--success' }}">
+                                                {{ __('Dispute:') }} {{ ucfirst(str_replace('_', ' ', $deposit->dispute->status)) }}
+                                            </span>
+                                        </div>
+                                    @endif
                                     @if((int) $deposit->status === \App\Constants\Status::PAYMENT_INITIATE)
                                         <div class="mt-2">
                                             <button class="btn btn-sm btn-outline--success confirmationBtn"
@@ -136,6 +144,20 @@
                                                 data-action="{{ route('admin.deposit.refund', $deposit->id) }}">
                                             <i class="la la-undo"></i> @lang('Refund')
                                         </button>
+                                    @endif
+                                    @php
+                                        $hasActiveDispute = $deposit->dispute && in_array($deposit->dispute->status, \App\Models\Dispute::ACTIVE_STATUSES, true);
+                                        $canOpenDispute = (int) $deposit->status === \App\Constants\Status::PAYMENT_SUCCESS && !$hasActiveDispute;
+                                    @endphp
+                                    @if($canOpenDispute)
+                                        <form action="{{ route('admin.disputes.open') }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="deposit_id" value="{{ $deposit->id }}">
+                                            <button class="btn btn-sm btn-outline--warning ms-1">@lang('Open Dispute')</button>
+                                        </form>
+                                    @endif
+                                    @if($deposit->dispute)
+                                        <a href="{{ route('admin.disputes.show', $deposit->dispute->id) }}" class="btn btn-sm btn-outline--info ms-1">@lang('Dispute')</a>
                                     @endif
                                 </td>
                             </tr>

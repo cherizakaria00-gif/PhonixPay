@@ -57,9 +57,9 @@ class DepositController extends Controller
     protected function depositData($scope = null,$summary = false,$userId = null, $pageTitle)
     {  
         if ($scope) {
-            $deposits = Deposit::$scope()->with(['user', 'gateway', 'stripeAccount', 'apiPayment']);
+            $deposits = Deposit::$scope()->with(['user', 'gateway', 'stripeAccount', 'apiPayment', 'dispute']);
         }else{
-            $deposits = Deposit::with(['user', 'gateway', 'stripeAccount', 'apiPayment']);
+            $deposits = Deposit::with(['user', 'gateway', 'stripeAccount', 'apiPayment', 'dispute']);
         }
 
         if ($userId) {
