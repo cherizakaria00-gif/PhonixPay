@@ -85,6 +85,7 @@ Route::middleware('auth')->name('user.')->group(function () {
 
                 //Report
                 Route::any('deposit/history', 'depositHistory')->name('deposit.history')->middleware('user.restricted');
+                Route::post('deposit/refund/{id}', 'refundDeposit')->name('deposit.refund')->middleware('user.restricted');
                 Route::get('transactions','transactions')->name('transactions')->middleware('user.restricted');
 
                 Route::post('add-device-token','addDeviceToken')->name('add.device.token');

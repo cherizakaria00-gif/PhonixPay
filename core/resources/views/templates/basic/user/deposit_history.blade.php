@@ -152,17 +152,13 @@
                                     <td>
                                         @php
                                             $hasActiveDispute = $deposit->dispute && in_array($deposit->dispute->status, \App\Models\Dispute::ACTIVE_STATUSES, true);
-                                            $canOpenDispute = (int) $deposit->status === \App\Constants\Status::PAYMENT_SUCCESS && !$hasActiveDispute;
+                                            $canRefund = (int) $deposit->status === \App\Constants\Status::PAYMENT_SUCCESS && !$hasActiveDispute;
                                         @endphp
-                                        @if($canOpenDispute)
-                                            <form action="{{ route('user.disputes.open') }}" method="POST" class="d-inline-block mb-1">
+                                        @if($canRefund)
+                                            <form action="{{ route('user.deposit.refund', $deposit->id) }}" method="POST" class="d-inline-block mb-1" onsubmit="return confirm('{{ __('Are you sure to refund this payment?') }}')">
                                                 @csrf
-                                                <input type="hidden" name="deposit_id" value="{{ $deposit->id }}">
-                                                <button class="btn btn-sm btn-outline--warning">@lang('Open Dispute')</button>
+                                                <button class="btn btn-sm btn-outline--danger">@lang('Refund')</button>
                                             </form>
-                                        @endif
-                                        @if($deposit->dispute)
-                                            <a href="{{ route('user.disputes.show', $deposit->dispute->id) }}" class="btn btn-sm btn-outline--primary">@lang('Dispute')</a>
                                         @endif
                                     </td>
                                 </tr>

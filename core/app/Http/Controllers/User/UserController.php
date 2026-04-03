@@ -18,6 +18,7 @@ use App\Models\PlanChangeRequest;
 use App\Models\PluginLicense;
 use App\Models\Transaction;
 use App\Models\Withdrawal;
+use App\Http\Controllers\Gateway\PaymentController;
 use App\Services\PluginLicenseService;
 use App\Services\PlanService;
 use Carbon\Carbon;
@@ -624,6 +625,60 @@ class UserController extends Controller
         $deposits = $deposits->paginate(getPaginate());
 
         return view('Template::user.deposit_history', compact('pageTitle', 'deposits', 'currencies', 'gateways'));
+    }
+
+    public function refundDeposit($id)
+    {
+        $user = auth()->user();
+
+        $deposit = Deposit::where('id', $id)
+            ->where('user_id', $user->id)
+            ->with(['gateway', 'dispute'])
+            ->firstOrFail();
+
+        if ((int) $deposit->status === Status::PAYMENT_REFUNDED) {
+            $notify[] = ['error', 'This payment is already refunded'];
+            return back()->withNotify($notify);
+        }
+
+        if ((int) $deposit->status !== Status::PAYMENT_SUCCESS) {
+            $notify[] = ['error', 'Only successful payments can be refunded'];
+            return back()->withNotify($notify);
+        }
+
+        $hasActiveDispute = $deposit->dispute && in_array($deposit->dispute->status, \App\Models\Dispute::ACTIVE_STATUSES, true);
+        if ($hasActiveDispute) {
+            $notify[] = ['error', 'This payment has an active dispute. Please close dispute first'];
+            return back()->withNotify($notify);
+        }
+
+        $gatewayAlias = strtolower((string) ($deposit->gateway->alias ?? ''));
+        $gatewayName = strtolower((string) ($deposit->gateway->name ?? ''));
+        $isStripeGateway = str_contains($gatewayAlias, 'stripe') || str_contains($gatewayName, 'stripe');
+        $isBictorysGateway = str_contains($gatewayAlias, 'bictorys') || str_contains($gatewayName, 'bictorys');
+
+        if (!$isStripeGateway && !$isBictorysGateway) {
+            $notify[] = ['error', 'Refund is available only for Stripe and Bictorys payments'];
+            return back()->withNotify($notify);
+        }
+
+        if ($isBictorysGateway) {
+            $detail = is_array($deposit->detail) ? $deposit->detail : (array) $deposit->detail;
+            data_set($detail, 'bictorys.refund.mode', 'manual');
+            data_set($detail, 'bictorys.refund.provider_sync', 'manual_required');
+            data_set($detail, 'bictorys.refund.refunded_at', now()->toIso8601String());
+            $deposit->detail = $detail;
+            $deposit->save();
+        }
+
+        $refunded = PaymentController::refundUserData($deposit, 'Refunded by merchant');
+        if (!$refunded) {
+            $notify[] = ['error', 'Refund failed. Please try again'];
+            return back()->withNotify($notify);
+        }
+
+        $notify[] = ['success', 'Refund completed successfully'];
+        return back()->withNotify($notify);
     }
 
     public function show2faForm()
