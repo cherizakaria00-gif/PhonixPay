@@ -1,8 +1,17 @@
 @php
     use App\Constants\Status;
+
     $merchantUser = auth()->user();
     $isAccountRestricted = !$merchantUser->hasGatewayAccess();
     $showSetupFeeMenu = $merchantUser->requiresSetupFee() || in_array(($merchantUser->setup_fee_status ?? 'unpaid'), ['pending_review', 'rejected'], true);
+    $activeDisputeCount = 0;
+
+    if (\Illuminate\Support\Facades\Schema::hasTable('disputes')) {
+        $activeDisputeCount = \App\Models\Dispute::query()
+            ->where('merchant_id', $merchantUser->id)
+            ->whereIn('status', \App\Models\Dispute::ACTIVE_STATUSES)
+            ->count();
+    }
 @endphp
 
 <aside class="sidebar d-sidebar">
@@ -70,6 +79,9 @@
                    class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
                    @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
                     <i class="las la-exclamation-triangle n-ic"></i><span>@lang('Disputes')</span>
+                    @if($activeDisputeCount > 0)
+                        <span class="badge badge--danger" style="margin-left:auto;">{{ $activeDisputeCount > 99 ? '99+' : $activeDisputeCount }}</span>
+                    @endif
                 </a>
             </li>
 

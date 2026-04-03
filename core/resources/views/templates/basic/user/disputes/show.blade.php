@@ -1,6 +1,18 @@
 @extends($activeTemplate.'layouts.master')
 
 @section('content')
+@php
+    $customer = $dispute->deposit->apiPayment->customer ?? null;
+    $customerName = '';
+    if ($customer) {
+        $customerName = trim((string) ($customer->name ?? (($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))));
+    }
+    $customerEmail = $customer->email ?? $dispute->customer_email;
+    $customerPhone = $customer->mobile
+        ?? ($customer->phone
+        ?? data_get($dispute->deposit->detail, 'customer.mobile')
+        ?? data_get($dispute->deposit->detail, 'customer.phone'));
+@endphp
 <div class="row gy-3">
     <div class="col-lg-4">
         <div class="card custom--card border-0">
@@ -36,7 +48,9 @@
             <div class="card-body">
                 <h5 class="mb-3">@lang('Details')</h5>
                 <p class="mb-2"><strong>@lang('Reason'):</strong> {{ $dispute->reason ?: 'N/A' }}</p>
-                <p class="mb-2"><strong>@lang('Provider'):</strong> {{ $dispute->provider ?: 'N/A' }}</p>
+                <p class="mb-2"><strong>@lang('Customer'):</strong> {{ $customerName ?: 'N/A' }}</p>
+                <p class="mb-2"><strong>@lang('Customer Email'):</strong> {{ $customerEmail ?: 'N/A' }}</p>
+                <p class="mb-2"><strong>@lang('Customer Phone'):</strong> {{ $customerPhone ?: 'N/A' }}</p>
                 <p class="mb-2"><strong>@lang('Provider Email Notified At'):</strong> {{ $dispute->provider_email_sent_at ? showDateTime($dispute->provider_email_sent_at) : 'N/A' }}</p>
                 <p class="mb-0"><strong>@lang('Merchant Notes'):</strong> {{ $dispute->merchant_notes ?: 'N/A' }}</p>
             </div>

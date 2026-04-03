@@ -57,7 +57,7 @@ class DisputeController extends Controller
         $merchant = auth()->user();
         $dispute = Dispute::query()
             ->where('merchant_id', $merchant->id)
-            ->with(['deposit.gateway', 'logs'])
+            ->with(['deposit.gateway', 'deposit.apiPayment', 'logs'])
             ->findOrFail($id);
 
         $pageTitle = 'Dispute Details - ' . $dispute->dispute_id;
