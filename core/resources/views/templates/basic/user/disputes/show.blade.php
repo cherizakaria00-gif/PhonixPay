@@ -51,7 +51,6 @@
                 <p class="mb-2"><strong>@lang('Customer'):</strong> {{ $customerName ?: 'N/A' }}</p>
                 <p class="mb-2"><strong>@lang('Customer Email'):</strong> {{ $customerEmail ?: 'N/A' }}</p>
                 <p class="mb-2"><strong>@lang('Customer Phone'):</strong> {{ $customerPhone ?: 'N/A' }}</p>
-                <p class="mb-2"><strong>@lang('Provider Email Notified At'):</strong> {{ $dispute->provider_email_sent_at ? showDateTime($dispute->provider_email_sent_at) : 'N/A' }}</p>
                 <p class="mb-0"><strong>@lang('Merchant Notes'):</strong> {{ $dispute->merchant_notes ?: 'N/A' }}</p>
             </div>
         </div>
@@ -66,7 +65,6 @@
                                 <th>@lang('Action')</th>
                                 <th>@lang('From')</th>
                                 <th>@lang('To')</th>
-                                <th>@lang('Actor')</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -76,11 +74,10 @@
                                     <td>{{ ucfirst(str_replace('_', ' ', $log->action)) }}</td>
                                     <td>{{ $log->old_status ? ucfirst(str_replace('_', ' ', $log->old_status)) : '-' }}</td>
                                     <td>{{ $log->new_status ? ucfirst(str_replace('_', ' ', $log->new_status)) : '-' }}</td>
-                                    <td>{{ ucfirst($log->actor_type) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td class="text-center text-muted" colspan="5">@lang('No log entries')</td>
+                                    <td class="text-center text-muted" colspan="4">@lang('No log entries')</td>
                                 </tr>
                             @endforelse
                         </tbody>
