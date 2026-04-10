@@ -217,7 +217,7 @@
                                 <label>@lang('Withdraw Schedule')</label>
                                 <select name="schedule" class="form-control" required>
                                     <option value="">@lang('Select One')</option>
-                                    @foreach(workingDays() as $day) 
+                                    @foreach(week() as $day)
                                         <option value="{{ $day }}">{{ __($day) }}</option>
                                     @endforeach
                                 </select>

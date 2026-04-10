@@ -33,7 +33,24 @@ class WithdrawSetting extends Model
             $date = $date->addDay();
         } 
         elseif($method->schedule_type == 'weekly'){
-            $date = $date->addWeek();
+            $day = trim((string) ($method->schedule ?? ''));
+            $map = [
+                'Sunday' => Carbon::SUNDAY,
+                'Monday' => Carbon::MONDAY,
+                'Tuesday' => Carbon::TUESDAY,
+                'Wednesday' => Carbon::WEDNESDAY,
+                'Thursday' => Carbon::THURSDAY,
+                'Friday' => Carbon::FRIDAY,
+                'Saturday' => Carbon::SATURDAY,
+            ];
+
+            // Always schedule on the *next* occurrence of the chosen day (never "today"),
+            // so a Wednesday schedule means "next Wednesday", not "this Wednesday".
+            if (isset($map[$day])) {
+                $date = Carbon::now()->next($map[$day]);
+            } else {
+                $date = $date->addWeek();
+            }
         } 
         elseif($method->schedule_type == 'monthly'){
             $firstDayOfMonth = Carbon::now()->startOfMonth();
