@@ -203,11 +203,9 @@ class CronController extends Controller
             $holiday = Holiday::whereDate('day_off', Carbon::today())->first();
     
             if (array_key_exists($day, $offDays) || $holiday) {
-                $setting->next_withdraw_date = HolidayCalculator::nextWorkingDay($setting);
-                $setting->save();
-
                 echo "Holiday...<br/>";
-                return false;
+                // Do not rewrite next_withdraw_date here; keep the schedule stable and retry next run.
+                continue;
             }
     
             $user = $setting->user;

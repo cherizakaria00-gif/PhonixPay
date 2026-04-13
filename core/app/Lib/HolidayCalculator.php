@@ -11,6 +11,12 @@ class HolidayCalculator{
     {
         $setting = gs();
         $nextPossible = $withdrawMethod->nextWithdrawDate();
+
+        // For weekly schedules we keep the cadence fixed (every 7 days on the chosen weekday).
+        // Holidays/off-days should not rewrite the planned schedule date.
+        if (($withdrawMethod->withdrawMethod?->schedule_type ?? null) === 'weekly') {
+            return $nextPossible;
+        }
         $now = Carbon::parse($nextPossible);
 
         while (0==0) {

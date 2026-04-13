@@ -30,7 +30,12 @@ class WithdrawSetting extends Model
         $method = $this->withdrawMethod;
 
         if($method->schedule_type == 'daily'){
-            $date = $date->addDay();
+            // If we already have a scheduled date, advance from that to avoid drift.
+            if ($this->next_withdraw_date) {
+                $date = Carbon::parse($this->next_withdraw_date)->startOfDay()->addDay();
+            } else {
+                $date = $date->addDay();
+            }
         } 
         elseif($method->schedule_type == 'weekly'){
             $day = trim((string) ($method->schedule ?? ''));
@@ -44,9 +49,12 @@ class WithdrawSetting extends Model
                 'Saturday' => Carbon::SATURDAY,
             ];
 
-            // Always schedule on the *next* occurrence of the chosen day (never "today"),
-            // so a Wednesday schedule means "next Wednesday", not "this Wednesday".
-            if (isset($map[$day])) {
+            // Stable weekly scheduling:
+            // - If a next date already exists, always add 7 days (keeps Wednesday fixed).
+            // - Otherwise, pick the next occurrence of the selected day (never "today").
+            if ($this->next_withdraw_date) {
+                $date = Carbon::parse($this->next_withdraw_date)->startOfDay()->addDays(7);
+            } elseif (isset($map[$day])) {
                 $date = Carbon::now()->next($map[$day]);
             } else {
                 $date = $date->addWeek();
