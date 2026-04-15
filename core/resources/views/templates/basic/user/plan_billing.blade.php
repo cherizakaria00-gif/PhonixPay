@@ -68,10 +68,8 @@
                                 $isCurrent = (int) ($currentPlanId ?? 0) === (int) $plan->id;
                                 $isStarter = $plan->slug === 'starter';
                                 $features = $plan->features ?? [];
-                                $payoutLabel = match($plan->payout_frequency) {
-                                    'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
-                                    default => 'Weekly (Wed)',
-                                };
+                                $payoutIntervalDays = strtolower((string) $plan->slug) === 'business' ? 3 : 7;
+                                $payoutLabel = __('Every :days days', ['days' => $payoutIntervalDays]);
                             @endphp
                             <div class="col-lg-3 col-md-6">
                                 <div class="card h-100 border {{ $isCurrent ? 'border-primary' : '' }}">

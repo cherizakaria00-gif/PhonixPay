@@ -45,10 +45,10 @@
                                 <label class="form-label">@lang('Payout Frequency')</label>
                                 <select name="payout_frequency" class="form-control" required>
                                     @php $freq = old('payout_frequency', $plan->payout_frequency); @endphp
-                                    <option value="weekly_7d" {{ $freq == 'weekly_7d' ? 'selected' : '' }}>Weekly (Wednesday)</option>
-                                    <option value="twice_weekly" {{ $freq == 'twice_weekly' ? 'selected' : '' }}>2x per week (Wednesday/Saturday)</option>
+                                    <option value="weekly_7d" {{ $freq == 'weekly_7d' ? 'selected' : '' }}>Every 7 days</option>
+                                    <option value="twice_weekly" {{ $freq == 'twice_weekly' ? 'selected' : '' }}>Every 3 days (Business only)</option>
                                 </select>
-                                <small class="text-muted">@lang('Only Business plan keeps 2x/week. Other plans are forced to weekly.')</small>
+                                <small class="text-muted">@lang('Payout scheduling is enforced by plan: Business = every 3 days, others = every 7 days.')</small>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">@lang('Payout Delay Days')</label>

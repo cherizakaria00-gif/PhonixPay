@@ -17,13 +17,19 @@
                         <li class="list-group-item d-flex justify-content-between">
                             <span>@lang('Payout')</span>
                             <strong>
-                                {{ match($effectivePlan['payout_frequency'] ?? 'weekly_7d') {
-                                    'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
-                                    default => 'Weekly (Wed)',
-                                } }}
+                                @php
+                                    $payoutIntervalDays = strtolower((string) ($effectivePlan['slug'] ?? '')) === 'business' ? 3 : 7;
+                                @endphp
+                                {{ __('Every :days days', ['days' => $payoutIntervalDays]) }}
                             </strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between"><span>@lang('Last Payout')</span><strong>{{ $lastPayout ? showDateTime($lastPayout->scheduled_for) : '-' }}</strong></li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>@lang('Manual Next Payout Date')</span>
+                            <strong>
+                                {{ $merchant->manual_next_payout_at ? showDateTime($merchant->manual_next_payout_at) : __('Default schedule (every :days days)', ['days' => $payoutIntervalDays]) }}
+                            </strong>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -42,6 +48,26 @@
                             </select>
                         </div>
                         <button type="submit" class="btn btn--primary w-100">@lang('Assign Immediately')</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header"><h5 class="mb-0">@lang('Manual Payout Date')</h5></div>
+                <div class="card-body">
+                    <form action="{{ route('admin.plans.merchants.payout.date', $merchant->id) }}" method="POST">
+                        @csrf
+                        <div class="form-group mb-3">
+                            <label>@lang('Next Payout Date (optional)')</label>
+                            <input
+                                type="datetime-local"
+                                name="manual_next_payout_at"
+                                class="form-control"
+                                value="{{ old('manual_next_payout_at', $merchant->manual_next_payout_at ? \Carbon\Carbon::parse($merchant->manual_next_payout_at)->format('Y-m-d\\TH:i') : '') }}"
+                            >
+                            <small class="text-muted">{{ __('Leave empty to use default merchant schedule (every :days days).', ['days' => $payoutIntervalDays]) }}</small>
+                        </div>
+                        <button type="submit" class="btn btn--primary w-100">@lang('Save Manual Date')</button>
                     </form>
                 </div>
             </div>
@@ -74,7 +100,7 @@
                                 @php $freq = $overrides['payout_frequency'] ?? ''; @endphp
                                 <select class="form-control" name="payout_frequency">
                                     <option value="">@lang('Use plan default')</option>
-                                    <option value="weekly_7d" {{ $freq === 'weekly_7d' ? 'selected' : '' }}>Weekly (Wednesday)</option>
+                                    <option value="weekly_7d" {{ $freq === 'weekly_7d' ? 'selected' : '' }}>Every 7 days</option>
                                     <option value="twice_weekly" {{ $freq === 'twice_weekly' ? 'selected' : '' }}>2x per week (Wednesday/Saturday)</option>
                                 </select>
                             </div>

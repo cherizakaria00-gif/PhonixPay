@@ -450,16 +450,29 @@ class PlanService
     public function payoutFrequencyLabel(string $frequency): string
     {
         return match ($frequency) {
-            'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
-            default => 'Weekly (Wed)',
+            // Kept for backwards compatibility with existing plan/admin values.
+            // Payout scheduling is interval-based:
+            // - business: every 3 days
+            // - others: every 7 days
+            'twice_weekly', 'every_2_days' => 'Every 3 days',
+            default => 'Every 7 days',
         };
     }
 
     public function nextPayoutRequestAvailableAt(User $user): ?Carbon
     {
+        $manualNext = $this->manualNextPayoutAt($user);
+        if ($manualNext) {
+            return $manualNext->copy()->startOfDay();
+        }
+
         $effectivePlan = $this->getEffectivePlan($user);
-        $frequency = (string) ($effectivePlan['payout_frequency'] ?? 'weekly_7d');
-        $allowedDays = $this->allowedPayoutDays($frequency);
+        // Business rule:
+        // - Plan 1/2/3 (non-business): every 7 days
+        // - Business plan: every 3 days
+        //
+        // Keep using manual override when present. Do not depend on day-of-week alignment.
+        $intervalDays = $this->payoutIntervalDays($effectivePlan);
 
         $lastApprovedWithdrawal = Withdrawal::where('user_id', $user->id)
             ->approved()
@@ -467,12 +480,16 @@ class PlanService
             ->first();
 
         if ($lastApprovedWithdrawal) {
-            $base = Carbon::parse($lastApprovedWithdrawal->updated_at)->utc();
-            $candidate = in_array($frequency, ['twice_weekly', 'every_2_days'], true)
-                ? $base->copy()->addDay()->startOfDay()
-                : $base->copy()->addDays(7)->startOfDay();
+            // Prefer the originally scheduled payout date if available to keep cadence stable.
+            // (Using updated_at can drift when admin approves at a later time.)
+            $base = null;
+            if (Schema::hasColumn('withdrawals', 'payout_date') && $lastApprovedWithdrawal->payout_date) {
+                $base = Carbon::parse($lastApprovedWithdrawal->payout_date)->utc()->startOfDay();
+            } else {
+                $base = Carbon::parse($lastApprovedWithdrawal->updated_at)->utc()->startOfDay();
+            }
 
-            return $this->alignToAllowedPayoutDay($candidate, $allowedDays);
+            return $base->copy()->addDays($intervalDays)->startOfDay();
         }
 
         $activationAt = $this->merchantActivationAt($user);
@@ -480,15 +497,19 @@ class PlanService
             return null;
         }
 
-        $firstEligible = $activationAt->copy()->addDays(15)->startOfDay();
-        return $this->alignToAllowedPayoutDay($firstEligible, $allowedDays);
+        // If there is no payout history, start from activation/plan-start date.
+        return $activationAt->copy()->startOfDay()->addDays($intervalDays)->startOfDay();
     }
 
     public function nextPayoutRunAt(User $user): ?Carbon
     {
+        $manualNext = $this->manualNextPayoutAt($user);
+        if ($manualNext) {
+            return $manualNext->copy()->startOfDay();
+        }
+
         $effectivePlan = $this->getEffectivePlan($user);
-        $frequency = (string) ($effectivePlan['payout_frequency'] ?? 'weekly_7d');
-        $allowedDays = $this->allowedPayoutDays($frequency);
+        $intervalDays = $this->payoutIntervalDays($effectivePlan);
 
         $lastPayout = Payout::where('user_id', $user->id)
             ->latest('scheduled_for')
@@ -496,11 +517,7 @@ class PlanService
 
         if ($lastPayout && $lastPayout->scheduled_for) {
             $base = Carbon::parse($lastPayout->scheduled_for)->utc();
-            $candidate = in_array($frequency, ['twice_weekly', 'every_2_days'], true)
-                ? $base->copy()->addDay()->startOfDay()
-                : $base->copy()->addDays(7)->startOfDay();
-
-            return $this->alignToAllowedPayoutDay($candidate, $allowedDays);
+            return $base->copy()->startOfDay()->addDays($intervalDays)->startOfDay();
         }
 
         $activationAt = $this->merchantActivationAt($user);
@@ -508,8 +525,7 @@ class PlanService
             return null;
         }
 
-        $firstEligible = $activationAt->copy()->addDays(15)->startOfDay();
-        return $this->alignToAllowedPayoutDay($firstEligible, $allowedDays);
+        return $activationAt->copy()->startOfDay()->addDays($intervalDays)->startOfDay();
     }
 
     private function applyOverrides(array $basePlan, array $overrides): array
@@ -601,6 +617,19 @@ class PlanService
         return null;
     }
 
+    private function manualNextPayoutAt(User $user): ?Carbon
+    {
+        if (!Schema::hasColumn('users', 'manual_next_payout_at')) {
+            return null;
+        }
+
+        if (!$user->manual_next_payout_at) {
+            return null;
+        }
+
+        return Carbon::parse($user->manual_next_payout_at)->utc();
+    }
+
     private function legacyMerchantFeeColumnsExist(): bool
     {
         if (self::$hasLegacyMerchantFeeColumns !== null) {
@@ -646,5 +675,14 @@ class PlanService
         }
 
         return $plan;
+    }
+
+    private function payoutIntervalDays(array $effectivePlan): int
+    {
+        // Default: 7 days for starter/growth/pro (plans 1-3).
+        // Business plan: 3 days.
+        $slug = strtolower((string) ($effectivePlan['slug'] ?? ''));
+
+        return $slug === 'business' ? 3 : 7;
     }
 }

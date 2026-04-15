@@ -44,9 +44,7 @@ class WithdrawController extends Controller
 
         $hasPendingWithdraw = Withdrawal::where('user_id', $user->id)->pending()->exists();
         $nextPayoutDate = @$user->withdrawSetting->next_withdraw_date;
-        $nextPlanPayoutAt = $this->planService->nextPayoutRequestAvailableAt($user);
-        $nextMethodPayoutAt = $nextPayoutDate ? Carbon::parse($nextPayoutDate)->startOfDay() : null;
-        $nextAllowedPayoutAt = $this->maxDate($nextPlanPayoutAt, $nextMethodPayoutAt);
+        $nextAllowedPayoutAt = $this->resolveNextAllowedPayoutAt($user, $user->withdrawSetting);
 
         $canRequestPayout = false;
         if (
@@ -158,9 +156,7 @@ class WithdrawController extends Controller
             return back()->withNotify($notify);
         }
 
-        $nextPlanPayoutAt = $this->planService->nextPayoutRequestAvailableAt($user);
-        $nextMethodPayoutAt = $withdrawSetting->next_withdraw_date ? Carbon::parse($withdrawSetting->next_withdraw_date)->startOfDay() : null;
-        $nextAllowedPayoutAt = $this->maxDate($nextPlanPayoutAt, $nextMethodPayoutAt);
+        $nextAllowedPayoutAt = $this->resolveNextAllowedPayoutAt($user, $withdrawSetting);
         if ($nextAllowedPayoutAt && now()->lt($nextAllowedPayoutAt)) {
             $notify[] = ['error', 'Next payout request will be available on ' . $nextAllowedPayoutAt->format('M d, Y')];
             return back()->withNotify($notify);
@@ -170,7 +166,7 @@ class WithdrawController extends Controller
             'amount' => 'nullable|numeric|gt:0',
         ]);
 
-        $nextPayoutDate = $withdrawSetting->next_withdraw_date;
+        $nextPayoutDate = $nextAllowedPayoutAt ? $nextAllowedPayoutAt->toDateString() : $withdrawSetting->next_withdraw_date;
 
         $method = $withdrawSetting->withdrawMethod;
         $amount = $request->amount;
@@ -224,6 +220,11 @@ class WithdrawController extends Controller
         $withdrawSetting->next_withdraw_date = HolidayCalculator::nextWorkingDay($withdrawSetting);
         $withdrawSetting->save();
 
+        if (Schema::hasColumn('users', 'manual_next_payout_at') && $user->manual_next_payout_at) {
+            $user->manual_next_payout_at = null;
+            $user->save();
+        }
+
         $transaction = new Transaction();
         $transaction->user_id = $withdraw->user_id;
         $transaction->amount = $withdraw->amount;
@@ -266,6 +267,37 @@ class WithdrawController extends Controller
         }
 
         return $first->greaterThan($second) ? $first : $second;
+    }
+
+    private function resolveNextAllowedPayoutAt($user, ?WithdrawSetting $withdrawSetting): ?Carbon
+    {
+        $manualNextPayoutAt = $this->manualNextPayoutAt($user);
+        if ($manualNextPayoutAt) {
+            return $manualNextPayoutAt;
+        }
+
+        $nextPlanPayoutAt = $this->planService->nextPayoutRequestAvailableAt($user);
+        if ($nextPlanPayoutAt) {
+            return $nextPlanPayoutAt;
+        }
+
+        // Safe fallback: if plan schedule can't be resolved, keep using method schedule.
+        return $withdrawSetting?->next_withdraw_date
+            ? Carbon::parse($withdrawSetting->next_withdraw_date)->startOfDay()
+            : null;
+    }
+
+    private function manualNextPayoutAt($user): ?Carbon
+    {
+        if (!Schema::hasColumn('users', 'manual_next_payout_at')) {
+            return null;
+        }
+
+        if (!$user->manual_next_payout_at) {
+            return null;
+        }
+
+        return Carbon::parse($user->manual_next_payout_at)->startOfDay();
     }
 
     public function downloadAttachment($fileHash)

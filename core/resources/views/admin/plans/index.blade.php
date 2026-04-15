@@ -36,10 +36,8 @@
                                         <td>{{ $plan->tx_limit_monthly ?? __('Unlimited') }}</td>
                                         <td>{{ number_format($plan->fee_percent, 2) }}% + ${{ number_format($plan->fee_fixed, 2) }}</td>
                                         <td>
-                                            {{ match($plan->payout_frequency) {
-                                                'twice_weekly', 'every_2_days' => '2x per week (Wed/Sat)',
-                                                default => 'Weekly (Wed)',
-                                            } }}
+                                            @php $payoutIntervalDays = strtolower((string) $plan->slug) === 'business' ? 3 : 7; @endphp
+                                            {{ __('Every :days days', ['days' => $payoutIntervalDays]) }}
                                         </td>
                                         <td>
                                             @if($plan->is_active)
