@@ -59,6 +59,13 @@
                                     <input type="text" class="form-control" placeholder="@lang('Measurement Id')" name="measurementId" value="{{ @gs('firebase_config')->measurementId }}" required>
                                 </div>
                             </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>@lang('Web Push Certificate Key (VAPID)') </label>
+                                    <input type="text" class="form-control" placeholder="@lang('VAPID Key (optional but recommended)')" name="vapidKey" value="{{ @gs('firebase_config')->vapidKey }}">
+                                    <small class="text-muted">@lang('Firebase Console -> Project settings -> Cloud Messaging -> Web Push certificates')</small>
+                                </div>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn--primary w-100 h-45">@lang('Submit')</button>
                     </div>

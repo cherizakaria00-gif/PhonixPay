@@ -943,7 +943,7 @@ class UserController extends Controller
     {
 
         $validator = Validator::make($request->all(), [
-            'token' => 'required',
+            'token' => 'required|string|min:20|max:512',
         ]);
 
         if ($validator->fails()) {
@@ -953,6 +953,13 @@ class UserController extends Controller
         $deviceToken = DeviceToken::where('token', $request->token)->first();
 
         if ($deviceToken) {
+            // Re-associate token to the current user if it was previously saved for another account.
+            if ((int) $deviceToken->user_id !== (int) auth()->id()) {
+                $deviceToken->user_id = auth()->id();
+                $deviceToken->is_app = Status::NO;
+                $deviceToken->save();
+            }
+
             return ['success' => true, 'message' => 'Already exists'];
         }
 

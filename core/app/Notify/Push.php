@@ -58,7 +58,7 @@ class Push extends NotifyProcess implements Notifiable{
     *
     * @return void|bool
     */
-	public function send(){
+    public function send(){
         $message = $this->getMessage();
         if (gs('pn') && $message) {
             try {
@@ -76,12 +76,44 @@ class Push extends NotifyProcess implements Notifiable{
                     return false;
                 }
 
-                $credentialsFilePath = getFilePath('pushConfig').'/push_config.json';
+                $credentialsFilePath = $this->resolvePushConfigPath();
+                $projectId = gs('firebase_config')->projectId ?? null;
+
+                if (!$credentialsFilePath || !is_file($credentialsFilePath) || !$projectId) {
+                    Log::warning('FCM send skipped: missing Firebase config', [
+                        'template' => $this->templateName ?? null,
+                        'user_id' => $this->user->id ?? null,
+                        'credentials_exists' => $credentialsFilePath ? is_file($credentialsFilePath) : false,
+                        'credentials_path' => $credentialsFilePath,
+                        'project_id' => $projectId,
+                    ]);
+                    return false;
+                }
+
                 $client = new \Google_Client();
                 $client->setAuthConfig($credentialsFilePath);
                 $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-                $client->fetchAccessTokenWithAssertion();
-                $token = $client->getAccessToken();
+                try {
+                    $client->fetchAccessTokenWithAssertion();
+                    $token = $client->getAccessToken();
+                } catch (\Throwable $e) {
+                    // Keep technical detail in server logs, but do not create admin notification noise.
+                    Log::error('FCM token generation failed', [
+                        'template' => $this->templateName ?? null,
+                        'user_id' => $this->user->id ?? null,
+                        'message' => $e->getMessage(),
+                    ]);
+                    return false;
+                }
+
+                if (empty($token['access_token'])) {
+                    Log::error('FCM token generation failed: empty access token', [
+                        'template' => $this->templateName ?? null,
+                        'user_id' => $this->user->id ?? null,
+                    ]);
+                    return false;
+                }
+
                 $access_token = $token['access_token'];
                 $headers = [
                     "Authorization: Bearer $access_token",
@@ -118,9 +150,9 @@ class Push extends NotifyProcess implements Notifiable{
                     'payment_link_id'  => (string) ($this->shortCodes['payment_link_id'] ?? ''),
                 ];
 
-                $fcmUrl = 'https://fcm.googleapis.com/v1/projects/'.gs('firebase_config')->projectId.'/messages:send';
+                $fcmUrl = 'https://fcm.googleapis.com/v1/projects/'.$projectId.'/messages:send';
                 Log::info('FCM configuration ready', [
-                    'project_id' => gs('firebase_config')->projectId ?? null,
+                    'project_id' => $projectId,
                     'template' => $this->templateName ?? null,
                     'user_id' => $this->user->id ?? null,
                 ]);
@@ -143,7 +175,7 @@ class Push extends NotifyProcess implements Notifiable{
                     curl_setopt($ch, CURLOPT_POST, true);
                     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
                     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 
                     $result   = curl_exec($ch);
@@ -159,7 +191,6 @@ class Push extends NotifyProcess implements Notifiable{
                             'error' => $curlErr,
                         ]);
                         error_log("FCM curl error (token: {$toAddress}): {$curlErr}");
-                        $this->createErrorLog("FCM curl error: {$curlErr}");
                         continue;
                     }
 
@@ -180,7 +211,6 @@ class Push extends NotifyProcess implements Notifiable{
                             'result' => $result,
                         ]);
                         error_log("FCM delivery failed HTTP {$httpCode} (token: {$toAddress}): {$result}");
-                        $this->createErrorLog("FCM push failed (HTTP {$httpCode}): {$result}");
 
                         $decoded = json_decode($result, true);
                         $fcmStatus = $decoded['error']['status'] ?? '';
@@ -195,8 +225,7 @@ class Push extends NotifyProcess implements Notifiable{
                     'user_id' => $this->user->id ?? null,
                     'message' => $e->getMessage(),
                 ]);
-                $this->createErrorLog($e->getMessage());
-                session()->flash('firebase_error',$e->getMessage());
+                return false;
             }
         }
 
@@ -219,5 +248,32 @@ class Push extends NotifyProcess implements Notifiable{
 
     private function getTitle(){
         return $this->replaceTemplateShortCode($this->template->push_title ?? gs('push_title'));
+    }
+
+    /**
+     * Resolve push config absolute path across web/cli contexts.
+     */
+    private function resolvePushConfigPath(): ?string
+    {
+        $relative = trim(getFilePath('pushConfig'), '/').'/push_config.json';
+
+        $candidates = [
+            $relative,
+            base_path($relative),
+            public_path($relative),
+            dirname(base_path()).'/'.$relative,
+            ($_SERVER['DOCUMENT_ROOT'] ?? '').'/'.$relative,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!$candidate) {
+                continue;
+            }
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 }

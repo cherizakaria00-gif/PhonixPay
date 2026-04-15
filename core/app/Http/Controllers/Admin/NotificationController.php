@@ -394,7 +394,7 @@ class NotificationController extends Controller
     public function pushSetting()
     {
         $pageTitle = 'Push Notification Settings';
-        $fileExists = file_exists(getFilePath('pushConfig') . '/push_config.json');
+        $fileExists = $this->resolvePushConfigPath() !== null;
         return view('admin.notification.push_setting', compact('pageTitle','fileExists'));
     }
     public function pushSettingUpdate(Request $request)
@@ -407,6 +407,7 @@ class NotificationController extends Controller
             'messagingSenderId' => 'required',
             'appId'             => 'required',
             'measurementId'     => 'required',
+            'vapidKey'          => 'nullable|string|max:255',
         ]);
         $data = [
             'apiKey'            => $request->apiKey,
@@ -416,6 +417,7 @@ class NotificationController extends Controller
             'messagingSenderId' => $request->messagingSenderId,
             'appId'             => $request->appId,
             'measurementId'     => $request->measurementId,
+            'vapidKey'          => $request->vapidKey ? trim((string) $request->vapidKey) : null,
         ];
         $general                  = gs();
         $general->firebase_config = $data;
@@ -437,8 +439,13 @@ class NotificationController extends Controller
         ]);
         try {
             fileUploader($request->file, getFilePath('pushConfig'), filename:'push_config.json');
+            $uploadedPath = $this->resolvePushConfigPath();
+            if (!$uploadedPath) {
+                throw new \Exception('Push config file uploaded but could not be resolved');
+            }
+            $this->validateFirebaseServiceAccount($uploadedPath);
         } catch (\Exception $exp) {
-            $notify[] = ['error', 'Couldn\'t upload your file'];
+            $notify[] = ['error', 'Invalid Firebase service account JSON: ' . $exp->getMessage()];
             return back()->withNotify($notify);
         }
         $notify[] = ['success', 'Configuration file uploaded successfully'];
@@ -446,12 +453,48 @@ class NotificationController extends Controller
     }
     public function pushSettingDownload()
     {
-        $filePath = getFilePath('pushConfig') . '/push_config.json';
-        if (!file_exists($filePath)) {
+        $filePath = $this->resolvePushConfigPath();
+        if (!$filePath || !file_exists($filePath)) {
             $notify[] = ['success', "File not found"];
             return back()->withNotify($notify);
         }
         return response()->download($filePath);
+    }
+
+    private function resolvePushConfigPath(): ?string
+    {
+        $relative = trim(getFilePath('pushConfig'), '/').'/push_config.json';
+        $candidates = [
+            $relative,
+            base_path($relative),
+            public_path($relative),
+            dirname(base_path()).'/'.$relative,
+            ($_SERVER['DOCUMENT_ROOT'] ?? '').'/'.$relative,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!$candidate) {
+                continue;
+            }
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function validateFirebaseServiceAccount(string $configPath): void
+    {
+        $client = new \Google_Client();
+        $client->setAuthConfig($configPath);
+        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+        $client->fetchAccessTokenWithAssertion();
+        $token = $client->getAccessToken();
+
+        if (empty($token['access_token'])) {
+            throw new \Exception('Unable to generate OAuth access token from service account');
+        }
     }
 
 }
