@@ -123,9 +123,25 @@
 
             $('.notificationForm').on('submit',function (e) {
                 try {
-                    if (typeof nicEditors !== 'undefined' && nicEditors.findEditor('nicEdit')) {
-                        var content = nicEditors.findEditor('nicEdit').getContent();
-                        $('#nicEdit').val(content);
+                    const $ta = $('#nicEdit');
+                    if ($ta.length) {
+                        let content = '';
+                        try {
+                            if (typeof nicEditors !== 'undefined' && nicEditors.findEditor('nicEdit')) {
+                                content = nicEditors.findEditor('nicEdit').getContent() || '';
+                            }
+                        } catch (err) {}
+
+                        if (!content) {
+                            const main = document.querySelector('.nicEdit-main');
+                            if (main) {
+                                content = main.innerHTML || '';
+                            }
+                        }
+
+                        if (content) {
+                            $ta.val(content);
+                        }
                     }
                 } catch (err) {}
 

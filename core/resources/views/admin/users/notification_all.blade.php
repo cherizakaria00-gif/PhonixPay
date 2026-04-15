@@ -340,6 +340,30 @@
             });
 
             $(".notify-form").on("submit", function(e) {
+                // Ensure nicEdit content is copied into the underlying textarea so backend receives it.
+                try {
+                    const $ta = $('#nicEdit');
+                    if ($ta.length) {
+                        let content = '';
+                        try {
+                            if (typeof nicEditors !== 'undefined' && nicEditors.findEditor('nicEdit')) {
+                                content = nicEditors.findEditor('nicEdit').getContent() || '';
+                            }
+                        } catch (err) {}
+
+                        if (!content) {
+                            const main = document.querySelector('.nicEdit-main');
+                            if (main) {
+                                content = main.innerHTML || '';
+                            }
+                        }
+
+                        if (content) {
+                            $ta.val(content);
+                        }
+                    }
+                } catch (err) {}
+
                 try {
                     if (typeof nicEditors !== 'undefined' && nicEditors.findEditor('nicEdit')) {
                         const content = nicEditors.findEditor('nicEdit').getContent();
@@ -373,6 +397,12 @@
                                 });
                                 clearInterval(coalingIntVal);
                                 clearTimeout(coalingTimeOut);
+                                try {
+                                    const main = document.querySelector('.nicEdit-main');
+                                    if (main) {
+                                        $('#nicEdit').val(main.innerHTML || $('#nicEdit').val());
+                                    }
+                                } catch (err) {}
                                 $(".notify-form").submit();
                             }
                         }, 1000);
