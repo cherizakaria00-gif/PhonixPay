@@ -7,7 +7,9 @@ use App\Models\Plan;
 use App\Models\PlanChangeRequest;
 use App\Models\User;
 use App\Services\PlanService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class PlanController extends Controller
@@ -225,6 +227,28 @@ class PlanController extends Controller
         $this->planService->syncMerchantFeeSnapshot($merchant);
 
         $notify[] = ['success', 'Overrides updated successfully'];
+        return back()->withNotify($notify);
+    }
+
+    public function updateMerchantPayoutDate(Request $request, $id)
+    {
+        $merchant = User::findOrFail($id);
+
+        if (!Schema::hasColumn('users', 'manual_next_payout_at')) {
+            $notify[] = ['error', 'Manual payout date column is not available yet. Please run migrations first.'];
+            return back()->withNotify($notify);
+        }
+
+        $request->validate([
+            'manual_next_payout_at' => 'nullable|date',
+        ]);
+
+        $merchant->manual_next_payout_at = $request->manual_next_payout_at
+            ? Carbon::parse($request->manual_next_payout_at)->utc()->startOfDay()
+            : null;
+        $merchant->save();
+
+        $notify[] = ['success', 'Manual payout date updated successfully'];
         return back()->withNotify($notify);
     }
 
