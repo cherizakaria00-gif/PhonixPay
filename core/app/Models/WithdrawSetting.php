@@ -30,12 +30,13 @@ class WithdrawSetting extends Model
         $method = $this->withdrawMethod;
 
         if($method->schedule_type == 'daily'){
-            // If we already have a scheduled date, advance from that to avoid drift.
-            if ($this->next_withdraw_date) {
-                $date = Carbon::parse($this->next_withdraw_date)->startOfDay()->addDay();
-            } else {
-                $date = $date->addDay();
-            }
+            // If the saved schedule is already in the past, advance from "today" to avoid returning a past date.
+            // Otherwise advance from the saved schedule date.
+            $today = Carbon::now()->startOfDay();
+            $base = $this->next_withdraw_date
+                ? Carbon::parse($this->next_withdraw_date)->startOfDay()
+                : $today;
+            $date = ($base->greaterThan($today) ? $base : $today)->addDay();
         } 
         elseif($method->schedule_type == 'weekly'){
             $day = trim((string) ($method->schedule ?? ''));
@@ -50,10 +51,13 @@ class WithdrawSetting extends Model
             ];
 
             // Stable weekly scheduling:
-            // - If a next date already exists, always add 7 days (keeps Wednesday fixed).
+            // - If a next date already exists, add 7 days from the later of (today, next_withdraw_date)
+            //   so we never end up with a past date after a late payout.
             // - Otherwise, pick the next occurrence of the selected day (never "today").
             if ($this->next_withdraw_date) {
-                $date = Carbon::parse($this->next_withdraw_date)->startOfDay()->addDays(7);
+                $today = Carbon::now()->startOfDay();
+                $base = Carbon::parse($this->next_withdraw_date)->startOfDay();
+                $date = ($base->greaterThan($today) ? $base : $today)->addDays(7);
             } elseif (isset($map[$day])) {
                 $date = Carbon::now()->next($map[$day]);
             } else {
