@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Gateway\PaymentController;
 use App\Lib\CurlRequest;
 use App\Models\Deposit;
+use App\Models\GatewayCurrency;
 use App\Services\CurrencyConversionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -48,7 +49,15 @@ class ProcessController extends Controller
         $customer = $apiPayment->customer ?? null;
 
         $grossAmount = (float) ($deposit->gateway_amount ?? 0);
-        $reconstructedGross = (float) (($deposit->final_amount ?? 0) + ($deposit->totalCharge ?? 0));
+        // Reconstruct gross amount in the same currency as `gateway_amount` / `method_currency`.
+        // `final_amount` is stored in gateway currency, but `charge` + `payment_charge` are stored in base currency.
+        // Convert charges into gateway currency using `deposit->rate` when falling back.
+        $chargeBase = (float) ($deposit->charge ?? 0) + (float) ($deposit->payment_charge ?? 0);
+        $rateBaseToGateway = (float) ($deposit->rate ?? 1);
+        if ($rateBaseToGateway <= 0) {
+            $rateBaseToGateway = 1.0;
+        }
+        $reconstructedGross = (float) (($deposit->final_amount ?? 0) + ($chargeBase * $rateBaseToGateway));
         if ($grossAmount <= 0 && $reconstructedGross > 0) {
             $grossAmount = $reconstructedGross;
         }
@@ -966,6 +975,22 @@ class ProcessController extends Controller
             ];
         }
 
+        // If the central conversion table is not migrated/enabled, Admin dashboard still updates gateway currency
+        // rates (GatewayCurrency::rate). Use those as a safe fallback so the configured FX applies end-to-end.
+        $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
+        if ($fallbackRate !== null && $fallbackRate > 0) {
+            Log::info('Bictorys direct FX fallback applied from gateway currency rates', [
+                'from' => $currency,
+                'to' => 'XOF',
+                'rate' => $fallbackRate,
+            ]);
+            return [
+                'amount' => (float) max(1, round($amount * $fallbackRate, 0)),
+                'currency' => 'XOF',
+                'rate' => $fallbackRate,
+            ];
+        }
+
         if ($currency === 'USD') {
             $rate = (float) ($gatewayParams->usd_xof_rate ?? 0);
             if ($rate <= 0) {
@@ -999,6 +1024,41 @@ class ProcessController extends Controller
             'currency' => $currency,
             'rate' => null,
         ];
+    }
+
+    protected static function resolveDashboardCrossRateFallback(string $fromCurrency, string $toCurrency): ?float
+    {
+        $fromCurrency = strtoupper(trim($fromCurrency));
+        $toCurrency = strtoupper(trim($toCurrency));
+
+        if ($fromCurrency === '' || $toCurrency === '') {
+            return null;
+        }
+        if ($fromCurrency === $toCurrency) {
+            return 1.0;
+        }
+
+        $base = strtoupper(trim((string) gs('cur_text')));
+        if ($base === '') {
+            $base = 'USD';
+        }
+
+        $rates = GatewayCurrency::query()
+            ->select(['currency', 'rate'])
+            ->get()
+            ->groupBy(fn ($row) => strtoupper(trim((string) $row->currency)))
+            ->map(fn ($rows) => (float) $rows->max('rate'));
+
+        $baseToFrom = $fromCurrency === $base ? 1.0 : (float) ($rates->get($fromCurrency) ?? 0);
+        $baseToTo = $toCurrency === $base ? 1.0 : (float) ($rates->get($toCurrency) ?? 0);
+
+        if ($baseToFrom <= 0 || $baseToTo <= 0) {
+            return null;
+        }
+
+        // base->to divided by base->from yields from->to.
+        $cross = $baseToTo / $baseToFrom;
+        return $cross > 0 ? $cross : null;
     }
 
     protected static function appendQueryParam(string $url, string $key, string $value): string
