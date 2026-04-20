@@ -36,7 +36,7 @@
                                         <td>{{ $plan->tx_limit_monthly ?? __('Unlimited') }}</td>
                                         <td>{{ number_format($plan->fee_percent, 2) }}% + ${{ number_format($plan->fee_fixed, 2) }}</td>
                                         <td>
-                                            @php $payoutIntervalDays = strtolower((string) $plan->slug) === 'business' ? 3 : 7; @endphp
+                                            @php $payoutIntervalDays = 7; @endphp
                                             {{ __('Every :days days', ['days' => $payoutIntervalDays]) }}
                                         </td>
                                         <td>

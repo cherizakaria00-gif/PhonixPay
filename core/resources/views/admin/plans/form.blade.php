@@ -46,9 +46,9 @@
                                 <select name="payout_frequency" class="form-control" required>
                                     @php $freq = old('payout_frequency', $plan->payout_frequency); @endphp
                                     <option value="weekly_7d" {{ $freq == 'weekly_7d' ? 'selected' : '' }}>Every 7 days</option>
-                                    <option value="twice_weekly" {{ $freq == 'twice_weekly' ? 'selected' : '' }}>Every 3 days (Business only)</option>
+                                    <option value="twice_weekly" {{ $freq == 'twice_weekly' ? 'selected' : '' }}>Every 7 days</option>
                                 </select>
-                                <small class="text-muted">@lang('Payout scheduling is enforced by plan: Business = every 3 days, others = every 7 days.')</small>
+                                <small class="text-muted">@lang('Payout scheduling is enforced globally: next payout is always available 7 days after the last approved payout.')</small>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">@lang('Payout Delay Days')</label>

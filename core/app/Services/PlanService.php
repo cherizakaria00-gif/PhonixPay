@@ -452,9 +452,8 @@ class PlanService
         return match ($frequency) {
             // Kept for backwards compatibility with existing plan/admin values.
             // Payout scheduling is interval-based:
-            // - business: every 3 days
-            // - others: every 7 days
-            'twice_weekly', 'every_2_days' => 'Every 3 days',
+            // - all merchants: every 7 days after the last approved payout
+            'twice_weekly', 'every_2_days' => 'Every 7 days',
             default => 'Every 7 days',
         };
     }
@@ -480,15 +479,10 @@ class PlanService
             ->first();
 
         if ($lastApprovedWithdrawal) {
-            // Prefer the originally scheduled payout date if available to keep cadence stable.
-            // (Using updated_at can drift when admin approves at a later time.)
-            $base = null;
-            if (Schema::hasColumn('withdrawals', 'payout_date') && $lastApprovedWithdrawal->payout_date) {
-                $base = Carbon::parse($lastApprovedWithdrawal->payout_date)->utc()->startOfDay();
-            } else {
-                $base = Carbon::parse($lastApprovedWithdrawal->updated_at)->utc()->startOfDay();
-            }
-
+            // IMPORTANT:
+            // Do NOT use withdrawals.payout_date as base. It may represent an old scheduled date and can be in the past
+            // when the merchant requested/was approved later, which would make "next payout" go backwards.
+            $base = Carbon::parse($lastApprovedWithdrawal->updated_at)->utc()->startOfDay();
             return $base->copy()->addDays($intervalDays)->startOfDay();
         }
 
@@ -679,10 +673,8 @@ class PlanService
 
     private function payoutIntervalDays(array $effectivePlan): int
     {
-        // Default: 7 days for starter/growth/pro (plans 1-3).
-        // Business plan: 3 days.
-        $slug = strtolower((string) ($effectivePlan['slug'] ?? ''));
-
-        return $slug === 'business' ? 3 : 7;
+        // Business rule (latest): all merchants are on a 7-day cadence.
+        // This avoids plan-based drift and ensures next payout is always +7 days after the last approved payout.
+        return 7;
     }
 }

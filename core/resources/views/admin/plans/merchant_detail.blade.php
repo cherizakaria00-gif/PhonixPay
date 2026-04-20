@@ -18,7 +18,7 @@
                             <span>@lang('Payout')</span>
                             <strong>
                                 @php
-                                    $payoutIntervalDays = strtolower((string) ($effectivePlan['slug'] ?? '')) === 'business' ? 3 : 7;
+                                    $payoutIntervalDays = 7;
                                 @endphp
                                 {{ __('Every :days days', ['days' => $payoutIntervalDays]) }}
                             </strong>

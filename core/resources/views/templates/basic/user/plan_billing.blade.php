@@ -68,7 +68,7 @@
                                 $isCurrent = (int) ($currentPlanId ?? 0) === (int) $plan->id;
                                 $isStarter = $plan->slug === 'starter';
                                 $features = $plan->features ?? [];
-                                $payoutIntervalDays = strtolower((string) $plan->slug) === 'business' ? 3 : 7;
+                                $payoutIntervalDays = 7;
                                 $payoutLabel = __('Every :days days', ['days' => $payoutIntervalDays]);
                             @endphp
                             <div class="col-lg-3 col-md-6">
