@@ -924,6 +924,88 @@ class ProcessController extends Controller
             ];
         }
 
+        if ($currency === 'USD') {
+            // Prefer gateway-configured rate (Admin -> Gateway -> Bictorys Checkout).
+            $rate = (float) ($gatewayParams->usd_xof_rate ?? 0);
+            if ($rate > 0) {
+                return [
+                    'amount' => (float) max(1, round($amount * $rate, 0)),
+                    'currency' => 'XOF',
+                    'rate' => $rate,
+                ];
+            }
+
+            $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
+            if ($centralRate !== null && $centralRate > 0) {
+                return [
+                    'amount' => (float) max(1, round($amount * $centralRate, 0)),
+                    'currency' => 'XOF',
+                    'rate' => $centralRate,
+                ];
+            }
+
+            $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
+            if ($fallbackRate !== null && $fallbackRate > 0) {
+                Log::info('Bictorys checkout FX fallback applied from gateway currency rates', [
+                    'from' => $currency,
+                    'to' => 'XOF',
+                    'rate' => $fallbackRate,
+                ]);
+                return [
+                    'amount' => (float) max(1, round($amount * $fallbackRate, 0)),
+                    'currency' => 'XOF',
+                    'rate' => $fallbackRate,
+                ];
+            }
+
+            return [
+                'error' => 'Bictorys USD to XOF rate not configured',
+            ];
+        }
+
+        if ($currency === 'EUR') {
+            // Prefer gateway-configured rate (Admin -> Gateway -> Bictorys Checkout).
+            $rate = (float) ($gatewayParams->eur_xof_rate ?? 0);
+            if ($rate > 0) {
+                return [
+                    'amount' => (float) max(1, round($amount * $rate, 0)),
+                    'currency' => 'XOF',
+                    'rate' => $rate,
+                ];
+            }
+
+            $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
+            if ($centralRate !== null && $centralRate > 0) {
+                return [
+                    'amount' => (float) max(1, round($amount * $centralRate, 0)),
+                    'currency' => 'XOF',
+                    'rate' => $centralRate,
+                ];
+            }
+
+            $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
+            if ($fallbackRate !== null && $fallbackRate > 0) {
+                Log::info('Bictorys checkout FX fallback applied from gateway currency rates', [
+                    'from' => $currency,
+                    'to' => 'XOF',
+                    'rate' => $fallbackRate,
+                ]);
+                return [
+                    'amount' => (float) max(1, round($amount * $fallbackRate, 0)),
+                    'currency' => 'XOF',
+                    'rate' => $fallbackRate,
+                ];
+            }
+
+            $rate = self::DEFAULT_EUR_XOF_RATE;
+
+            return [
+                'amount' => (float) max(1, round($amount * $rate, 0)),
+                'currency' => 'XOF',
+                'rate' => $rate,
+            ];
+        }
+
         $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
         if ($centralRate !== null && $centralRate > 0) {
             return [
@@ -933,8 +1015,6 @@ class ProcessController extends Controller
             ];
         }
 
-        // If the central conversion table is not migrated/enabled, Admin dashboard still updates gateway currency
-        // rates (GatewayCurrency::rate). Use those as a safe fallback so the configured FX applies end-to-end.
         $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
         if ($fallbackRate !== null && $fallbackRate > 0) {
             Log::info('Bictorys checkout FX fallback applied from gateway currency rates', [
@@ -946,34 +1026,6 @@ class ProcessController extends Controller
                 'amount' => (float) max(1, round($amount * $fallbackRate, 0)),
                 'currency' => 'XOF',
                 'rate' => $fallbackRate,
-            ];
-        }
-
-        if ($currency === 'USD') {
-            $rate = (float) ($gatewayParams->usd_xof_rate ?? 0);
-            if ($rate <= 0) {
-                return [
-                    'error' => 'Bictorys USD to XOF rate not configured',
-                ];
-            }
-
-            return [
-                'amount' => (float) max(1, round($amount * $rate, 0)),
-                'currency' => 'XOF',
-                'rate' => $rate,
-            ];
-        }
-
-        if ($currency === 'EUR') {
-            $rate = (float) ($gatewayParams->eur_xof_rate ?? self::DEFAULT_EUR_XOF_RATE);
-            if ($rate <= 0) {
-                $rate = self::DEFAULT_EUR_XOF_RATE;
-            }
-
-            return [
-                'amount' => (float) max(1, round($amount * $rate, 0)),
-                'currency' => 'XOF',
-                'rate' => $rate,
             ];
         }
 
