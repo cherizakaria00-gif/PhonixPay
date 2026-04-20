@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Frontend;
 use App\Models\Holiday;
 use App\Rules\FileTypeValidate;
+use App\Services\Didit\DiditSessionService;
 use Illuminate\Http\Request;
 
 class GeneralSettingController extends Controller
@@ -71,6 +72,46 @@ class GeneralSettingController extends Controller
     public function systemConfiguration(){
         $pageTitle = 'System Configuration';
         return view('admin.setting.configuration', compact('pageTitle'));
+    }
+
+    public function didit()
+    {
+        $pageTitle = 'Didit Identity Verification';
+
+        $general = gs();
+        $dbConfig = (array) ($general->didit_config ?? []);
+        $status = app(DiditSessionService::class)->configStatus();
+
+        return view('admin.setting.didit', compact('pageTitle', 'dbConfig', 'status'));
+    }
+
+    public function diditUpdate(Request $request)
+    {
+        $request->validate([
+            'api_key' => 'nullable|string|max:255',
+            'workflow_id' => 'nullable|string|max:255',
+            'webhook_secret' => 'nullable|string|max:255',
+            'base_url' => 'nullable|string|max:255',
+            'callback_url' => 'nullable|string|max:255',
+        ]);
+
+        $clean = function ($value) {
+            $trimmed = trim((string) $value);
+            return $trimmed === '' ? null : $trimmed;
+        };
+
+        $general = gs();
+        $general->didit_config = [
+            'api_key' => $clean($request->api_key),
+            'workflow_id' => $clean($request->workflow_id),
+            'webhook_secret' => $clean($request->webhook_secret),
+            'base_url' => $clean($request->base_url),
+            'callback_url' => $clean($request->callback_url),
+        ];
+        $general->save();
+
+        $notify[] = ['success', 'Didit settings updated successfully'];
+        return back()->withNotify($notify);
     }
 
 

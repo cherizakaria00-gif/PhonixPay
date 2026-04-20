@@ -69,6 +69,13 @@
         "icon": "las la-user-check",
         "route_name": "admin.kyc.setting"
     },
+    "didit_identity_verification": {
+        "keyword": ["didit", "identity verification", "kyc", "workflow id", "webhook", "verification", "document verification"],
+        "title": "Didit Identity Verification",
+        "subtitle": "Configure Didit credentials, workflow, callback, and webhook verification.",
+        "icon": "las la-id-card",
+        "route_name": "admin.setting.didit"
+    },
     "social_login_setting": {
         "keyword": ["social login", "social media", "authentication", "social media login", "social media authentication","facebook login","google login","linkedin login"],
         "title": "Social Login Setting",

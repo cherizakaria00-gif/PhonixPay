@@ -50,7 +50,7 @@
 
                         @if(!$walletAddress)
                             <div class="alert alert--danger" role="alert">
-                                @lang('USDT TRC20 wallet address is not configured yet. Please update GATEWAY_SETUP_FEE_USDT_TRC20_WALLET in the environment file.')
+                                @lang('USDT TRC20 wallet address is not configured yet. Please contact support.')
                             </div>
                         @else
                             <div class="row g-4 align-items-start">

@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Hide source maps in production
+    RewriteCond %{REQUEST_URI} \.map$ [NC]
+    RewriteRule ^ - [F,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -23,4 +27,9 @@
         Order allow,deny
         Deny from all
     </Files>
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
 </IfModule>

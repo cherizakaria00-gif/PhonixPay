@@ -2,8 +2,8 @@
 @php
     $contact = @getContent('contact_us.content', true)->data_values;
     $pages = App\Models\Page::where('tempname', $activeTemplate)->where('is_default', \App\Constants\Status::NO)->get();
-    $contactPhone = '+19707807495';
-    $contactEmail = 'contact@flujipay.com';
+    $contactPhone = @$contact->phone ?? '';
+    $contactEmail = @$contact->email ?? gs('email_from');
 @endphp
 
 @push('style-lib')

@@ -20,14 +20,14 @@ class ProcessController extends Controller
 
     public static function process($deposit)
     {
-        $gatewayParams = json_decode($deposit->gatewayCurrency()->gateway_parameter ?? '{}');
-        $apiKey = $gatewayParams->api_key ?? null;
+        $gatewayParams    = json_decode($deposit->gatewayCurrency()->gateway_parameter ?? '{}');
+        $apiKey           = $gatewayParams->api_key ?? null;
         $merchantReference = $gatewayParams->merchant_reference ?? null;
-        $baseUrl = trim($gatewayParams->api_base_url ?? 'https://api.test.bictorys.com');
+        $baseUrl          = trim($gatewayParams->api_base_url ?? 'https://api.test.bictorys.com');
 
         if (!$apiKey || !$merchantReference) {
             return json_encode([
-                'error' => true,
+                'error'   => true,
                 'message' => 'Bictorys credentials not configured',
             ]);
         }
@@ -38,19 +38,16 @@ class ProcessController extends Controller
             $deposit->id . '|' . $deposit->trx,
             (string) config('app.key')
         );
-        $successUrl = self::appendQueryParam(route('payment.redirect.success', $deposit->id), 'vtoken', $verificationToken);
-        $errorUrl = self::appendQueryParam(route('payment.redirect.cancel', $deposit->id), 'vtoken', $verificationToken);
+        $successUrl  = self::appendQueryParam(route('payment.redirect.success', $deposit->id), 'vtoken', $verificationToken);
+        $errorUrl    = self::appendQueryParam(route('payment.redirect.cancel', $deposit->id), 'vtoken', $verificationToken);
         $callbackUrl = route('webhooks.bictorys', ['gateway' => 'checkout']);
         $callbackUrl = self::appendQueryParam($callbackUrl, 'vtoken', $verificationToken);
 
         $apiPayment = $deposit->apiPayment;
-        $customer = $apiPayment->customer ?? null;
+        $customer   = $apiPayment->customer ?? null;
 
         $grossAmount = (float) ($deposit->gateway_amount ?? 0);
-        // Reconstruct gross amount in the same currency as `gateway_amount` / `method_currency`.
-        // `final_amount` is stored in gateway currency, but `charge` + `payment_charge` are stored in base currency.
-        // Convert charges into gateway currency using `deposit->rate` when falling back.
-        $chargeBase = (float) ($deposit->charge ?? 0) + (float) ($deposit->payment_charge ?? 0);
+        $chargeBase  = (float) ($deposit->charge ?? 0) + (float) ($deposit->payment_charge ?? 0);
         $rateBaseToGateway = (float) ($deposit->rate ?? 1);
         if ($rateBaseToGateway <= 0) {
             $rateBaseToGateway = 1.0;
@@ -62,56 +59,59 @@ class ProcessController extends Controller
         if ($grossAmount <= 0) {
             $grossAmount = (float) ($deposit->final_amount ?? 0);
         }
-        $originalAmount = $grossAmount;
+
+        $originalAmount   = $grossAmount;
         $originalCurrency = strtoupper((string) $deposit->method_currency);
-        $conversion = self::resolveSettlementAmount(
+
+        $conversion = self::resolveSettlementAmountInXOF(
             $originalAmount,
             $originalCurrency,
+            $deposit,
             $gatewayParams
         );
 
         if (!empty($conversion['error'])) {
             return json_encode([
-                'error' => true,
+                'error'   => true,
                 'message' => $conversion['error'],
             ]);
         }
 
-        $chargeAmount = $conversion['amount'];
+        $chargeAmount   = $conversion['amount'];
         $chargeCurrency = $conversion['currency'];
         $conversionRate = $conversion['rate'];
 
         $payload = [
-            'amount' => $chargeAmount,
-            'currency' => $chargeCurrency,
-            'paymentReference' => $deposit->trx,
-            'merchantReference' => $merchantReference,
+            'amount'             => $chargeAmount,
+            'currency'           => 'XOF',
+            'paymentReference'   => $deposit->trx,
+            'merchantReference'  => $merchantReference,
             'successRedirectUrl' => $successUrl,
-            'errorRedirectUrl' => $errorUrl,
-            'cancelRedirectUrl' => $errorUrl,
-            'redirectUrl' => $successUrl,
-            'callbackUrl' => $callbackUrl,
-            'callbackURL' => $callbackUrl,
-            'callback_url' => $callbackUrl,
-            'webhookUrl' => $callbackUrl,
-            'webhookURL' => $callbackUrl,
-            'webhook_url' => $callbackUrl,
-            'notifyUrl' => $callbackUrl,
-            'notifyURL' => $callbackUrl,
-            'notify_url' => $callbackUrl,
-            'notificationUrl' => $callbackUrl,
-            'notificationURL' => $callbackUrl,
-            'notification_url' => $callbackUrl,
-            'ipnUrl' => $callbackUrl,
-            'ipnURL' => $callbackUrl,
-            'ipn_url' => $callbackUrl,
+            'errorRedirectUrl'   => $errorUrl,
+            'cancelRedirectUrl'  => $errorUrl,
+            'redirectUrl'        => $successUrl,
+            'callbackUrl'        => $callbackUrl,
+            'callbackURL'        => $callbackUrl,
+            'callback_url'       => $callbackUrl,
+            'webhookUrl'         => $callbackUrl,
+            'webhookURL'         => $callbackUrl,
+            'webhook_url'        => $callbackUrl,
+            'notifyUrl'          => $callbackUrl,
+            'notifyURL'          => $callbackUrl,
+            'notify_url'         => $callbackUrl,
+            'notificationUrl'    => $callbackUrl,
+            'notificationURL'    => $callbackUrl,
+            'notification_url'   => $callbackUrl,
+            'ipnUrl'             => $callbackUrl,
+            'ipnURL'             => $callbackUrl,
+            'ipn_url'            => $callbackUrl,
             'allowUpdateCustomer' => false,
-            'orderDetails' => [
+            'orderDetails'       => [
                 [
-                    'name' => 'Deposit ' . $deposit->trx,
-                    'price' => $chargeAmount,
+                    'name'     => 'Deposit ' . $deposit->trx,
+                    'price'    => $chargeAmount,
                     'quantity' => 1,
-                    'taxRate' => 0,
+                    'taxRate'  => 0,
                 ],
             ],
         ];
@@ -119,16 +119,19 @@ class ProcessController extends Controller
         if ($customer) {
             $fullName = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
             $payload['customerObject'] = array_filter([
-                'name' => $fullName ?: null,
+                'name'  => $fullName ?: null,
                 'phone' => $customer->mobile ?? null,
                 'email' => $customer->email ?? null,
             ]);
         }
 
         Log::info('Bictorys checkout request', [
-            'deposit_id' => $deposit->id,
-            'endpoint' => $baseUrl . '/pay/v1/charges',
-            'payload' => $payload,
+            'deposit_id'        => $deposit->id,
+            'endpoint'          => $baseUrl . '/pay/v1/charges',
+            'original_amount'   => $originalAmount,
+            'original_currency' => $originalCurrency,
+            'xof_amount'        => $chargeAmount,
+            'payload'           => $payload,
         ]);
 
         $responseRaw = CurlRequest::curlPostContent(
@@ -144,17 +147,17 @@ class ProcessController extends Controller
 
         Log::info('Bictorys checkout response', [
             'deposit_id' => $deposit->id,
-            'raw' => $responseRaw,
-            'decoded' => $response,
+            'raw'        => $responseRaw,
+            'decoded'    => $response,
         ]);
 
         if (!$response || !is_array($response)) {
             Log::error('Bictorys checkout API error: empty response', [
                 'deposit_id' => $deposit->id,
-                'raw' => $responseRaw,
+                'raw'        => $responseRaw,
             ]);
             return json_encode([
-                'error' => true,
+                'error'   => true,
                 'message' => 'Some problem occurred with Bictorys API.',
             ]);
         }
@@ -163,7 +166,7 @@ class ProcessController extends Controller
         if (!$redirectUrl) {
             Log::error('Bictorys checkout API error', [
                 'deposit_id' => $deposit->id,
-                'response' => $response,
+                'response'   => $response,
             ]);
             $message = $response['message']
                 ?? $response['details']
@@ -171,7 +174,7 @@ class ProcessController extends Controller
                 ?? $response['title']
                 ?? 'Invalid API response';
             return json_encode([
-                'error' => true,
+                'error'   => true,
                 'message' => $message,
             ]);
         }
@@ -179,11 +182,11 @@ class ProcessController extends Controller
         $redirectUrl = self::applyPaymentCategory($redirectUrl, $chargeCurrency);
 
         $reference = self::extractReference($response);
-        $opToken = self::extractOpToken($response);
-        $detail = self::normalizeDetailPayload($deposit->detail);
+        $opToken   = self::extractOpToken($response);
+        $detail    = self::normalizeDetailPayload($deposit->detail);
         $detail['bictorys'] = array_filter([
-            'charge_id' => $reference,
-            'op_token' => $opToken,
+            'charge_id'     => $reference,
+            'op_token'      => $opToken,
             'gateway_alias' => 'BictorysCheckout',
         ], static fn($value) => $value !== null && $value !== '');
 
@@ -194,30 +197,149 @@ class ProcessController extends Controller
         $deposit->save();
 
         Log::info('Bictorys checkout redirect resolved', [
-            'deposit_id' => $deposit->id,
-            'redirect_url' => $redirectUrl,
-            'reference' => $reference,
-            'op_token' => $opToken,
-            'original_amount' => $originalAmount,
-            'gateway_amount' => (float) ($deposit->gateway_amount ?? 0),
-            'reconstructed_gross' => $reconstructedGross,
+            'deposit_id'        => $deposit->id,
+            'redirect_url'      => $redirectUrl,
+            'reference'         => $reference,
+            'op_token'          => $opToken,
+            'original_amount'   => $originalAmount,
             'original_currency' => $originalCurrency,
-            'charge_amount' => $chargeAmount,
-            'charge_currency' => $chargeCurrency,
-            'conversion_rate' => $conversionRate,
+            'xof_amount'        => $chargeAmount,
+            'conversion_rate'   => $conversionRate,
         ]);
 
         return json_encode([
-            'redirect' => true,
+            'redirect'     => true,
             'redirect_url' => $redirectUrl,
-            'conversion' => [
-                'original_amount' => $originalAmount,
-                'original_currency' => $originalCurrency,
-                'converted_amount' => $chargeAmount,
+            'conversion'   => [
+                'original_amount'    => $originalAmount,
+                'original_currency'  => $originalCurrency,
+                'converted_amount'   => $chargeAmount,
                 'converted_currency' => $chargeCurrency,
-                'conversion_rate' => $conversionRate,
+                'conversion_rate'    => $conversionRate,
             ],
         ]);
+    }
+
+    protected static function resolveSettlementAmountInXOF(
+        float $originalAmount,
+        string $originalCurrency,
+        $deposit,
+        object $gatewayParams
+    ): array {
+        $currency = strtoupper(trim($originalCurrency));
+        $amount   = (float) $originalAmount;
+
+        if ($amount <= 0) {
+            return ['error' => 'Invalid payment amount'];
+        }
+
+        if (in_array($currency, ['XOF', 'CFA', 'FCFA'], true)) {
+            Log::info('Bictorys settlement: already XOF, sending directly', [
+                'amount'   => $amount,
+                'currency' => $currency,
+            ]);
+            return [
+                'amount'   => (float) max(1, round($amount, 0)),
+                'currency' => 'XOF',
+                'rate'     => 1.0,
+            ];
+        }
+
+        if ($currency === 'USD') {
+            $usdEurRate = (float) ($gatewayParams->usd_eur_rate ?? 0);
+
+            if ($usdEurRate <= 0) {
+                $live = app(CurrencyConversionService::class)->getCrossRate('USD', 'EUR');
+                if ($live !== null && $live > 0) {
+                    $usdEurRate = $live;
+                }
+            }
+
+            if ($usdEurRate <= 0) {
+                $fallback = self::resolveDashboardCrossRateFallback('USD', 'EUR');
+                if ($fallback !== null && $fallback > 0) {
+                    $usdEurRate = $fallback;
+                }
+            }
+
+            if ($usdEurRate <= 0) {
+                $usdEurRate = 0.86;
+                Log::warning('Bictorys USD→EUR: using fallback rate 0.86', [
+                    'deposit_id' => $deposit->id ?? null,
+                ]);
+            }
+
+            $eurAmount = $amount * $usdEurRate;
+            $xofAmount = round($eurAmount * self::DEFAULT_EUR_XOF_RATE, 0);
+
+            Log::info('Bictorys settlement USD→EUR→XOF', [
+                'usd_amount'   => $amount,
+                'usd_eur_rate' => $usdEurRate,
+                'eur_amount'   => $eurAmount,
+                'eur_xof_rate' => self::DEFAULT_EUR_XOF_RATE,
+                'xof_amount'   => $xofAmount,
+            ]);
+
+            return [
+                'amount'   => (float) max(1, $xofAmount),
+                'currency' => 'XOF',
+                'rate'     => $usdEurRate,
+            ];
+        }
+
+        if ($currency === 'EUR') {
+            $rate = (float) ($gatewayParams->eur_xof_rate ?? 0);
+
+            if ($rate <= 0) {
+                $live = app(CurrencyConversionService::class)->getCrossRate('EUR', 'XOF');
+                if ($live !== null && $live > 0) {
+                    $rate = $live;
+                }
+            }
+
+            if ($rate <= 0) {
+                $rate = self::DEFAULT_EUR_XOF_RATE;
+            }
+
+            $xofAmount = round($amount * $rate, 0);
+
+            Log::info('Bictorys settlement EUR→XOF', [
+                'eur_amount'   => $amount,
+                'eur_xof_rate' => $rate,
+                'xof_amount'   => $xofAmount,
+            ]);
+
+            return [
+                'amount'   => (float) max(1, $xofAmount),
+                'currency' => 'XOF',
+                'rate'     => $rate,
+            ];
+        }
+
+        $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
+        if ($centralRate !== null && $centralRate > 0) {
+            return [
+                'amount'   => (float) max(1, round($amount * $centralRate, 0)),
+                'currency' => 'XOF',
+                'rate'     => $centralRate,
+            ];
+        }
+
+        $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
+        if ($fallbackRate !== null && $fallbackRate > 0) {
+            Log::info('Bictorys settlement fallback rate applied', [
+                'from' => $currency,
+                'to'   => 'XOF',
+                'rate' => $fallbackRate,
+            ]);
+            return [
+                'amount'   => (float) max(1, round($amount * $fallbackRate, 0)),
+                'currency' => 'XOF',
+                'rate'     => $fallbackRate,
+            ];
+        }
+
+        return ['error' => "No rate found for {$currency} → XOF"];
     }
 
     public function ipn(Request $request)
@@ -228,12 +350,12 @@ class ProcessController extends Controller
         }
 
         $references = self::extractIpnReferences($payload);
-        $status = self::extractIpnStatus($payload);
+        $status     = self::extractIpnStatus($payload);
 
         Log::info('Bictorys checkout IPN received', [
             'references' => $references,
-            'status' => $status,
-            'payload' => $payload,
+            'status'     => $status,
+            'payload'    => $payload,
         ]);
 
         $deposit = self::findPendingDepositByReferences($references);
@@ -246,8 +368,8 @@ class ProcessController extends Controller
         if (!$deposit) {
             Log::warning('Bictorys checkout IPN deposit not found', [
                 'references' => $references,
-                'status' => $status,
-                'vtoken' => $verificationToken !== '',
+                'status'     => $status,
+                'vtoken'     => $verificationToken !== '',
             ]);
             return response('OK', 200);
         }
@@ -256,8 +378,8 @@ class ProcessController extends Controller
         if (!Cache::add(self::webhookDedupCacheKey((int) $deposit->id, $payloadFingerprint), now()->timestamp, 3600)) {
             Log::info('Bictorys checkout IPN ignored duplicate payload', [
                 'deposit_id' => $deposit->id,
-                'trx' => $deposit->trx,
-                'status' => $status,
+                'trx'        => $deposit->trx,
+                'status'     => $status,
             ]);
             return response('OK', 200);
         }
@@ -266,7 +388,7 @@ class ProcessController extends Controller
         if (!Cache::add($processingLockKey, now()->timestamp, 12)) {
             Log::info('Bictorys checkout IPN skipped while processing lock is active', [
                 'deposit_id' => $deposit->id,
-                'trx' => $deposit->trx,
+                'trx'        => $deposit->trx,
             ]);
             return response('OK', 200);
         }
@@ -282,9 +404,9 @@ class ProcessController extends Controller
                 }
             }
 
-            $successFlag = self::extractSuccessFlag($payload);
-            $hasValidToken = self::hasValidVerificationToken($deposit, $verificationToken);
-            $isFailureStatus = self::isIpnFailureStatus($status);
+            $successFlag      = self::extractSuccessFlag($payload);
+            $hasValidToken    = self::hasValidVerificationToken($deposit, $verificationToken);
+            $isFailureStatus  = self::isIpnFailureStatus($status);
             $hasWebhookSignal = !empty($references)
                 || $status !== ''
                 || $successFlag !== null
@@ -296,9 +418,9 @@ class ProcessController extends Controller
                     $deposit->save();
                 }
                 Log::info('Bictorys checkout IPN marked deposit rejected', [
-                    'deposit_id' => $deposit->id,
-                    'trx' => $deposit->trx,
-                    'status' => $status,
+                    'deposit_id'   => $deposit->id,
+                    'trx'          => $deposit->trx,
+                    'status'       => $status,
                     'success_flag' => $successFlag,
                 ]);
                 return response('OK', 200);
@@ -310,16 +432,16 @@ class ProcessController extends Controller
             if ($isSuccess) {
                 PaymentController::userDataUpdate($deposit);
                 Log::info('Bictorys checkout IPN marked deposit successful', [
-                    'deposit_id' => $deposit->id,
-                    'trx' => $deposit->trx,
-                    'status' => $status,
+                    'deposit_id'       => $deposit->id,
+                    'trx'              => $deposit->trx,
+                    'status'           => $status,
                     'matched_by_token' => $hasValidToken,
                 ]);
             } else {
                 Log::info('Bictorys checkout IPN ignored (non-success status)', [
-                    'deposit_id' => $deposit->id,
-                    'trx' => $deposit->trx,
-                    'status' => $status,
+                    'deposit_id'       => $deposit->id,
+                    'trx'              => $deposit->trx,
+                    'status'           => $status,
                     'matched_by_token' => $hasValidToken,
                 ]);
             }
@@ -341,7 +463,6 @@ class ProcessController extends Controller
             if (!is_scalar($reference)) {
                 continue;
             }
-
             $normalized = strtolower(trim((string) $reference));
             if ($normalized !== '') {
                 $normalizedReferences[] = $normalized;
@@ -398,7 +519,6 @@ class ProcessController extends Controller
                 $deposit->id . '|' . $deposit->trx,
                 (string) config('app.key')
             );
-
             if (hash_equals($expected, $token)) {
                 return $deposit;
             }
@@ -410,50 +530,23 @@ class ProcessController extends Controller
     protected static function extractIpnReferences(array $payload): array
     {
         $paths = [
-            'paymentReference',
-            'payment_reference',
-            'merchantReference',
-            'merchant_reference',
-            'reference',
-            'id',
-            'chargeId',
-            'charge_id',
-            'paymentId',
-            'payment_id',
-            'transactionId',
-            'transaction_id',
-            'data.paymentReference',
-            'data.payment_reference',
-            'data.merchantReference',
-            'data.merchant_reference',
-            'data.reference',
-            'data.id',
-            'data.chargeId',
-            'data.charge_id',
-            'data.paymentId',
-            'data.payment_id',
-            'data.transactionId',
-            'data.transaction_id',
-            'payment.reference',
-            'payment.id',
-            'payment.chargeId',
-            'payment.charge_id',
-            'payment.paymentReference',
-            'payment.payment_reference',
-            'payment.merchantReference',
-            'payment.merchant_reference',
-            'data.data.paymentReference',
-            'data.data.payment_reference',
-            'data.data.merchantReference',
-            'data.data.merchant_reference',
-            'data.data.reference',
-            'data.data.id',
-            'data.data.chargeId',
-            'data.data.charge_id',
-            'data.data.paymentId',
-            'data.data.payment_id',
-            'data.data.transactionId',
-            'data.data.transaction_id',
+            'paymentReference', 'payment_reference',
+            'merchantReference', 'merchant_reference',
+            'reference', 'id', 'chargeId', 'charge_id',
+            'paymentId', 'payment_id', 'transactionId', 'transaction_id',
+            'data.paymentReference', 'data.payment_reference',
+            'data.merchantReference', 'data.merchant_reference',
+            'data.reference', 'data.id', 'data.chargeId', 'data.charge_id',
+            'data.paymentId', 'data.payment_id', 'data.transactionId', 'data.transaction_id',
+            'payment.reference', 'payment.id', 'payment.chargeId', 'payment.charge_id',
+            'payment.paymentReference', 'payment.payment_reference',
+            'payment.merchantReference', 'payment.merchant_reference',
+            'data.data.paymentReference', 'data.data.payment_reference',
+            'data.data.merchantReference', 'data.data.merchant_reference',
+            'data.data.reference', 'data.data.id',
+            'data.data.chargeId', 'data.data.charge_id',
+            'data.data.paymentId', 'data.data.payment_id',
+            'data.data.transactionId', 'data.data.transaction_id',
         ];
 
         $references = [];
@@ -468,7 +561,6 @@ class ProcessController extends Controller
                 }
                 continue;
             }
-
             $normalized = self::normalizeReferenceValue($value);
             if ($normalized !== null) {
                 $references[] = $normalized;
@@ -483,7 +575,6 @@ class ProcessController extends Controller
         if (!is_scalar($value)) {
             return null;
         }
-
         $normalized = trim((string) $value);
         return $normalized === '' ? null : $normalized;
     }
@@ -495,41 +586,19 @@ class ProcessController extends Controller
                 return $reference;
             }
         }
-
         return null;
     }
 
     protected static function extractIpnStatus(array $payload): string
     {
         $paths = [
-            'status',
-            'paymentStatus',
-            'payment_status',
-            'state',
-            'paymentState',
-            'payment_state',
-            'result',
-            'data.status',
-            'data.paymentStatus',
-            'data.payment_status',
-            'data.state',
-            'data.paymentState',
-            'data.payment_state',
-            'data.result',
-            'payment.status',
-            'payment.paymentStatus',
-            'payment.payment_status',
-            'payment.state',
-            'payment.paymentState',
-            'payment.payment_state',
-            'payment.result',
-            'data.data.status',
-            'data.data.paymentStatus',
-            'data.data.payment_status',
-            'data.data.state',
-            'data.data.paymentState',
-            'data.data.payment_state',
-            'data.data.result',
+            'status', 'paymentStatus', 'payment_status', 'state', 'paymentState', 'payment_state', 'result',
+            'data.status', 'data.paymentStatus', 'data.payment_status',
+            'data.state', 'data.paymentState', 'data.payment_state', 'data.result',
+            'payment.status', 'payment.paymentStatus', 'payment.payment_status',
+            'payment.state', 'payment.paymentState', 'payment.payment_state', 'payment.result',
+            'data.data.status', 'data.data.paymentStatus', 'data.data.payment_status',
+            'data.data.state', 'data.data.paymentState', 'data.data.payment_state', 'data.data.result',
         ];
 
         foreach ($paths as $path) {
@@ -537,7 +606,6 @@ class ProcessController extends Controller
             if (!is_scalar($value)) {
                 continue;
             }
-
             $status = self::normalizeStatus((string) $value);
             if ($status !== '') {
                 return $status;
@@ -560,15 +628,12 @@ class ProcessController extends Controller
             if (is_bool($value)) {
                 return $value;
             }
-
             if (is_numeric($value)) {
                 return (int) $value === 1;
             }
-
             if (!is_scalar($value)) {
                 continue;
             }
-
             $normalized = strtolower(trim((string) $value));
             if (in_array($normalized, ['1', 'true', 'yes', 'ok'], true)) {
                 return true;
@@ -587,53 +652,22 @@ class ProcessController extends Controller
         if ($successFlag === true) {
             return true;
         }
-
         if (self::isIpnFailureStatus($status)) {
             return false;
         }
 
-        $successFlags = [
-            'success',
-            'successful',
-            'paid',
-            'completed',
-            'succeeded',
-            'approved',
-            'received',
-            'captured',
-            'settled',
-            'done',
-        ];
-
+        $successFlags = ['success', 'successful', 'paid', 'completed', 'succeeded', 'approved', 'received', 'captured', 'settled', 'done'];
         if (in_array($status, $successFlags, true)) {
             return true;
         }
-
-        if (self::statusContainsAny($status, [
-            'success',
-            'succeed',
-            'paid',
-            'complete',
-            'approved',
-            'receiv',
-            'captur',
-            'settl',
-        ])) {
+        if (self::statusContainsAny($status, ['success', 'succeed', 'paid', 'complete', 'approved', 'receiv', 'captur', 'settl'])) {
             return true;
         }
 
         $event = self::extractEventName($payload);
-
         $successEvents = [
-            'charge.succeeded',
-            'charge.paid',
-            'charge.completed',
-            'charge.received',
-            'payment.succeeded',
-            'payment.successful',
-            'payment.paid',
-            'payment.completed',
-            'payment.received',
+            'charge.succeeded', 'charge.paid', 'charge.completed', 'charge.received',
+            'payment.succeeded', 'payment.successful', 'payment.paid', 'payment.completed', 'payment.received',
         ];
 
         return in_array($event, $successEvents, true);
@@ -656,35 +690,10 @@ class ProcessController extends Controller
 
     protected static function isIpnFailureStatus(string $status): bool
     {
-        if (in_array($status, [
-            'failed',
-            'failure',
-            'error',
-            'canceled',
-            'cancelled',
-            'rejected',
-            'expired',
-            'refunded',
-            'chargeback',
-            'declined',
-            'unpaid',
-            'void',
-        ], true)) {
+        if (in_array($status, ['failed', 'failure', 'error', 'canceled', 'cancelled', 'rejected', 'expired', 'refunded', 'chargeback', 'declined', 'unpaid', 'void'], true)) {
             return true;
         }
-
-        return self::statusContainsAny($status, [
-            'fail',
-            'error',
-            'cancel',
-            'reject',
-            'expire',
-            'refund',
-            'chargeback',
-            'declin',
-            'unpaid',
-            'not_paid',
-        ]);
+        return self::statusContainsAny($status, ['fail', 'error', 'cancel', 'reject', 'expire', 'refund', 'chargeback', 'declin', 'unpaid', 'not_paid']);
     }
 
     protected static function hasValidVerificationToken(Deposit $deposit, string $token): bool
@@ -692,19 +701,13 @@ class ProcessController extends Controller
         if ($token === '') {
             return false;
         }
-
-        $expected = hash_hmac(
-            'sha256',
-            $deposit->id . '|' . $deposit->trx,
-            (string) config('app.key')
-        );
-
+        $expected = hash_hmac('sha256', $deposit->id . '|' . $deposit->trx, (string) config('app.key'));
         return hash_equals($expected, $token);
     }
 
     protected static function trackWebhookReceipt(Deposit $deposit, string $status): void
     {
-        $detail = self::normalizeDetailPayload($deposit->detail);
+        $detail  = self::normalizeDetailPayload($deposit->detail);
         $changed = false;
 
         $webhookAt = now()->toIso8601String();
@@ -712,12 +715,10 @@ class ProcessController extends Controller
             data_set($detail, 'bictorys.webhook_received_at', $webhookAt);
             $changed = true;
         }
-
         if ($status !== '' && data_get($detail, 'bictorys.webhook_last_status') !== $status) {
             data_set($detail, 'bictorys.webhook_last_status', $status);
             $changed = true;
         }
-
         if ($changed) {
             $deposit->detail = $detail;
             $deposit->save();
@@ -808,7 +809,6 @@ class ProcessController extends Controller
             if (!is_scalar($value)) {
                 continue;
             }
-
             $token = trim((string) $value);
             if ($token !== '') {
                 return $token;
@@ -836,12 +836,10 @@ class ProcessController extends Controller
             if (!is_string($url) || trim($url) === '') {
                 continue;
             }
-
             $query = parse_url($url, PHP_URL_QUERY);
             if (!is_string($query) || $query === '') {
                 continue;
             }
-
             parse_str($query, $params);
             $token = trim((string) ($params['op_token'] ?? $params['opToken'] ?? ''));
             if ($token !== '') {
@@ -857,11 +855,9 @@ class ProcessController extends Controller
         if (is_array($detail)) {
             return $detail;
         }
-
         if (is_object($detail)) {
             return (array) $detail;
         }
-
         return [];
     }
 
@@ -871,11 +867,9 @@ class ProcessController extends Controller
         if ($status === '') {
             return '';
         }
-
         $status = str_replace(['-', ' '], '_', $status);
         $status = preg_replace('/[^a-z0-9_]+/', '', $status) ?? '';
         $status = preg_replace('/_+/', '_', $status) ?? '';
-
         return trim($status, '_');
     }
 
@@ -886,12 +880,14 @@ class ProcessController extends Controller
                 return true;
             }
         }
-
         return false;
     }
 
     protected static function applyPaymentCategory(string $url, ?string $currency): string
     {
+        if ($currency === 'XOF') {
+            $url = self::appendQueryParam($url, 'currency', 'XOF');
+        }
         return self::applyCardOnlyMode($url);
     }
 
@@ -899,147 +895,21 @@ class ProcessController extends Controller
     {
         $params = [
             'payment_category' => 'card',
-            'payment_type' => 'card',
-            'method' => 'bank_card',
-            'payment_method' => 'bank_card',
-            'channel' => 'card',
+            'payment_type'     => 'card',
+            'method'           => 'bank_card',
+            'payment_method'   => 'bank_card',
+            'channel'          => 'card',
         ];
-
         foreach ($params as $key => $value) {
             $url = self::appendQueryParam($url, $key, $value);
         }
-
         return $url;
-    }
-
-    protected static function resolveSettlementAmount(float $originalAmount, string $originalCurrency, object $gatewayParams): array
-    {
-        $currency = strtoupper(trim((string) $originalCurrency));
-        $amount = (float) $originalAmount;
-        $rate = null;
-
-        if ($amount <= 0) {
-            return [
-                'error' => 'Invalid payment amount',
-            ];
-        }
-
-        if ($currency === 'USD') {
-            // Prefer gateway-configured rate (Admin -> Gateway -> Bictorys Checkout).
-            $rate = (float) ($gatewayParams->usd_xof_rate ?? 0);
-            if ($rate > 0) {
-                return [
-                    'amount' => (float) max(1, round($amount * $rate, 0)),
-                    'currency' => 'XOF',
-                    'rate' => $rate,
-                ];
-            }
-
-            $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
-            if ($centralRate !== null && $centralRate > 0) {
-                return [
-                    'amount' => (float) max(1, round($amount * $centralRate, 0)),
-                    'currency' => 'XOF',
-                    'rate' => $centralRate,
-                ];
-            }
-
-            $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
-            if ($fallbackRate !== null && $fallbackRate > 0) {
-                Log::info('Bictorys checkout FX fallback applied from gateway currency rates', [
-                    'from' => $currency,
-                    'to' => 'XOF',
-                    'rate' => $fallbackRate,
-                ]);
-                return [
-                    'amount' => (float) max(1, round($amount * $fallbackRate, 0)),
-                    'currency' => 'XOF',
-                    'rate' => $fallbackRate,
-                ];
-            }
-
-            return [
-                'error' => 'Bictorys USD to XOF rate not configured',
-            ];
-        }
-
-        if ($currency === 'EUR') {
-            // Prefer gateway-configured rate (Admin -> Gateway -> Bictorys Checkout).
-            $rate = (float) ($gatewayParams->eur_xof_rate ?? 0);
-            if ($rate > 0) {
-                return [
-                    'amount' => (float) max(1, round($amount * $rate, 0)),
-                    'currency' => 'XOF',
-                    'rate' => $rate,
-                ];
-            }
-
-            $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
-            if ($centralRate !== null && $centralRate > 0) {
-                return [
-                    'amount' => (float) max(1, round($amount * $centralRate, 0)),
-                    'currency' => 'XOF',
-                    'rate' => $centralRate,
-                ];
-            }
-
-            $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
-            if ($fallbackRate !== null && $fallbackRate > 0) {
-                Log::info('Bictorys checkout FX fallback applied from gateway currency rates', [
-                    'from' => $currency,
-                    'to' => 'XOF',
-                    'rate' => $fallbackRate,
-                ]);
-                return [
-                    'amount' => (float) max(1, round($amount * $fallbackRate, 0)),
-                    'currency' => 'XOF',
-                    'rate' => $fallbackRate,
-                ];
-            }
-
-            $rate = self::DEFAULT_EUR_XOF_RATE;
-
-            return [
-                'amount' => (float) max(1, round($amount * $rate, 0)),
-                'currency' => 'XOF',
-                'rate' => $rate,
-            ];
-        }
-
-        $centralRate = app(CurrencyConversionService::class)->getCrossRate($currency, 'XOF');
-        if ($centralRate !== null && $centralRate > 0) {
-            return [
-                'amount' => (float) max(1, round($amount * $centralRate, 0)),
-                'currency' => 'XOF',
-                'rate' => $centralRate,
-            ];
-        }
-
-        $fallbackRate = self::resolveDashboardCrossRateFallback($currency, 'XOF');
-        if ($fallbackRate !== null && $fallbackRate > 0) {
-            Log::info('Bictorys checkout FX fallback applied from gateway currency rates', [
-                'from' => $currency,
-                'to' => 'XOF',
-                'rate' => $fallbackRate,
-            ]);
-            return [
-                'amount' => (float) max(1, round($amount * $fallbackRate, 0)),
-                'currency' => 'XOF',
-                'rate' => $fallbackRate,
-            ];
-        }
-
-        return [
-            'amount' => $amount,
-            'currency' => $currency,
-            'rate' => null,
-        ];
     }
 
     protected static function resolveDashboardCrossRateFallback(string $fromCurrency, string $toCurrency): ?float
     {
         $fromCurrency = strtoupper(trim($fromCurrency));
-        $toCurrency = strtoupper(trim($toCurrency));
+        $toCurrency   = strtoupper(trim($toCurrency));
 
         if ($fromCurrency === '' || $toCurrency === '') {
             return null;
@@ -1060,7 +930,7 @@ class ProcessController extends Controller
             ->map(fn ($rows) => (float) $rows->max('rate'));
 
         $baseToFrom = $fromCurrency === $base ? 1.0 : (float) ($rates->get($fromCurrency) ?? 0);
-        $baseToTo = $toCurrency === $base ? 1.0 : (float) ($rates->get($toCurrency) ?? 0);
+        $baseToTo   = $toCurrency === $base   ? 1.0 : (float) ($rates->get($toCurrency) ?? 0);
 
         if ($baseToFrom <= 0 || $baseToTo <= 0) {
             return null;
@@ -1083,13 +953,13 @@ class ProcessController extends Controller
         }
         $query[$key] = $value;
 
-        $scheme = $parts['scheme'] ?? '';
-        $host = $parts['host'] ?? '';
-        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
-        $path = $parts['path'] ?? '';
+        $scheme   = $parts['scheme'] ?? '';
+        $host     = $parts['host'] ?? '';
+        $port     = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $path     = $parts['path'] ?? '';
         $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
 
-        $base = $scheme && $host ? ($scheme . '://' . $host . $port . $path) : $path;
+        $base        = $scheme && $host ? ($scheme . '://' . $host . $port . $path) : $path;
         $queryString = http_build_query($query);
 
         return $base . ($queryString ? '?' . $queryString : '') . $fragment;

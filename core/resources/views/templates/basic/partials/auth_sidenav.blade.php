@@ -85,6 +85,14 @@
                 </a>
             </li>
 
+            <li class="sidebar-menu__item {{ menuActive('user.identity*') }} {{ $isAccountRestricted ? 'is-disabled' : '' }}">
+                <a href="{{ $isAccountRestricted ? 'javascript:void(0)' : route('user.identity.index') }}"
+                   class="sidebar-menu__link nav-item {{ $isAccountRestricted ? 'is-disabled-link' : '' }}"
+                   @if($isAccountRestricted) aria-disabled="true" tabindex="-1" @endif>
+                    <i class="las la-id-card n-ic"></i><span>@lang('Identity Verification')</span>
+                </a>
+            </li>
+
             <li class="sidebar-menu__item is-disabled">
                 <a href="javascript:void(0)"
                    class="sidebar-menu__link nav-item is-disabled-link"

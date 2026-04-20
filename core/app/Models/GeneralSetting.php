@@ -12,6 +12,7 @@ class GeneralSetting extends Model
         'global_shortcodes' => 'object',
         'socialite_credentials' => 'object',
         'firebase_config' => 'object',
+        'didit_config' => 'object',
         'off_days' => 'array',
     ];
 

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Mobile\AuthController;
 use App\Http\Controllers\Api\Mobile\AuthorizationController;
 use App\Http\Controllers\Api\Mobile\DashboardController;
 use App\Http\Controllers\Api\Mobile\DeviceTokenController;
+use App\Http\Controllers\Api\Mobile\IdentityVerificationController;
 use App\Http\Controllers\Api\Mobile\NotificationController;
 use App\Http\Controllers\Api\Mobile\PaymentController;
 use App\Http\Controllers\Api\Mobile\PaymentLinkController;
@@ -13,11 +14,11 @@ use App\Http\Controllers\Api\Mobile\SupportTicketController;
 use App\Http\Controllers\Api\Mobile\WalletController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('auth')->group(function () {
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('register-mobile', [AuthController::class, 'registerMobile']);
-    Route::post('social-login/{provider}', [AuthController::class, 'socialLogin']);
+Route::prefix('auth')->middleware('throttle:40,1')->group(function () {
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:12,1');
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:8,1');
+    Route::post('register-mobile', [AuthController::class, 'registerMobile'])->middleware('throttle:8,1');
+    Route::post('social-login/{provider}', [AuthController::class, 'socialLogin'])->middleware('throttle:12,1');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
@@ -25,7 +26,7 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:120,1'])->group(function () {
     Route::prefix('authorization')->group(function () {
         Route::get('status', [AuthorizationController::class, 'status']);
         Route::post('resend', [AuthorizationController::class, 'resend']);
@@ -42,6 +43,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('twofactor', [ProfileController::class, 'twoFactorStatus']);
         Route::post('twofactor/enable', [ProfileController::class, 'enableTwoFactor']);
         Route::post('twofactor/disable', [ProfileController::class, 'disableTwoFactor']);
+
+        Route::prefix('identity')->group(function () {
+            Route::get('', [IdentityVerificationController::class, 'status']);
+            Route::post('session', [IdentityVerificationController::class, 'createSession']);
+        });
     });
 
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
@@ -64,8 +70,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('payouts/request', [PayoutController::class, 'requestPayout']);
 
-    Route::post('device-token', [DeviceTokenController::class, 'store']);
-    Route::delete('device-token', [DeviceTokenController::class, 'destroy']);
+    Route::post('device-token', [DeviceTokenController::class, 'store'])->middleware('throttle:20,1');
+    Route::delete('device-token', [DeviceTokenController::class, 'destroy'])->middleware('throttle:20,1');
 
     Route::prefix('notifications')->group(function () {
         Route::get('', [NotificationController::class, 'index']);

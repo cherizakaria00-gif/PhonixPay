@@ -44,18 +44,38 @@ class PluginLicense extends Model
 
     public function isActive(): bool
     {
-        return $this->status === self::STATUS_ACTIVE
+        return $this->isActiveStatus()
             && (!$this->expires_at || $this->expires_at->isFuture());
+    }
+
+    public function normalizedStatus(): string
+    {
+        $raw = strtolower(trim((string) $this->status));
+
+        if (in_array($raw, ['active', '1', 'true', 'enabled', 'approved'], true)) {
+            return self::STATUS_ACTIVE;
+        }
+
+        if (in_array($raw, ['revoked', 'blocked', 'disabled'], true)) {
+            return self::STATUS_REVOKED;
+        }
+
+        return self::STATUS_INACTIVE;
+    }
+
+    public function isActiveStatus(): bool
+    {
+        return $this->normalizedStatus() === self::STATUS_ACTIVE;
     }
 
     public function statusBadge(): Attribute
     {
         return new Attribute(function () {
-            if ($this->status === self::STATUS_ACTIVE) {
+            if ($this->normalizedStatus() === self::STATUS_ACTIVE) {
                 return '<span class="badge badge--success">' . trans('Active') . '</span>';
             }
 
-            if ($this->status === self::STATUS_INACTIVE) {
+            if ($this->normalizedStatus() === self::STATUS_INACTIVE) {
                 return '<span class="badge badge--warning">' . trans('Inactive') . '</span>';
             }
 

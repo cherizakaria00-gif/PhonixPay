@@ -21,8 +21,25 @@
     const notifications = @json(session('notify', []));
     const errors = @json(@$errors ? collect($errors->all())->unique() : []);
 
+    // Suppress duplicate toasts fired back-to-back (double-clicks, multiple handlers).
+    const recentToasts = new Map();
+    const TOAST_DEDUPE_WINDOW_MS = 1500;
+
+    const shouldShowToast = (status, message) => {
+        const key = `${status}:${String(message)}`;
+        const now = Date.now();
+        const last = recentToasts.get(key) || 0;
+        if (now - last < TOAST_DEDUPE_WINDOW_MS) {
+            return false;
+        }
+        recentToasts.set(key, now);
+        return true;
+    };
 
     const triggerToaster = (status, message) => {
+        if (!shouldShowToast(status, message)) {
+            return;
+        }
         iziToast[status]({
             title: status.charAt(0).toUpperCase() + status.slice(1),
             message: message,
@@ -40,8 +57,15 @@
     }
 
     if (notifications.length) {
+        // De-dupe identical notifications emitted by backend.
+        const uniqueNotifications = new Set();
         notifications.forEach(element => {
-            triggerToaster(element[0], element[1]);
+            const status = element?.[0];
+            const message = element?.[1];
+            const key = `${status}:${String(message)}`;
+            if (uniqueNotifications.has(key)) return;
+            uniqueNotifications.add(key);
+            triggerToaster(status, message);
         });
     }
 

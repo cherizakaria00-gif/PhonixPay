@@ -154,7 +154,7 @@ class NotifyProcess{
     *
     * @return string
     */
-	protected function getMessage(){
+    protected function getMessage(){
         $this->prevConfiguration();
 
 		$body = $this->body;
@@ -165,6 +165,7 @@ class NotifyProcess{
         //finding the notification template
 		$template = NotificationTemplate::where('act', $this->templateName)->where($this->statusField, Status::ENABLE)->first();
 		$this->template = $template;
+        $resolvedShortCodes = $this->resolvedShortCodes();
 
         //Getting the notification message from database if use and template exist
         //If not exist, get the message which have sent via method
@@ -176,19 +177,23 @@ class NotifyProcess{
                     $message = $template->$body ?? '';
                 }
             } else {
-		        $message = $this->replaceShortCode($user->fullname,$user->username,gs($globalTemplate),$template->$body);
-		        if (empty($message)) {
-		            $message = $template->$body;
-		        }
+                $templateBody = (string) ($template->$body ?? '');
+                if ($this->isFullEmailTemplate($templateBody)) {
+                    // Full HTML body per notification template (no global wrapper needed).
+		            $message = $templateBody;
+                } else {
+		            $message = $this->replaceShortCode($user->fullname, $user->username, gs($globalTemplate), $templateBody);
+		            if (empty($message)) {
+		                $message = $templateBody;
+		            }
+                }
             }
 		}else{
 			$message = $this->replaceShortCode($this->receiverName,$this->toAddress,gs($globalTemplate),$this->message);
 		}
 
         //replace the all short code of template
-	    if ($this->shortCodes) {
-            $message = $this->replaceTemplateShortCode($message);
-	    }
+        $message = $this->replaceTemplateShortCode($message, $resolvedShortCodes);
 
         //Check email enable
         if (!$this->template && $this->templateName) return false;
@@ -219,13 +224,19 @@ class NotifyProcess{
 	}
 
     /**
-    * Replace the short code of the template
+    * Replace the short code of the template (robust variant).
     *
+    * @param string|null $content
+    * @param array<string,mixed>|null $resolvedShortCodes
     * @return string
     */
-    protected function replaceTemplateShortCode($content){
-        foreach ($this->shortCodes ?? [] as $code => $value) {
-            $content = str_replace('{{' . $code . '}}', $value, $content);
+    protected function replaceTemplateShortCode($content, ?array $resolvedShortCodes = null){
+        $content = (string) $content;
+        foreach (($resolvedShortCodes ?? $this->resolvedShortCodes()) as $code => $value) {
+            $placeholder = preg_quote((string) $code, '/');
+            $replacement = $this->normalizeShortCodeValue($value);
+            // Replace {{code}} and {{ code }} (case-insensitive key matching)
+            $content = (string) preg_replace('/{{\s*' . $placeholder . '\s*}}/i', $replacement, $content);
         }
         return $content;
     }
@@ -238,14 +249,72 @@ class NotifyProcess{
 	protected function getSubject(){
 		if ($this->template) {
 			$subject = $this->template->subject;
-			if ($this->shortCodes) {
-			    foreach ($this->shortCodes as $code => $value) {
-			        $subject = str_replace('{{' . $code . '}}', $value, $subject);
-			    }
-		    }
+            $subject = $this->replaceTemplateShortCode($subject, $this->resolvedShortCodes());
 			$this->subject = $subject;
 		}
 	}
+
+    /**
+    * Resolve all short codes available for any notification.
+    *
+    * @return array<string,mixed>
+    */
+    protected function resolvedShortCodes(): array
+    {
+        $shortCodes = (array) ($this->shortCodes ?? []);
+
+        $shortCodes['site_name'] = $shortCodes['site_name'] ?? gs('site_name');
+        $shortCodes['site_currency'] = $shortCodes['site_currency'] ?? gs('cur_text');
+        $shortCodes['currency_symbol'] = $shortCodes['currency_symbol'] ?? gs('cur_sym');
+
+        $shortCodes['fullname'] = $shortCodes['fullname'] ?? ($this->user->fullname ?? $this->receiverName ?? '');
+        $shortCodes['username'] = $shortCodes['username'] ?? ($this->user->username ?? $this->toAddress ?? '');
+        $shortCodes['message'] = $shortCodes['message'] ?? $this->message ?? '';
+
+        return $shortCodes;
+    }
+
+    /**
+    * Convert shortcode values to a safe string representation.
+    *
+    * @param mixed $value
+    * @return string
+    */
+    protected function normalizeShortCodeValue($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        if (is_array($value)) {
+            return implode(', ', array_map(fn($item) => $this->normalizeShortCodeValue($item), $value));
+        }
+
+        if (is_object($value)) {
+            if (method_exists($value, '__toString')) {
+                return (string) $value;
+            }
+            return json_encode($value, JSON_UNESCAPED_UNICODE) ?: '';
+        }
+
+        return (string) $value;
+    }
+
+    /**
+    * Detect if notification body is already a full HTML email template.
+    *
+    * @param string $content
+    * @return bool
+    */
+    protected function isFullEmailTemplate(string $content): bool
+    {
+        $needle = strtolower($content);
+        return str_contains($needle, '<html') || str_contains($needle, '<body') || str_contains($needle, '<!doctype');
+    }
 
     /**
     * Create the notification log

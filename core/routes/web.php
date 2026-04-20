@@ -2,8 +2,14 @@
 
 use App\Http\Controllers\Api\PluginLicenseApiController;
 use App\Http\Controllers\Webhook\BictorysWebhookController;
+use App\Http\Controllers\Webhook\DiditWebhookController;
 use App\Http\Controllers\Webhook\StrowalletCardWebhookController;
 use Illuminate\Support\Facades\Route;
+
+// Disable legacy package activation UI route in production.
+Route::get('activate', fn () => redirect('/'))->name('activate');
+Route::match(['get', 'post'], 'activation', fn () => redirect('/'))->name('activation');
+Route::post('activate_system_submit', fn () => redirect('/'))->name('activate_system_submit');
 
 Route::get('/clear', function(){
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
@@ -34,9 +40,24 @@ Route::any('api/webhooks/strowallet/card', StrowalletCardWebhookController::clas
     ->middleware('throttle:120,1')
     ->name('webhooks.strowallet.card');
 
+Route::post('api/webhooks/didit', DiditWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('webhooks.didit');
+
 Route::prefix('api/plugin-license')->controller(PluginLicenseApiController::class)->group(function () {
     Route::post('generate', 'generate')->middleware('throttle:30,1');
     Route::post('validate', 'validateLicense')->middleware('throttle:120,1');
+    Route::post('revoke', 'revoke')->middleware('throttle:30,1');
+    Route::post('regenerate', 'regenerate')->middleware('throttle:30,1');
+    Route::post('details', 'details')->middleware('throttle:60,1');
+});
+
+// Legacy WooCommerce plugin compatibility:
+// Older builds call /api/licenses/* endpoints.
+Route::prefix('api/licenses')->controller(PluginLicenseApiController::class)->group(function () {
+    Route::post('generate', 'generate')->middleware('throttle:30,1');
+    Route::post('validate', 'validateLicense')->middleware('throttle:120,1');
+    Route::post('deactivate', 'revoke')->middleware('throttle:30,1');
     Route::post('revoke', 'revoke')->middleware('throttle:30,1');
     Route::post('regenerate', 'regenerate')->middleware('throttle:30,1');
     Route::post('details', 'details')->middleware('throttle:60,1');

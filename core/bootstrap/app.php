@@ -3,6 +3,7 @@
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\AutoRunCron;
 use App\Http\Middleware\CheckStatus;
+use App\Http\Middleware\CheckProject;
 use App\Http\Middleware\Demo;
 use App\Http\Middleware\UserRestricted;
 use App\Http\Middleware\KycMiddleware;
@@ -15,7 +16,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
-use Laramin\Utility\VugiChugi; 
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -23,10 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         using:function(){
-            Route::namespace('App\Http\Controllers')->middleware([VugiChugi::mdNm()])->group(function(){
+            Route::namespace('App\Http\Controllers')->group(function(){
                 Route::middleware(['web'])
                     ->namespace('Admin')
-                    ->prefix('admin')
+                    ->prefix('Zakikbal2026')
                     ->name('admin.')
                     ->group(base_path('routes/admin.php'));
 
@@ -48,7 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->redirectGuestsTo(function ($request) {
-            if ($request->is('admin') || $request->is('admin/*')) {
+            if ($request->is('Zakikbal2026') || $request->is('Zakikbal2026/*')) {
                 return route('admin.login');
             }
 
@@ -81,6 +81,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.guest' => RedirectIfAdmin::class,
 
             'check.status' => CheckStatus::class,
+            'checkProject' => CheckProject::class,
             'demo' => Demo::class,
             'kyc' => KycMiddleware::class,
             'registration.complete' => RegistrationStep::class,
@@ -97,6 +98,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'test/payment/initiate',
                 'payment-link/ipn*',
                 'api/webhooks/bictorys',
+                'api/webhooks/didit',
                 'api/plugin-license/*',
                 'webhook-endpoint',
                 'api/webhook-endpoint',

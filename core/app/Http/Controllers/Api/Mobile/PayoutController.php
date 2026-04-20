@@ -35,9 +35,7 @@ class PayoutController extends ApiMobileController
             ], 422);
         }
 
-        $nextPlanPayoutAt = app(\App\Services\PlanService::class)->nextPayoutRequestAvailableAt($user);
-        $nextMethodPayoutAt = $withdrawSetting->next_withdraw_date ? Carbon::parse($withdrawSetting->next_withdraw_date)->startOfDay() : null;
-        $nextAllowedPayoutAt = $this->maxDate($nextPlanPayoutAt, $nextMethodPayoutAt);
+        $nextAllowedPayoutAt = $this->resolveNextAllowedPayoutAt($user, $withdrawSetting);
         if ($nextAllowedPayoutAt && now()->lt($nextAllowedPayoutAt)) {
             return $this->ok([
                 'success' => false,
@@ -87,7 +85,9 @@ class PayoutController extends ApiMobileController
         $withdraw->status = Status::PAYMENT_PENDING;
         $withdraw->withdraw_information = $withdrawSetting->user_data;
         if (Schema::hasColumn('withdrawals', 'payout_date')) {
-            $withdraw->payout_date = $withdrawSetting->next_withdraw_date;
+            $withdraw->payout_date = $nextAllowedPayoutAt
+                ? $nextAllowedPayoutAt->toDateString()
+                : $withdrawSetting->next_withdraw_date;
         }
         $withdraw->save();
 
@@ -99,6 +99,11 @@ class PayoutController extends ApiMobileController
             $withdrawSetting->next_withdraw_date = $withdrawSetting->nextWithdrawDate();
         }
         $withdrawSetting->save();
+
+        if (Schema::hasColumn('users', 'manual_next_payout_at') && $user->manual_next_payout_at) {
+            $user->manual_next_payout_at = null;
+            $user->save();
+        }
 
         $transaction = new Transaction();
         $transaction->user_id = $withdraw->user_id;
@@ -133,5 +138,17 @@ class PayoutController extends ApiMobileController
         }
 
         return $first->greaterThan($second) ? $first : $second;
+    }
+
+    private function resolveNextAllowedPayoutAt($user, $withdrawSetting): ?Carbon
+    {
+        if (Schema::hasColumn('users', 'manual_next_payout_at') && $user->manual_next_payout_at) {
+            return Carbon::parse($user->manual_next_payout_at)->startOfDay();
+        }
+
+        $nextPlanPayoutAt = app(\App\Services\PlanService::class)->nextPayoutRequestAvailableAt($user);
+        $nextMethodPayoutAt = $withdrawSetting->next_withdraw_date ? Carbon::parse($withdrawSetting->next_withdraw_date)->startOfDay() : null;
+
+        return $this->maxDate($nextPlanPayoutAt, $nextMethodPayoutAt);
     }
 }

@@ -45,6 +45,8 @@ class User extends Authenticatable
         'setup_fee_reviewed_at' => 'datetime',
         'discount_percent' => 'integer',
         'priority_support_enabled' => 'boolean',
+        'didit_verified_at' => 'datetime',
+        'didit_decision' => 'array',
     ];
 
 
@@ -231,6 +233,11 @@ class User extends Authenticatable
     public function disputes()
     {
         return $this->hasMany(Dispute::class, 'merchant_id')->latest('id');
+    }
+
+    public function diditVerificationSessions()
+    {
+        return $this->hasMany(DiditVerificationSession::class)->latest('id');
     }
 
     public function isSetupFeeApproved(): bool

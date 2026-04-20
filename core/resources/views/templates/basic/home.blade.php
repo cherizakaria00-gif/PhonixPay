@@ -42,12 +42,12 @@
 
             <div class="mx-auto max-w-4xl px-6 text-center">
                 <span class="inline-flex items-center gap-2 rounded-full border border-[#87c5a6]/30 bg-[#87c5a6]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-[#87c5a6]">
-                    Powered by Fluji Official
+                    Powered by FlujiPay
                 </span>
 
                 <h1 class="mt-8 text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
                     New Payment Technology
-                    <span class="block text-[#87c5a6]">Powered by Fluji Official</span>
+                    <span class="block text-[#87c5a6]">Powered by FlujiPay</span>
                 </h1>
 
                 <p class="mt-5 text-base sm:text-lg text-slate-300">
@@ -55,8 +55,8 @@
                 </p>
 
                 <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
-                    <a href="https://fluji.com" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-full bg-[#87c5a6] px-7 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 hover:bg-[#9ad8bf] transition-colors">
-                        Visit Fluji.com
+                    <a href="https://flujipay.com" class="inline-flex items-center justify-center rounded-full bg-[#87c5a6] px-7 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 hover:bg-[#9ad8bf] transition-colors">
+                        Visit FlujiPay
                     </a>
                     <a href="{{ route('contact') }}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-7 py-3 text-sm font-semibold text-white hover:border-[#87c5a6]/60 hover:text-[#87c5a6] transition-colors">
                         Contact Sales

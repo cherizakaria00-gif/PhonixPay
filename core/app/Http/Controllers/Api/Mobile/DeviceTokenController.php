@@ -10,7 +10,9 @@ class DeviceTokenController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate(['token' => 'required|string']);
+        $request->validate([
+            'token' => 'required|string|min:20|max:512',
+        ]);
 
         $existing = DeviceToken::where('token', $request->token)->first();
         if ($existing) {
@@ -34,7 +36,9 @@ class DeviceTokenController extends Controller
 
     public function destroy(Request $request)
     {
-        $request->validate(['token' => 'required|string']);
+        $request->validate([
+            'token' => 'required|string|min:20|max:512',
+        ]);
 
         DeviceToken::where('token', $request->token)
             ->where('user_id', auth()->id())

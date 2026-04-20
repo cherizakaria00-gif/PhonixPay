@@ -93,7 +93,15 @@
                                             >
                                                 <span class="payment-option__content">
                                                     <span class="payment-option__icon">
-                                                        <img src="{{ getImage(getFilePath('gateway').'/'. @$data->method->image, getFileSize('gateway')) }}" alt="">
+                                                        <img
+                                                            src="{{ getImage(getFilePath('gateway').'/'. @$data->method->image, getFileSize('gateway')) }}"
+                                                            alt=""
+                                                            onerror="this.closest('.payment-option__icon').classList.add('is-fallback'); this.remove();"
+                                                        >
+                                                        <svg class="payment-option__fallback" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                            <rect x="3" y="6" width="18" height="12" rx="2.5" stroke="currentColor" stroke-width="1.8"></rect>
+                                                            <path d="M3 10h18" stroke="currentColor" stroke-width="1.8"></path>
+                                                        </svg>
                                                     </span>
                                                     <span class="text">{{ __($data->name) }}</span>
                                                 </span>
@@ -790,6 +798,22 @@
             height: 22px;
             width: auto;
             object-fit: contain;
+        }
+
+        .payment-option__fallback {
+            display: none;
+            width: 20px;
+            height: 20px;
+            color: #3b82f6;
+        }
+
+        .payment-option__icon.is-fallback {
+            background: #dbeafe;
+            border-color: #bfdbfe;
+        }
+
+        .payment-option__icon.is-fallback .payment-option__fallback {
+            display: block;
         }
 
         .payment-option .text {

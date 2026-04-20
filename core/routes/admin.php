@@ -290,6 +290,10 @@ Route::middleware('admin')->group(function () {
         Route::get('general-setting', 'general')->name('setting.general');
         Route::post('general-setting', 'generalUpdate');
 
+        // Didit identity verification settings
+        Route::get('setting/didit', 'didit')->name('setting.didit');
+        Route::post('setting/didit', 'diditUpdate')->name('setting.didit.update');
+
         Route::get('setting/social/credentials', 'socialiteCredentials')->name('setting.socialite.credentials');
         Route::post('setting/social/credentials/update/{key}', 'updateSocialiteCredential')->name('setting.socialite.credentials.update');
         Route::post('setting/social/credentials/status/{key}', 'updateSocialiteCredentialStatus')->name('setting.socialite.credentials.status.update');

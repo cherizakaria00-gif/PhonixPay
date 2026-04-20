@@ -40,4 +40,12 @@ return [
         'pending_expire_lookback_hours' => env('BICTORYS_PENDING_EXPIRE_LOOKBACK_HOURS', 720),
     ],
 
+    'didit' => [
+        'api_key' => env('DIDIT_API_KEY'),
+        'workflow_id' => env('DIDIT_WORKFLOW_ID'),
+        'webhook_secret' => env('DIDIT_WEBHOOK_SECRET'),
+        'base_url' => env('DIDIT_BASE_URL', 'https://verification.didit.me'),
+        'callback_url' => env('DIDIT_CALLBACK_URL'),
+    ],
+
 ];

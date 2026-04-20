@@ -164,6 +164,13 @@ Route::middleware('auth')->name('user.')->group(function () {
                 Route::post('open', 'open')->name('open');
                 Route::post('{id}/resolve', 'resolve')->name('resolve');
             });
+
+            Route::controller('IdentityVerificationController')->prefix('identity-verification')->name('identity.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('start', 'start')->name('start');
+                Route::post('session', 'createSession')->name('session');
+                Route::get('callback', 'callback')->name('callback');
+            });
         });
     });
 });

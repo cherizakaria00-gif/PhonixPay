@@ -59,7 +59,7 @@ class PluginLicenseApiController extends Controller
     {
         $request->validate([
             'license_key' => 'required|string|max:191',
-            'email' => 'required|email|max:191',
+            'email' => 'nullable|email|max:191',
             'domain' => 'nullable|string|max:255',
             'site_url' => 'nullable|string|max:255',
             'plugin_version' => 'nullable|string|max:50',

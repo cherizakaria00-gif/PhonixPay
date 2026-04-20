@@ -4,6 +4,10 @@
     $banner = @getContent('banner.content', true)->data_values;
     $product = @getContent('product.content', true)->data_values;
     $pages = App\Models\Page::where('tempname', $activeTemplate)->where('is_default', \App\Constants\Status::NO)->get();
+    $policyPages = @getContent('policy_pages.element', orderById:true);
+    $contact = @getContent('contact_us.content', true)->data_values;
+    $contactPhone = @$contact->phone ?? '';
+    $contactEmail = @$contact->email ?? gs('email_from');
 @endphp
 
 @push('style-lib')
@@ -243,6 +247,91 @@
             z-index: 0 !important;
         }
 
+        .industry-carousel-wrap {
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+        }
+
+        .industry-carousel-wrap::before,
+        .industry-carousel-wrap::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 90px;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .industry-carousel-wrap::before {
+            left: 0;
+            background: linear-gradient(to right, #020617 0%, rgba(2, 6, 23, 0) 100%);
+        }
+
+        .industry-carousel-wrap::after {
+            right: 0;
+            background: linear-gradient(to left, #020617 0%, rgba(2, 6, 23, 0) 100%);
+        }
+
+        .industry-row {
+            overflow: hidden;
+            padding: 10px 0;
+        }
+
+        .industry-track {
+            display: flex;
+            width: max-content;
+            animation: industryScroll 36s linear infinite;
+            will-change: transform;
+        }
+
+        .industry-row.reverse .industry-track {
+            animation-direction: reverse;
+            animation-duration: 42s;
+        }
+
+        .industry-group {
+            display: flex;
+            gap: 14px;
+            padding-right: 14px;
+        }
+
+        .industry-pill {
+            min-width: 190px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            color: #cbd5e1;
+        }
+
+        .industry-pill-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #87c5a6;
+            color: #0f172a;
+        }
+
+        .industry-pill-name {
+            font-size: 1.5rem;
+            line-height: 1.2;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        @keyframes industryScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
         @media (max-width: 1024px) {
             .scanner-shell {
                 min-height: 320px;
@@ -261,6 +350,27 @@
             }
             .scanner-container {
                 height: 260px;
+            }
+
+            .industry-carousel-wrap::before,
+            .industry-carousel-wrap::after {
+                width: 45px;
+            }
+
+            .industry-pill {
+                min-width: 160px;
+                padding: 12px 14px;
+                gap: 10px;
+            }
+
+            .industry-pill-icon {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+            }
+
+            .industry-pill-name {
+                font-size: 1.1rem;
             }
         }
     </style>
@@ -293,11 +403,8 @@
                     <span class="block text-white">Without the Headaches</span>
                 </h1>
 
-                <p class="mt-5 text-base sm:text-lg font-semibold text-[#87c5a6]">
-                    Zero setup fees. No monthly charges. Same-day payouts.
-                </p>
                 <p class="mt-3 text-base sm:text-lg text-slate-300">
-                    Start accepting Apple Pay, Google Pay, Cash App & Crypto in under 5 minutes.
+                    App available on Android. iOS coming soon.
                 </p>
 
                 <div class="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm text-slate-300">
@@ -328,36 +435,22 @@
 
                 <p class="mt-4 text-xs text-slate-500">No credit card required • Setup in 5 minutes</p>
 
-                <div class="mt-8 flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs sm:text-sm text-slate-200">
-                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
-                            <i class="fab fa-apple-pay text-slate-900" aria-hidden="true"></i>
+                <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+                    <a href="#"
+                       class="inline-flex min-w-[230px] items-center justify-center gap-3 rounded-xl border border-white/15 bg-black px-5 py-3 text-left text-white shadow-lg transition hover:border-[#87c5a6]/60 hover:bg-slate-950">
+                        <i class="fab fa-google-play text-lg text-[#87c5a6]" aria-hidden="true"></i>
+                        <span class="leading-tight">
+                            <span class="block text-[10px] uppercase tracking-wide text-slate-300">Get it on</span>
+                            <span class="block text-base font-semibold">Google Play</span>
                         </span>
-                        Apple Pay
-                    </span>
-                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
-                            <i class="fab fa-google-pay text-[#4285F4]" aria-hidden="true"></i>
+                    </a>
+                    <span
+                        class="inline-flex min-w-[230px] cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-white/15 bg-black/70 px-5 py-3 text-left text-white/80 opacity-80">
+                        <i class="fab fa-apple text-xl text-slate-300" aria-hidden="true"></i>
+                        <span class="leading-tight">
+                            <span class="block text-[10px] uppercase tracking-wide text-slate-400">Available on</span>
+                            <span class="block text-base font-semibold">App Store (Soon)</span>
                         </span>
-                        Google Pay
-                    </span>
-                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
-                            <i class="fas fa-dollar-sign text-[#00D632]" aria-hidden="true"></i>
-                        </span>
-                        Cash App
-                    </span>
-                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
-                            <i class="fab fa-bitcoin text-[#F7931A]" aria-hidden="true"></i>
-                        </span>
-                        Crypto
-                    </span>
-                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px]">
-                            <i class="fas fa-credit-card text-[#2563EB]" aria-hidden="true"></i>
-                        </span>
-                        Cards
                     </span>
                 </div>
             </div>
@@ -383,48 +476,59 @@
                 <h2 class="text-center text-3xl font-bold tracking-tight text-white sm:text-4xl mb-16">
                     Supported Industries
                 </h2>
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
-                        <div class="transform group-hover:scale-110 transition-transform duration-300">
-                            <i data-lucide="monitor-play" class="w-8 h-8 mb-4 text-pink-500"></i>
+                @php
+                    $industryRowOne = [
+                        ['icon' => 'monitor-play', 'name' => 'IPTV'],
+                        ['icon' => 'layers', 'name' => 'Digital Products'],
+                        ['icon' => 'shopping-bag', 'name' => 'Replica'],
+                        ['icon' => 'book-open', 'name' => 'E-Books & Info'],
+                        ['icon' => 'plane', 'name' => 'Travel'],
+                        ['icon' => 'gamepad-2', 'name' => 'Gaming'],
+                        ['icon' => 'coins', 'name' => 'Crypto'],
+                    ];
+                    $industryRowTwo = [
+                        ['icon' => 'shopping-cart', 'name' => 'Ecommerce'],
+                        ['icon' => 'package', 'name' => 'Dropshipping'],
+                        ['icon' => 'graduation-cap', 'name' => 'Education'],
+                        ['icon' => 'tv', 'name' => 'Streaming'],
+                        ['icon' => 'smartphone', 'name' => 'Apps'],
+                        ['icon' => 'ticket', 'name' => 'Tickets'],
+                        ['icon' => 'globe', 'name' => 'Global Services'],
+                    ];
+                @endphp
+
+                <div class="industry-carousel-wrap">
+                    <div class="industry-row">
+                        <div class="industry-track">
+                            @for ($repeat = 0; $repeat < 2; $repeat++)
+                                <div class="industry-group">
+                                    @foreach($industryRowOne as $industry)
+                                        <div class="industry-pill">
+                                            <span class="industry-pill-icon">
+                                                <i data-lucide="{{ $industry['icon'] }}" class="w-5 h-5"></i>
+                                            </span>
+                                            <span class="industry-pill-name">{{ $industry['name'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endfor
                         </div>
-                        <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">IPTV</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
-                        <div class="transform group-hover:scale-110 transition-transform duration-300">
-                            <i data-lucide="layers" class="w-8 h-8 mb-4 text-blue-500"></i>
+                    <div class="industry-row reverse">
+                        <div class="industry-track">
+                            @for ($repeat = 0; $repeat < 2; $repeat++)
+                                <div class="industry-group">
+                                    @foreach($industryRowTwo as $industry)
+                                        <div class="industry-pill">
+                                            <span class="industry-pill-icon">
+                                                <i data-lucide="{{ $industry['icon'] }}" class="w-5 h-5"></i>
+                                            </span>
+                                            <span class="industry-pill-name">{{ $industry['name'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endfor
                         </div>
-                        <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Digital Products</span>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
-                        <div class="transform group-hover:scale-110 transition-transform duration-300">
-                            <i data-lucide="shopping-bag" class="w-8 h-8 mb-4 text-purple-500"></i>
-                        </div>
-                        <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Replica</span>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
-                        <div class="transform group-hover:scale-110 transition-transform duration-300">
-                            <i data-lucide="book-open" class="w-8 h-8 mb-4 text-yellow-500"></i>
-                        </div>
-                        <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">E-Books & Info</span>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
-                        <div class="transform group-hover:scale-110 transition-transform duration-300">
-                            <i data-lucide="plane" class="w-8 h-8 mb-4 text-cyan-500"></i>
-                        </div>
-                        <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Travel</span>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
-                        <div class="transform group-hover:scale-110 transition-transform duration-300">
-                            <i data-lucide="gamepad-2" class="w-8 h-8 mb-4 text-green-500"></i>
-                        </div>
-                        <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Gaming</span>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-6 bg-slate-900 rounded-xl border border-slate-800 hover:border-[#87c5a6]/50 hover:bg-slate-800 transition-all cursor-default group">
-                        <div class="transform group-hover:scale-110 transition-transform duration-300">
-                            <i data-lucide="coins" class="w-8 h-8 mb-4 text-orange-500"></i>
-                        </div>
-                        <span class="text-sm font-medium text-slate-300 group-hover:text-white text-center">Crypto</span>
                     </div>
                 </div>
                 <div class="mt-12 text-center">
@@ -787,20 +891,69 @@
         </div>
     </main>
 
-    <footer class="bg-slate-950 border-t border-slate-800">
-        <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
-            <div class="mt-8 md:order-1 md:mt-0">
-                <p class="text-center text-xs leading-5 text-slate-500">
-                    &copy; {{ date('Y') }} {{ __(gs('site_name')) }}. All rights reserved.
-                </p>
-                <p class="text-center text-xs leading-5 text-slate-600 mt-2">
-                    We do not support illegal activities. All businesses are subject to verification.
-                </p>
+    <footer class="bg-slate-950 border-t border-slate-800 text-slate-100">
+        <div class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+            <div class="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
+                <div>
+                    <a href="{{ route('home') }}" class="inline-flex items-center">
+                        <img src="{{ asset('assets/images/logo.png') }}" alt="@lang('Logo')" class="h-10 w-auto">
+                    </a>
+                    <p class="mt-5 max-w-sm text-base leading-8 text-slate-300">
+                        FlujiPay provides reliable online payments for merchants, with simple onboarding and secure payouts.
+                    </p>
+                    <div class="mt-6 flex flex-wrap items-center gap-3">
+                        <span class="inline-flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-white/80 border border-white/10">
+                            <i class="fab fa-apple text-base"></i>
+                            <span class="text-xs font-semibold">App Store (Soon)</span>
+                        </span>
+                        <a href="#" class="inline-flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-white border border-white/10 hover:bg-slate-900">
+                            <i class="fab fa-google-play text-sm text-[#87c5a6]"></i>
+                            <span class="text-xs font-semibold">Google Play</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-3xl font-semibold text-white">Popular Link</h3>
+                    <ul class="mt-6 space-y-3 text-lg text-slate-300">
+                        <li><a href="{{ route('home') }}" class="hover:text-white">Home</a></li>
+                        <li><a href="{{ route('blogs') }}" class="hover:text-white">Blogs</a></li>
+                        <li><a href="{{ route('contact') }}" class="hover:text-white">Contact Us</a></li>
+                        <li><a href="{{ route('api.documentation') }}" class="hover:text-white">API Documentation</a></li>
+                        @foreach($pages->take(3) as $data)
+                            <li><a href="{{ route('pages',[$data->slug]) }}" class="hover:text-white">{{ __($data->name) }}</a></li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="text-3xl font-semibold text-white">Links</h3>
+                    <ul class="mt-6 space-y-3 text-lg text-slate-300">
+                        <li><a href="{{ route('user.login') }}" class="hover:text-white">Login</a></li>
+                        <li><a href="{{ route('user.register') }}" class="hover:text-white">Create Account</a></li>
+                        <li><a href="{{ route('cookie.policy') }}" class="hover:text-white">Cookie Policy</a></li>
+                        @foreach($policyPages->take(4) as $page)
+                            <li>
+                                <a href="{{ route('policy.pages', ['slug'=>slug($page->data_values->title)]) }}" class="hover:text-white">
+                                    {{ __($page->data_values->title) }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="text-3xl font-semibold text-white">Contacts</h3>
+                    <div class="mt-6 space-y-3 text-lg text-slate-300 leading-8">
+                        <p><span class="font-semibold text-white">Address:</span> {{ @$contact->office_address ?: 'United States' }}</p>
+                        <p><span class="font-semibold text-white">Call:</span> {{ $contactPhone }}</p>
+                        <p><span class="font-semibold text-white">Email:</span> {{ $contactEmail }}</p>
+                    </div>
+                </div>
             </div>
-            <div class="flex justify-center space-x-6 md:order-2">
-                <a href="{{ route('policy.pages', 'terms-of-service') }}" class="text-slate-400 hover:text-slate-300">Terms</a>
-                <a href="{{ route('policy.pages', 'privacy-policy') }}" class="text-slate-400 hover:text-slate-300">Privacy</a>
-                <a href="{{ route('api.documentation') }}" class="text-slate-400 hover:text-slate-300">API Docs</a>
+
+            <div class="mt-10 border-t border-slate-800 pt-6 text-sm text-slate-500">
+                <p>&copy; {{ date('Y') }} {{ __(gs('site_name')) }}. All rights reserved.</p>
             </div>
         </div>
     </footer>

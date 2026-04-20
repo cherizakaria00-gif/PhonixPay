@@ -328,7 +328,7 @@ class PluginLicenseService
         $responseBase['merchant_id'] = $license->merchant_id;
         $responseBase['normalized_domain'] = $license->normalized_domain;
 
-        if ($license->status !== PluginLicense::STATUS_ACTIVE) {
+        if (!$license->isActiveStatus()) {
             $this->storeAudit($request, [
                 'license' => $license,
                 'merchant_id' => $license->merchant_id,
@@ -344,51 +344,13 @@ class PluginLicenseService
 
             return array_merge($responseBase, [
                 'valid' => false,
-                'status' => $license->status,
+                'status' => $license->normalizedStatus(),
                 'message' => 'License is not active',
             ]);
         }
 
-        if ($license->expires_at && $license->expires_at->isPast()) {
-            $this->storeAudit($request, [
-                'license' => $license,
-                'merchant_id' => $license->merchant_id,
-                'action' => 'validate',
-                'result' => 'failed',
-                'message' => 'License expired',
-                'request_email' => $email,
-                'request_domain' => $domainInput,
-                'normalized_domain' => $normalizedDomain,
-                'plugin_version' => $pluginVersion,
-                'site_url' => $siteUrl,
-            ]);
-
-            return array_merge($responseBase, [
-                'valid' => false,
-                'status' => 'expired',
-                'message' => 'License expired',
-            ]);
-        }
-
-        if (!hash_equals(strtolower($license->email), $email)) {
-            $this->storeAudit($request, [
-                'license' => $license,
-                'merchant_id' => $license->merchant_id,
-                'action' => 'validate',
-                'result' => 'failed',
-                'message' => 'Email mismatch',
-                'request_email' => $email,
-                'request_domain' => $domainInput,
-                'normalized_domain' => $normalizedDomain,
-                'plugin_version' => $pluginVersion,
-                'site_url' => $siteUrl,
-            ]);
-
-            return array_merge($responseBase, [
-                'valid' => false,
-                'message' => 'Email mismatch',
-            ]);
-        }
+        // Lifetime license policy: domain-locked validation.
+        // Email and expiration date are not enforced for activation.
 
         if (!$normalizedDomain || !hash_equals($license->normalized_domain, $normalizedDomain)) {
             $this->storeAudit($request, [
@@ -432,7 +394,7 @@ class PluginLicenseService
 
         return [
             'valid' => true,
-            'status' => $license->status,
+            'status' => $license->normalizedStatus(),
             'message' => 'License activated successfully',
             'merchant_id' => $license->merchant_id,
             'normalized_domain' => $license->normalized_domain,

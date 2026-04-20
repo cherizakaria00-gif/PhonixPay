@@ -57,8 +57,16 @@ class SubscriberController extends Controller
         }
 
         $subscribers = (clone $query)->skip($request->start - 1)->limit($request->batch)->get();
+        $messageBody = (string) $request->message;
+        $subject = (string) $request->subject;
+        $perEmailDelayMicroseconds = (int) floor((max((int) $request->cooling_time, 1) * 1000000) / max((int) $request->batch, 1));
+        $perEmailDelayMicroseconds = max(100000, min($perEmailDelayMicroseconds, 750000));
 
         foreach ($subscribers as $subscriber) {
+            if (!filter_var($subscriber->email, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
             $receiverName = explode('@', $subscriber->email)[0];
             $user = [
                 'username' => $subscriber->email,
@@ -66,9 +74,12 @@ class SubscriberController extends Controller
                 'fullname' => $receiverName,
             ];
             notify($user, 'DEFAULT', [
-                'subject' => $request->subject,
-                'message' => $request->body,
+                'subject' => $subject,
+                'message' => $messageBody,
             ], ['email'], createLog: false);
+
+            // Smooth throughput to reduce SMTP provider burst rejections on bulk sending.
+            usleep($perEmailDelayMicroseconds);
         }
 
         return $this->sessionForNotification($totalSubscriberCount, $request);

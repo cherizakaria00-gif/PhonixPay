@@ -41,6 +41,7 @@ class Email extends NotifyProcess implements Notifiable{
 		//get message from parent
 		$message = $this->getMessage();
 		if (gs('en') && $message) {
+            $this->finalMessage = $this->applyEmailColorSchemeSupport($this->finalMessage);
 			//Send mail
 			$methodName = gs('mail_config')->name;
 			$method = $this->mailMethods($methodName);
@@ -54,6 +55,39 @@ class Email extends NotifyProcess implements Notifiable{
 		}
 
 	}
+
+    /**
+    * Inject color-scheme metadata and CSS for light/dark adaptive email clients.
+    *
+    * @param string $html
+    * @return string
+    */
+    protected function applyEmailColorSchemeSupport(string $html): string
+    {
+        if (trim($html) === '') {
+            return $html;
+        }
+
+        $meta = '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">';
+        $style = '<style id="flujipay-email-color-scheme">'
+            . ':root{color-scheme:light dark;supported-color-schemes:light dark;}'
+            . '@media (prefers-color-scheme: dark){'
+            . 'body,.ReadMsgBody,.ExternalClass{background:#0b1220!important;color:#e5e7eb!important;}'
+            . 'table,td,div,p,span,h1,h2,h3,h4,h5,h6{color:inherit!important;}'
+            . 'a{color:#8ec5ff!important;}'
+            . '}'
+            . '</style>';
+
+        if (!str_contains($html, 'flujipay-email-color-scheme')) {
+            if (stripos($html, '</head>') !== false) {
+                $html = preg_replace('/<\/head>/i', $meta . $style . '</head>', $html, 1) ?? $html;
+            } else {
+                $html = $meta . $style . $html;
+            }
+        }
+
+        return $html;
+    }
 
     /**
     * Get the method name
@@ -96,6 +130,9 @@ class Email extends NotifyProcess implements Notifiable{
         }
         $mail->Port       = $config->port;
         $mail->CharSet = 'UTF-8';
+        $mail->Encoding = PHPMailer::ENCODING_BASE64;
+        $mail->SMTPKeepAlive = false;
+        $mail->Timeout = 30;
         //Recipients
         $mail->setFrom($this->getEmailFrom()['email'], $this->getEmailFrom()['name']);
         $mail->addAddress($this->email, $this->receiverName);
@@ -104,7 +141,15 @@ class Email extends NotifyProcess implements Notifiable{
         $mail->isHTML(true);
         $mail->Subject = $this->subject;
         $mail->Body    = $this->finalMessage;
-        $mail->send();
+        $mail->AltBody = trim(strip_tags((string) $this->finalMessage));
+
+        try {
+            $mail->send();
+        } catch (\Throwable $e) {
+            $details = trim((string) $mail->ErrorInfo);
+            $message = $details !== '' ? $details : $e->getMessage();
+            throw new Exception($message);
+        }
 	}
 
 	protected function sendSendGridMail(){

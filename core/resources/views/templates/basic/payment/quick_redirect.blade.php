@@ -97,13 +97,33 @@
         }
     }
 
+    /* Mobile provider view stacks the blue summary above the form.
+       Crop the top part so only the white payment form is visible. */
+    @media (max-width: 991px) {
+        .payment-gateway-preview__frame-wrap {
+            position: relative;
+            height: 78vh;
+        }
+
+        .payment-gateway-preview__frame--white-only {
+            height: calc(78vh + 230px);
+            margin-top: -230px;
+            transform: none;
+        }
+    }
+
     @media (max-width: 767px) {
         .payment-gateway-preview__content {
             padding: 12px;
         }
 
-        .payment-gateway-preview__frame {
+        .payment-gateway-preview__frame:not(.payment-gateway-preview__frame--white-only) {
             height: 78vh;
+        }
+
+        .payment-gateway-preview__frame--white-only {
+            height: calc(78vh + 230px);
+            margin-top: -230px;
         }
     }
 </style>

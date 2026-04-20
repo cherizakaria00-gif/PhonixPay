@@ -19,7 +19,7 @@
                 <br>
                 <small class="content">
                     {{ __(@$kyc->data_values->reject) }}
-                    <a href="{{ route('user.kyc.form') }}" class="link-color">@lang('Re-submit now')</a>, <a href="{{ route('user.kyc.data') }}" class="link-color">@lang('Submitted Data')</a>
+                    <a href="{{ route('user.identity.start') }}" class="link-color">@lang('Re-submit now')</a>, <a href="{{ route('user.kyc.data') }}" class="link-color">@lang('Submitted Data')</a>
                 </small>
             </p>
         </div>
@@ -33,7 +33,7 @@
                 <br>
                 <small class="content">
                     {{ __(@$kyc->data_values->required) }}
-                    <a href="{{ route('user.kyc.form') }}" class="link-color">@lang('Submit Now')</a>
+                    <a href="{{ route('user.identity.start') }}" class="link-color">@lang('Submit Now')</a>
                 </small>
             </p>
         </div>

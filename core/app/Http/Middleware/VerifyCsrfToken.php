@@ -16,6 +16,7 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         'api/webhooks/bictorys',
+        'api/webhooks/didit',
         'webhook-endpoint',
         'api/webhook-endpoint',
         'bictorys/webhook',

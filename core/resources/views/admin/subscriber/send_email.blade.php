@@ -99,7 +99,7 @@
                                         <div class="form-group">
                                             <label>@lang('Cooling Period') </label>
                                             <div class="input-group">
-                                                <input class="form-control" name="cooling_time" value="{{ old('cooling_time', @$sessionData['batch']) }}"
+                                                <input class="form-control" name="cooling_time" value="{{ old('cooling_time', @$sessionData['cooling_time']) }}"
                                                     type="number" placeholder="@lang('Waiting time')" required>
                                                 <span class="input-group-text">
                                                     @lang('Seconds')

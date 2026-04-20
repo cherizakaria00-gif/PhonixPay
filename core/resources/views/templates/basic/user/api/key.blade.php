@@ -125,7 +125,7 @@
                                 <p class="pf-dev-card__desc mb-0">@lang('Easily integrate FlujiPay into your WordPress store.')</p>
                             </div>
                             <div class="pf-dev-actions">
-                                <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}" download="FlujiPay Plug V2.5.0.zip">
+                                <a class="btn btn--base btn-sm" href="{{ asset('assets/files/Pluging.zip') }}?v=2.5.3" download="FlujiPay Plug V2.5.3.zip">
                                     <i class="las la-download"></i> @lang('FlujiPay Plugin v2.5.0')
                                 </a>
                             </div>

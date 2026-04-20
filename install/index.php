@@ -326,19 +326,19 @@ $sectionTitle =  empty($action) ? 'Terms of Use' : $action;
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="X-UA-Compatible" content="ie=edge">
-	<title>Easy Installer by ViserLab</title>
+	<title>FlujiPay Setup</title>
 	<link rel="stylesheet" href="../assets/global/css/bootstrap.min.css">
 	<link rel="stylesheet" href="../assets/global/css/all.min.css">
 	<link rel="stylesheet" href="../assets/global/css/installer.css">
-	<link rel="shortcut icon" href="https://license.viserlab.com/external/favicon.png" type="image/x-icon">
+	<link rel="shortcut icon" href="../assets/images/logoIcon/favicon.png" type="image/x-icon">
 </head>
 
 <body>
 	<header class="py-3 border-bottom border-primary bg--dark">
 		<div class="container">
 			<div class="d-flex align-items-center justify-content-between header gap-3">
-				<img class="logo" src="https://license.viserlab.com/external/logo.png" alt="ViserLab">
-				<h3 class="title">Easy Installer | <a style="color:red;" href="https://bit.ly/3Uzh8xZ" target="_blank">Web Community</a></h3>
+				<img class="logo" src="../assets/images/logoIcon/logo.png" alt="FlujiPay">
+				<h3 class="title">FlujiPay Setup</h3>
 			</div>
 		</div>
 	</header>
@@ -367,7 +367,7 @@ $sectionTitle =  empty($action) ? 'Terms of Use' : $action;
 									} else {
 										echo '<h3 class="text-danger mb-3">Your Server is not Capable to Handle the Request.</h3>';
 									}									
-									echo '<div class="warning mt-2"><h5 class="mb-4 fw-normal">Try again. Or you can ask for support by creating a support ticket.</h5><a href="?action=information" class="theme-button choto me-1 mb-3">Try Again</a> <a href="https://viserlab.com/support" target="_blank" class="theme-button choto ms-1">create  ticket</a></div>';
+									echo '<div class="warning mt-2"><h5 class="mb-4 fw-normal">Try again. Or you can ask for support by creating a support ticket.</h5><a href="?action=information" class="theme-button choto me-1 mb-3">Try Again</a> <a href="https://flujipay.com/support" target="_blank" class="theme-button choto ms-1">create ticket</a></div>';
 
 								}
 								echo '</div>';
@@ -646,7 +646,7 @@ $sectionTitle =  empty($action) ? 'Terms of Use' : $action;
 	</div>
 	<footer class="py-3 text-center bg--dark border-top border-primary">
 		<div class="container">
-			<p class="m-0 font-weight-bold">&copy;<?php echo Date('Y') ?> - All Right Reserved by <a href="https://viserlab.com/">ViserLab LLC</a></p>
+			<p class="m-0 font-weight-bold">&copy;<?php echo Date('Y') ?> - All Rights Reserved by <a href="https://flujipay.com">FlujiPay</a></p>
 		</div>
 	</footer>
 	<script src="../assets/global/js/bootstrap.bundle.min.js"></script>
