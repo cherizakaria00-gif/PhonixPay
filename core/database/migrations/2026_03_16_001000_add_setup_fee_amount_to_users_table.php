@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'setup_fee_amount_usdt')) {
-                $table->decimal('setup_fee_amount_usdt', 16, 2)->default(1000);
+                $table->decimal('setup_fee_amount_usdt', 16, 2)->default(1500);
             }
         });
     }
@@ -32,4 +32,3 @@ return new class extends Migration
         });
     }
 };
-

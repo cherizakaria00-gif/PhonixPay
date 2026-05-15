@@ -184,7 +184,7 @@
                                     <div class="form-group">
                                         <label for="setup_fee_amount_usdt">@lang('Setup Fee Amount')</label>
                                         <div class="input-group">
-                                            <input type="number" step="0.01" min="0" name="setup_fee_amount_usdt" class="form-control" value="{{ old('setup_fee_amount_usdt', getAmount($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000))) }}">
+                                            <input type="number" step="0.01" min="0" name="setup_fee_amount_usdt" class="form-control" value="{{ old('setup_fee_amount_usdt', getAmount($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1500))) }}">
                                             <div class="input-group-text">USDT</div>
                                         </div>
                                     </div>

@@ -29,13 +29,13 @@
                                     <td>
                                         <div class="d-flex flex-column gap-1">
                                             <span class="fw-bold">
-                                                {{ number_format((float) ($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000)), 2, '.', '') }} USDT
+                                                {{ number_format((float) ($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1500)), 2, '.', '') }} USDT
                                             </span>
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-outline--primary amountBtn"
                                                 data-action="{{ route('admin.setup.fees.amount.update', $user->id) }}"
-                                                data-amount="{{ old('setup_fee_amount_usdt', $user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000)) }}"
+                                                data-amount="{{ old('setup_fee_amount_usdt', $user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1500)) }}"
                                                 data-user="{{ '@' . $user->username }}"
                                             >
                                                 <i class="las la-edit"></i> @lang('Edit Amount')

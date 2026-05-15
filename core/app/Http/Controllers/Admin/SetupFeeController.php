@@ -76,7 +76,7 @@ class SetupFeeController extends Controller
         $user->save();
 
         notify($user, 'ACCOUNT_APPROVED', [
-            'setup_fee_amount' => number_format((float) ($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000)), 2, '.', ''),
+            'setup_fee_amount' => number_format((float) ($user->setup_fee_amount_usdt ?? env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1500)), 2, '.', ''),
             'account_status' => 'Active',
         ], ['email', 'push']);
 

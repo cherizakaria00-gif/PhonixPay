@@ -568,7 +568,7 @@ class UserController extends Controller
 
     protected function gatewaySetupFeeAmountForUser(int $userId): float
     {
-        $defaultAmount = (float) env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1000);
+        $defaultAmount = (float) env('GATEWAY_SETUP_FEE_AMOUNT_USDT', 1500);
 
         if (!Schema::hasColumn('users', 'setup_fee_amount_usdt')) {
             return $defaultAmount;
